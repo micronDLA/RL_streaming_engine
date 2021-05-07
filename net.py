@@ -30,8 +30,6 @@ class PolicyNet(nn.Module):
 
         self.cg_conv = nn.ModuleList([
             gnn.SGConv(cg_in_feats, cg_hidden_dim, cg_conv_k, False, nn.ReLU),
-            gnn.SGConv(cg_hidden_dim, cg_hidden_dim, cg_conv_k, False, nn.ReLU),
-            gnn.SGConv(cg_hidden_dim, cg_hidden_dim, cg_conv_k, False, nn.ReLU),
             gnn.SGConv(cg_hidden_dim, transformer_dim, cg_conv_k)
         ])
 
@@ -44,7 +42,7 @@ class PolicyNet(nn.Module):
         )
         self.match_ff = nn.Linear(transformer_dim, transformer_dim)
 
-        bin_score = nn.Parameter(torch.tensor(1.))
+        bin_score = nn.Parameter(torch.tensor(0.))
         self.register_parameter("bin_score", bin_score)
 
     def forward(self, graph, device_feats, debug=False):

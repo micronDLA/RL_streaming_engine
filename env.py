@@ -149,18 +149,18 @@ class StreamingEngineEnv:
                 if dst_ready_time == 0:
                     ready_time[dst] = dst_coord[2] + 4
                 elif dst_ready_time == -1:
-                    ready_time[dst] = -1
+                    ready_time[dst] = -2
                 elif dst_ready_time % self.device_topology[2] == dst_coord[2]:
                     ready_time[dst] = dst_ready_time + 4
                 else:
                     ready_time[dst] = -1
 
-        reward[ready_time == -2] = -1
-        reward[ready_time == -1] = 1
-        reward[ready_time >= 0]  = ((max_dist * num_nodes) - ready_time[ready_time >= 0]) / num_nodes
+        reward[ready_time == -2] = 0
+        reward[ready_time == -1] = -1
+        reward[ready_time >= 0]  = (max_dist*num_nodes - ready_time[ready_time >= 0])/num_nodes
 
         if (ready_time >= 0).all():
-            print(node_coord)
+            print(ready_time, node_coord)
 
         return reward
 
