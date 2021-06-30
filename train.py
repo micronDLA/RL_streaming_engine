@@ -27,8 +27,8 @@ parser.add_argument('--max-grad-norm', type=float, default=1)
 args = parser.parse_args()
 
 # define the distance function graph
-src_ids = [0, 0, 1, 2, 2, 3, 4, 5]
-dst_ids = [1, 2, 3, 3, 4, 5, 5, 6]
+src_ids = [0, 1, 2, 2, 2, 3, 4, 4, 5, 5, 6, 7, 8,  8, 11, 12, 13, 13, 14, 14, 14, 15, 16, 17, 18, 19, 19, 20, 20, 21, 22]
+dst_ids = [1, 2, 3, 4, 5, 4, 5, 6, 6, 7, 7, 8, 9, 10, 12, 13, 15, 14, 16, 17, 18, 19, 17, 18, 19, 20, 21, 21, 22, 22, 23]
 dist_fn_graphdef = (src_ids, dst_ids)
 
 # initialize Environment, Network and Optimizer

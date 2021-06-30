@@ -15,7 +15,7 @@ class StreamingEngineEnv:
     '''
 
     def __init__(self,
-                 device_topology=(4, 4, 3), device_feat_size=48,
+                 device_topology=(1, 4, 8), device_feat_size=48,
                  compute_graph_def=None, graph_feat_size=32):
 
         # Represent the streaming engine as a vector of positional encodings
@@ -160,7 +160,7 @@ class StreamingEngineEnv:
         reward[ready_time >= 0]  = (max_dist*num_nodes - ready_time[ready_time >= 0])/num_nodes
 
         if (ready_time >= 0).all():
-            print(ready_time, node_coord)
+            print(ready_time, node_coord, self.compute_graph.nodes())
 
         return reward
 
