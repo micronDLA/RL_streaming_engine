@@ -1,4 +1,5 @@
 import dgl
+import math
 import torch
 import networkx as nx
 
@@ -14,9 +15,9 @@ class StreamingEngineEnv:
     device_topology: [Rows, Cols, Spokes] for a given streaming engine setup
     '''
 
-    def __init__(self,
-                 device_topology=(1, 4, 8), device_feat_size=48,
-                 compute_graph_def=None, graph_feat_size=32):
+    def __init__(self, compute_graph_def,
+                 device_topology=(4, 4, 3), device_cross_connections=False,
+                 device_feat_size=48, graph_feat_size=32):
 
         # Represent the streaming engine as a vector of positional encodings
         coords = torch.meshgrid(*[torch.arange(i) for i in device_topology])
@@ -34,13 +35,18 @@ class StreamingEngineEnv:
         device_encoding = positional_encoding(coords, feat_size, 1000)
 
         # TODO: Make compute_graph_def a text file and load it here
-        if compute_graph_def is None: raise NotImplementedError
+        if type(compute_graph_def) != tuple: raise NotImplementedError
+
+        if device_cross_connections:
+            assert device_topology[0] == 1 or device_topology[1] == 1, \
+                "Device layout needs to be linear"
 
         self.compute_graph_def = compute_graph_def
         self.graph_feat_size = graph_feat_size
 
         self.coords = coords
         self.device_topology = device_topology
+        self.device_cross_connections = device_cross_connections
         self.device_encoding = device_encoding
         self.compute_graph = None
 
@@ -77,7 +83,7 @@ class StreamingEngineEnv:
         rand_enc = encoding.clone().detach().normal_(generator=generator)
 
         # Adding random vector to encoding helps distinguish between similar
-        # nodes according to a paper. TODO: add paper link
+        # nodes. This works pretty well, but maybe other solutions exist?
         node_feat = torch.cat([encoding, rand_enc], -1)
         graph.ndata['feat'] = node_feat
 
@@ -94,7 +100,9 @@ class StreamingEngineEnv:
     def render(self, debug=False):
         plt.figure()
         nx_graph = self.compute_graph.to_networkx()
-        nx.draw(nx_graph, nx.nx_agraph.graphviz_layout(nx_graph, prog='dot'))
+        nx.draw(nx_graph,
+                nx.nx_agraph.graphviz_layout(nx_graph, prog='dot'),
+                with_labels=True)
         if debug: plt.show()
         else: plt.pause(1e-3)
 
@@ -142,7 +150,13 @@ class StreamingEngineEnv:
                         dst_ready_time = -1
                         break
 
-                    src_done_time += (src_coord - dst_coord)[:2].abs().sum()
+                    abs_dist = (src_coord - dst_coord)[:2].abs().sum()
+                    if self.device_cross_connections:
+                        _dist = int(math.ceil(abs_dist / 2.)) * 2 - 2
+                        src_done_time += _dist / 2 + _dist + 1
+                    else:
+                        src_done_time += abs_dist + (abs_dist - 1) * 2
+
                     if src_done_time > dst_ready_time:
                         dst_ready_time = src_done_time
 
@@ -159,8 +173,10 @@ class StreamingEngineEnv:
         reward[ready_time == -1] = -1
         reward[ready_time >= 0]  = (max_dist*num_nodes - ready_time[ready_time >= 0])/num_nodes
 
+        self.compute_graph.ndata['node_coord'] = node_coord
+
         if (ready_time >= 0).all():
-            print(ready_time, node_coord, self.compute_graph.nodes())
+            print(ready_time, node_coord)
 
         return reward
 

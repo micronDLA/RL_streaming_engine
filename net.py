@@ -63,9 +63,11 @@ class PolicyNet(nn.Module):
         cost_matrix = cost_matrix.permute(1, 0, 2)
         cost_matrix = cost_matrix.abs() / feat.shape[-1]**0.5
 
+        # sinkhorn, returns log(scores)
         scores = self.log_optimal_transport(cost_matrix, self.bin_score)
 
-        # Get the matches with score above "match_threshold".
+        # Get the matches with score above "match_threshold"
+        # taken from code for SueprGlue paper
         max0, max1 = scores[:, :-1, :-1].max(2), scores[:, :-1, :-1].max(1)
         indices0, indices1 = max0.indices, max1.indices
         mutual0 = arange_like(indices0, 1)[None] == indices1.gather(1, indices0)
