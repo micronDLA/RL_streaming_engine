@@ -14,7 +14,7 @@ from env import StreamingEngineEnv
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--device-topology', type=int, nargs=3, default=(4, 4, 3))
+parser.add_argument('--device-topology', type=int, nargs=3, default=(8, 8, 3))
 parser.add_argument('--device-cross-connections', action='store_true')
 
 parser.add_argument('--num-episode', type=int, default=1000000)
@@ -28,9 +28,34 @@ parser.add_argument('--max-grad-norm', type=float, default=1)
 args = parser.parse_args()
 
 # define the distance function graph
-src_ids = [0, 1, 2, 2, 2, 3, 4, 4, 5, 5, 6, 7, 8,  8, 11, 12, 12, 13, 13, 14, 14, 14, 15, 16, 17, 18, 19, 19, 20, 20, 21, 22]
-dst_ids = [1, 2, 3, 4, 5, 4, 5, 6, 6, 7, 7, 8, 9, 10, 12, 13, 19, 15, 14, 16, 17, 18, 19, 17, 18, 19, 20, 21, 21, 22, 22, 23]
+# src_ids = [0, 1, 2, 2, 2, 3, 4, 4, 5, 5, 6, 7, 8,  8, 11, 12, 12, 13, 13, 14, 14, 14, 15, 16, 17, 18, 19, 19, 20, 20, 21, 22]
+# dst_ids = [1, 2, 3, 4, 5, 4, 5, 6, 6, 7, 7, 8, 9, 10, 12, 13, 19, 15, 14, 16, 17, 18, 19, 17, 18, 19, 20, 21, 21, 22, 22, 23]
+# sar_fn_graphdef = (src_ids, dst_ids)
+
+
+# define the FFT graph
+src_ids = [0, 1,
+           3, 4, 5,
+           7, 8, 8, 9, 10, 11, 12, 13, 14,
+           16, 17, 18, 19, 20, 21, 22, 23, 19, 19,
+           25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+           37, 38, 38, 39, 40, 41, 41, 42, 42, 43, 45, 44, 46, 47, 48, 49, 50, 47, 48, 49, 50, 46, 51, 56, 57, 58,
+           60, 61,
+           63,
+           65, 66,
+          ]
+dst_ids = [1, 2,
+           4, 5, 6,
+           8, 9, 10, 11, 11, 12, 13, 14, 15,
+           17, 18, 19, 20, 21, 22, 23, 24, 21, 23,
+           26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+           38, 39, 40, 41, 42, 43, 45, 44, 46, 47, 48, 49, 50, 52, 53, 54, 55, 53, 52, 55, 54, 51, 56, 57, 58, 59,
+           61, 62,
+           64,
+           66, 67,
+          ]
 sar_fn_graphdef = (src_ids, dst_ids)
+
 
 # initialize Environment, Network and Optimizer
 env    = StreamingEngineEnv(sar_fn_graphdef,
