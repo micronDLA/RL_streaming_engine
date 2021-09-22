@@ -2,7 +2,7 @@ import dgl
 import math
 import torch
 import networkx as nx
-
+import random
 from matplotlib import pyplot as plt
 
 from util import positional_encoding
@@ -56,9 +56,10 @@ class StreamingEngineEnv:
 
         generator = torch.Generator()
 
-        # TODO: Allow None for compute_graph_def. Generate a random graph
         if self.compute_graph_def is None:
-            raise NotImplementedError
+            nodes = random.randrange(10, 30, 5)
+            a = nx.generators.directed.gn_graph(nodes)
+            graph = dgl.from_networkx(a)
         else:
             src_ids, dst_ids = self.compute_graph_def
 
