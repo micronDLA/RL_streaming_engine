@@ -4,6 +4,8 @@ import numpy as np
 import random
 import networkx as nx
 import pickle
+import torch
+import math
 
 # grid: [node][coord x,y,z]
 # graph: dgl
@@ -57,6 +59,66 @@ def calc_score(grid, graph, args, C1=1.0, C2=1.0, C3=1.0, num_spokes=3):
 
     return time
 
+def calc_score_2(graph, node_coord, device_topology = (3, 4, 4), device_cross_connections=False):
+
+    reward = torch.zeros(graph.num_nodes())
+    ready_time = torch.zeros(graph.num_nodes())
+
+    num_nodes = graph.num_nodes()
+    max_dist = sum(device_topology)
+
+    timing_error = False
+    for nodes in dgl.topological_nodes_generator(graph):
+
+        # For each node in topological order
+        for dst in nodes:
+
+            dst_coord = node_coord[dst]
+
+            # if not placed
+            if dst_coord.sum() == -3:
+                ready_time[dst] = -2
+                continue
+
+            # if placed, check for time taken
+            dst_ready_time = 0
+            for src in graph.predecessors(dst):
+                src_coord = node_coord[src]
+                src_done_time = ready_time[src].item()
+
+                if src_done_time < 0:
+                    dst_ready_time = -1
+                    break
+
+                abs_dist = (src_coord - dst_coord)[1:3].abs().sum()
+                if device_cross_connections:
+                    _dist = int(math.ceil(abs_dist / 2.)) * 2 - 2
+                    src_done_time += _dist / 2 + _dist + 1
+                else:
+                    src_done_time += abs_dist + (abs_dist - 1) * 2
+
+                if src_done_time > dst_ready_time:
+                    dst_ready_time = src_done_time
+
+            if dst_ready_time == 0: # placed fine
+                ready_time[dst] = dst_coord[0] + 4
+            elif dst_ready_time == -1:
+                ready_time[dst] = -2
+            elif dst_ready_time % device_topology[0] == dst_coord[0]:
+                ready_time[dst] = dst_ready_time + 4
+            else: #fail place
+                ready_time[dst] = -1
+
+    reward[ready_time == -2] = 0 #node not placed
+    reward[ready_time == -1] = -1 #node place fail
+    reward[ready_time >= 0]  = (max_dist*num_nodes - ready_time[ready_time >= 0])/num_nodes
+
+    graph.ndata['node_coord'] = node_coord
+
+    if (ready_time >= 0).all():
+        print(ready_time, node_coord)
+
+    return reward
 
 # fill array random:
 def initial_fill(num_nodes, grid_shape):
@@ -65,7 +127,7 @@ def initial_fill(num_nodes, grid_shape):
     gg = np.prod(grid_shape)
     place = random.sample(range(gg), num_nodes) # list of unique elements chosen from the population sequence
     for i, idx in enumerate(place):
-        c, y, x = np.unravel_index(idx, grid_shape) # index to [coord x,y,z]
+        c, y, x = np.unravel_index(idx, grid_shape) # index to [coord c, y, x]
         grid[c, y, x] = i+1
         grid_in.append([c, y, x])
     grid_in = np.array(grid_in)
