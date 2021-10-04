@@ -13,8 +13,10 @@ from env import StreamingEngineEnv
 from tqdm import tqdm
 import random
 from matplotlib import pyplot as plt
-from extra.util import calc_score, calc_score_2, initial_fill, GridEnv, Q_learn
+from util import calc_score, initial_fill
+from env import GridEnv
 from torch.utils.tensorboard import SummaryWriter
+import time
 
 #torch.autograd.set_detect_anomaly(True)
 
@@ -25,7 +27,7 @@ def get_args():
 
     arg('--grid_size',   type=int, default=4, help='number of sqrt PE')
     arg('--grid_depth',   type=int, default=3, help='PE pipeline depth')
-    arg('--epochs',   type=int, default=5000, help='number of iterations')
+    arg('--epochs',   type=int, default=10000, help='number of iterations')
     arg('--nodes', type=int, default=20,  help='number of nodes')
     arg('--debug', dest='debug', action='store_true', default=False, help='debug mode')
 
@@ -86,6 +88,9 @@ if __name__ == "__main__":
     # define the part of FFT graph
     src_ids = [0, 0, 1, 2, 3, 3, 4, 4, 5, 7, 6, 8, 8, 13, 14, 15, 16]
     dst_ids = [1, 2, 3, 4, 5, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+
+    # src_ids = [0, 1, 2, 3, 4]
+    # dst_ids = [1, 2, 3, 4, 5]
     sar_fn_graphdef = (src_ids, dst_ids)
     # random generate a directed acyclic graph
     if sar_fn_graphdef is None:
@@ -94,7 +99,8 @@ if __name__ == "__main__":
     else:
         graph = dgl.graph((torch.Tensor(src_ids).int(), torch.Tensor(dst_ids).int()))
 
-    nodes = graph.number_of_nodes()
+    args.nodes = nodes = graph.number_of_nodes()
+
     if args.debug:
         graph_in = graph.adjacency_matrix_scipy().toarray()
         print('graph adjacency matrix: ', graph_in)
@@ -104,7 +110,9 @@ if __name__ == "__main__":
 
     # randomly occupy with nodes (not occupied=0 value):
     device_topology = (args.grid_depth, args.grid_size, args.grid_size)
-    grid, grid_in = initial_fill(nodes, device_topology)
+    # grid, grid_in = initial_fill(nodes, device_topology)
+    grid, grid_in = initial_fill(nodes, device_topology, manual=[i for i in range(nodes)])
+
 
     # testing grid placement scoring:
     score_test = calc_score(grid_in, graph, args)
@@ -166,11 +174,10 @@ if __name__ == "__main__":
 
     # PPO
     if args.mode == 2:
-        from extra.ppo_discrete import PPO
+        from ppo_discrete import PPO
 
         # RL RNN place each node
-        env = GridEnv(args, grid_in, graph)  # change util.py line 61 state_dim
-        # env = GridEnv(args)
+        env = GridEnv(args, grid_in, graph)
         ppo = PPO(args, env)
 
         # logging variables
@@ -180,6 +187,8 @@ if __name__ == "__main__":
 
         writer = SummaryWriter(comment='train')
         # writer.add_hparams(vars(args), {'hparam': 0})
+        start = time.time()
+
 
         # training loop:
         print('Starting PPO training...')
@@ -225,6 +234,8 @@ if __name__ == "__main__":
                 print('Episode {} \t Avg reward: {}'.format(i_episode, running_reward))
                 writer.add_scalar('final_reward/episode', best_reward, i_episode)
                 print('Episode {} \t Final reward: {}'.format(i_episode, best_reward))
+                end = time.time()
+                print('Execution time {} s'.format(end - start))
                 # writer.add_scalar('avg improvement/episode', avg_improve, i_episode)
                 # print('Episode {} \t Avg improvement: {}'.format(i_episode, avg_improve))
 
@@ -234,7 +245,7 @@ if __name__ == "__main__":
 
     # DQN
     if args.mode == 3:
-        from extra.qlearn import DQNAgent
+        from qlearn import DQNAgent
 
         # RL RNN place each node
         env = GridEnv(args, grid_in, graph)
