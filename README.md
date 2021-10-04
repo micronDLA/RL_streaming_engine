@@ -1,4 +1,4 @@
-## Streaming Engine Scheduler
+# Streaming Engine Scheduler
 
 - RL method that uses PPO to generate assignment for a given compute graph on a streaming engine topology.
 - Compute graph can be changed in the ```train.py```
@@ -33,3 +33,22 @@ NOTE: If you feel like the training is stuck and is not improving; wait for quie
 See the graph and all prints
 
 `python3 grid_placement.py --mode 2 --debug`
+
+## Dependencies
+
+First, install PyGraphViz on your system: https://pygraphviz.github.io/documentation/stable/install.html
+
+Install require Python packages
+```
+pip install -r requirements.txt
+```
+## Environment
+
+### Observations/States
+
+### Actions
+
+### Rewards
+
+
+
