@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
-
+import pickle
 
 GAMMA = 0.999
 EPS_START = 0.9
@@ -135,3 +135,115 @@ class DQNAgent(nn.Module):
         for param in self.policy_net.parameters():
             param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
+
+
+
+#state: [node] grid's flatten index
+#action: where to put node
+#rewards: cost
+class Q_learn:
+    def __init__(self, args, graph):
+        self.args = args
+        self.board = np.zeros(self.args.nodes)
+        self.graph = graph
+        self.states = []  # record hashes takes in an episode
+        self.lr = args.q_lr
+        self.exp_rate = args.exp_rate
+        self.decay_gamma = args.decay_gamma
+        self.states_value = {}  # state -> value
+        self.reset()
+
+    def reset(self):
+        self.board[:] = -1
+        self.states = []
+
+    # get unique hash of state
+    def get_hash(self, st):
+        return str(st.flatten())
+
+    #positions: array of avail idx
+    #cur_state: [node] [idx]
+    def chooseAction(self, positions, cur_state, node, exp=True):
+        # choose action with most expected value
+        action = 0
+        if np.random.uniform(0, 1) <= self.exp_rate and exp: # exploration
+            action = np.random.choice(positions)
+        else: # exploitation
+            value_max = -np.inf
+            for p in positions:
+                next_board = cur_state.copy()
+                next_board[node] = p
+                next_boardHash = self.get_hash(next_board)
+                value = self.states_value.get(next_boardHash)
+                if value is None:
+                    value = 0
+                # print("value", value)
+                if value >= value_max: # do action with max value
+                    value_max = value
+                    action = p
+            # print("{} takes action {}".format(self.name, action))
+        return action
+
+    def savePolicy(self):
+        fw = open('policy_' + str(self.name), 'wb')
+        pickle.dump(self.states_value, fw)
+        fw.close()
+
+    def loadPolicy(self, file):
+        fr = open(file, 'rb')
+        self.states_value = pickle.load(fr)
+        fr.close()
+
+    # at the end, backpropagate and update states value
+    def feedReward(self, reward):
+        for st in reversed(self.states):
+            if self.states_value.get(st) is None:
+                self.states_value[st] = 0
+            self.states_value[st] += self.lr * (self.decay_gamma * reward - self.states_value[st])
+            reward = self.states_value[st]
+
+    #get not used indexes
+    def availablePositions(self):
+        aa = [a for a in range(self.args.grid_depth * self.args.grid_size * self.args.grid_size)]
+        for i in self.board:
+            if i >= 0:
+                aa.remove(i)
+        return aa
+
+    # get reward and update state_value table
+    def giveReward(self):
+        grid_in = []
+        for i, idx in enumerate(self.board):
+            c, y, x = np.unravel_index(int(idx), (self.args.grid_depth, self.args.grid_size, self.args.grid_size))
+            grid_in.append([c, y, x])
+        rwd = -calc_score(np.array(grid_in), self.graph, self.args)
+        self.feedReward(rwd)
+        return rwd
+
+    def play(self, rounds=100):
+        for i in range(rounds):
+            for node in range(self.args.nodes):
+                positions = self.availablePositions()
+                p_action = self.chooseAction(positions, self.board, node)
+                self.board[node] = p_action
+                board_hash = self.get_hash(self.board)
+                self.states.append(board_hash)
+
+            rwd = self.giveReward()
+            if i % 500 == 0:
+                print(i, ' reward: ', rwd)
+            self.reset()
+
+    def test(self):
+        self.reset()
+        for node in range(self.args.nodes):
+            positions = self.availablePositions()
+            p_action = self.chooseAction(positions, self.board, node, exp=False)
+            self.board[node] = p_action
+        grid_in = []
+        for i, idx in enumerate(self.board):
+            c, y, x = np.unravel_index(int(idx), (self.args.grid_depth, self.args.grid_size, self.args.grid_size))
+            grid_in.append([c, y, x])
+        rwd = -calc_score(np.array(grid_in), self.graph, self.args)
+        print('reward: ', rwd)
+

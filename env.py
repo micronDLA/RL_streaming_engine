@@ -4,7 +4,7 @@ import torch
 import networkx as nx
 import random
 from matplotlib import pyplot as plt
-
+import numpy as np
 from util import positional_encoding
 
 class StreamingEngineEnv:
@@ -180,6 +180,43 @@ class StreamingEngineEnv:
             print(ready_time, node_coord)
 
         return reward
+
+
+# environment for grid:
+class GridEnv():
+    def __init__(self, args, grid_init = None, graph = None):
+        # args.nodes, grid_depth, grid_size
+        self.args = args
+        self.grid_shape = (args.grid_depth, args.grid_size, args.grid_size)
+
+        self.state_dim = args.nodes * 3 + args.nodes # actor input
+        # concat of node coord and onehot to select which node to place next
+        self.action_dim = np.prod(self.grid_shape)
+
+        self.grid = self.grid_init = grid_init
+        self.graph = graph
+        self.rst_graph = grid_init is None or graph is None #reset will create new graph
+        self.reset()
+
+    def reset(self):
+        if self.rst_graph:
+            self.graph = dgl.from_networkx(nx.generators.directed.gn_graph(self.args.nodes))
+            _, self.grid_init = initial_fill(self.args.nodes, self.grid_shape)
+        score_test = calc_score(self.grid_init, self.graph, self.args)
+        self.grid = self.grid_init.copy()
+        return self.grid, -score_test
+
+    #action: grid index flattened
+    #state: grid [node][coord x,y,z]
+    #reward: score
+    def step(self, action, node):
+        new_coord = list(np.unravel_index(action, self.grid_shape))
+        if new_coord in self.grid.tolist(): # if location already has node, swap nodes
+            ndt = self.grid.tolist().index(new_coord)# get node in the new coord
+            self.grid[ndt] = self.grid[node]
+        self.grid[node] = new_coord
+        reward = -calc_score(self.grid, self.graph, self.args) #RL maximize reward, we want to minimize time
+        return self.grid, reward
 
 if __name__ == "__main__":
 
