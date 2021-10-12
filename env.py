@@ -121,7 +121,11 @@ class StreamingEngineEnv:
         return reward
 
     def _calculate_reward(self, node_coord):
-
+        '''
+        calc score on grid assignment (dawood) returns reward matrix
+        node_coord: [node][coord c,y,x]
+        self.compute_graph: dgl
+        '''
         reward = torch.zeros(self.compute_graph.num_nodes())
         ready_time = torch.zeros(self.compute_graph.num_nodes())
 
@@ -147,31 +151,31 @@ class StreamingEngineEnv:
                     src_coord = node_coord[src]
                     src_done_time = ready_time[src].item()
 
-                    if src_done_time < 0:
+                    if src_done_time < 0: # not ready
                         dst_ready_time = -1
                         break
 
                     abs_dist = (src_coord - dst_coord)[:2].abs().sum()
-                    if self.device_cross_connections:
+                    if self.device_cross_connections: # linear representation
                         _dist = int(math.ceil(abs_dist / 2.)) * 2 - 2
                         src_done_time += _dist / 2 + _dist + 1
-                    else:
+                    else: # grid representation
                         src_done_time += abs_dist + (abs_dist - 1) * 2
 
-                    if src_done_time > dst_ready_time:
+                    if src_done_time > dst_ready_time: # get largest from all predecessors
                         dst_ready_time = src_done_time
 
-                if dst_ready_time == 0:
+                if dst_ready_time == 0: # placed fine
                     ready_time[dst] = dst_coord[2] + 4
-                elif dst_ready_time == -1:
+                elif dst_ready_time == -1: # not placed
                     ready_time[dst] = -2
-                elif dst_ready_time % self.device_topology[2] == dst_coord[2]:
+                elif dst_ready_time % self.device_topology[2] == dst_coord[2]: # placed fine
                     ready_time[dst] = dst_ready_time + 4
-                else:
+                else: # fail place
                     ready_time[dst] = -1
 
-        reward[ready_time == -2] = 0
-        reward[ready_time == -1] = -1
+        reward[ready_time == -2] = 0 # node not placed
+        reward[ready_time == -1] = -1 # node place fail
         reward[ready_time >= 0]  = (max_dist*num_nodes - ready_time[ready_time >= 0])/num_nodes
 
         self.compute_graph.ndata['node_coord'] = node_coord

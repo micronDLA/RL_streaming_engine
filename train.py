@@ -13,7 +13,8 @@ from env import StreamingEngineEnv
 from tqdm import tqdm
 import random
 from matplotlib import pyplot as plt
-from util import calc_score, initial_fill
+from util import calc_score, initial_fill, ROW, COL, fix_grid_bins
+
 from env import GridEnv
 from torch.utils.tensorboard import SummaryWriter
 import time
@@ -23,7 +24,7 @@ import time
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=4, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- DQN 4-sinkhorn')
+    arg('--mode', type=int, default=0, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- DQN 4-sinkhorn')
 
     arg('--grid_size',   type=int, default=4, help='number of sqrt PE')
     arg('--grid_depth',   type=int, default=3, help='PE pipeline depth')
@@ -86,8 +87,8 @@ if __name__ == "__main__":
     #            56,
     #           ]
     # define the part of FFT graph
-    src_ids = [0, 0, 1, 2, 3, 3, 4, 4, 5, 7, 6, 8, 8, 13, 14, 15, 16]
-    dst_ids = [1, 2, 3, 4, 5, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    src_ids = [0, 0, 1, 2, 3]#, 3, 4, 4, 5, 7, 6, 8, 8, 13, 14, 15, 16]
+    dst_ids = [1, 2, 3, 4, 5]#, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
 
     # src_ids = [0, 1, 2, 3, 4]
     # dst_ids = [1, 2, 3, 4, 5]
@@ -109,13 +110,14 @@ if __name__ == "__main__":
         plt.show()
 
     # randomly occupy with nodes (not occupied=0 value):
-    device_topology = (args.grid_depth, args.grid_size, args.grid_size)
-    # grid, grid_in = initial_fill(nodes, device_topology)
-    grid, grid_in = initial_fill(nodes, device_topology, manual=[i for i in range(nodes)])
-
+    device_topology = (nodes, COL, ROW)
+    grid, grid_in = initial_fill(nodes, device_topology)
+    # grid, grid_in = initial_fill(nodes, device_topology, manual=[i for i in range(nodes)])
+    fix_grid_bins(grid_in)
 
     # testing grid placement scoring:
-    score_test = calc_score(grid_in, graph, args)
+    score_test = calc_score(grid_in, graph)
+
     print('Initial score: ', score_test)
     if args.debug:
         print('Initial placement: ', grid_in)
@@ -130,7 +132,8 @@ if __name__ == "__main__":
         print('Running Random search optimization ...')
         for i in tqdm(range(args.epochs)):
             grid, grid_in = initial_fill(nodes, grid.shape)
-            after_rs = calc_score(grid_in, graph, args)
+            fix_grid_bins(grid_in)
+            after_rs = calc_score(grid_in, graph)
             if before_rs > after_rs:
                 before_rs = after_rs
                 best_grid = grid_in.copy()
