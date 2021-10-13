@@ -20,11 +20,12 @@ from torch.utils.tensorboard import SummaryWriter
 import time
 
 #torch.autograd.set_detect_anomaly(True)
+# random.seed(10)
 
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=0, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- DQN 4-sinkhorn')
+    arg('--mode', type=int, default=1, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- DQN 4-sinkhorn')
 
     arg('--grid_size',   type=int, default=4, help='number of sqrt PE')
     arg('--grid_depth',   type=int, default=3, help='PE pipeline depth')
@@ -87,8 +88,8 @@ if __name__ == "__main__":
     #            56,
     #           ]
     # define the part of FFT graph
-    src_ids = [0, 0, 1, 2, 3]#, 3, 4, 4, 5, 7, 6, 8, 8, 13, 14, 15, 16]
-    dst_ids = [1, 2, 3, 4, 5]#, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    src_ids = [0, 0, 1, 2, 3, 3, 4, 4, 5, 7, 6, 8, 8, 13, 14, 15, 16]
+    dst_ids = [1, 2, 3, 4, 5, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
 
     # src_ids = [0, 1, 2, 3, 4]
     # dst_ids = [1, 2, 3, 4, 5]
@@ -111,7 +112,7 @@ if __name__ == "__main__":
 
     # randomly occupy with nodes (not occupied=0 value):
     device_topology = (nodes, COL, ROW)
-    grid, grid_in = initial_fill(nodes, device_topology)
+    grid, grid_in, place = initial_fill(nodes, device_topology)
     # grid, grid_in = initial_fill(nodes, device_topology, manual=[i for i in range(nodes)])
     fix_grid_bins(grid_in)
 
@@ -131,7 +132,7 @@ if __name__ == "__main__":
 
         print('Running Random search optimization ...')
         for i in tqdm(range(args.epochs)):
-            grid, grid_in = initial_fill(nodes, grid.shape)
+            grid, grid_in, _ = initial_fill(nodes, grid.shape)
             fix_grid_bins(grid_in)
             after_rs = calc_score(grid_in, graph)
             if before_rs > after_rs:
@@ -150,9 +151,8 @@ if __name__ == "__main__":
 
         budget = args.epochs  # How many steps of training we will do before concluding.
         workers = 16
-        # param = ng.p.Array(shape=(nodes, 3)).set_integer_casting() #3 coord: x, y, pipe
-        param = ng.p.Array(init=grid_in).set_integer_casting() \
-            .set_bounds(lower=0, upper=max(args.grid_size, args.grid_depth))
+        # param = ng.p.Array(shape=(int(nodes), 1)).set_integer_casting().set_bounds(lower=0, upper=ROW*COL*nodes)
+        param = ng.p.Array(init=place).set_integer_casting().set_bounds(lower=0, upper=ROW * COL * nodes)
         # ES optim
         names = "CMA"
         optim = ng.optimizers.registry[names](parametrization=param, budget=budget, num_workers=workers)
@@ -164,12 +164,16 @@ if __name__ == "__main__":
         print('Running ES optimization ...')
         for _ in tqdm(range(budget)):
             x = optim.ask()
-            loss = calc_score(x.value, graph, args)
+            grid, grid_in, _ = initial_fill(nodes, device_topology, manual=x.value)
+            fix_grid_bins(grid_in)
+            loss = calc_score(grid_in, graph)
             optim.tell(x, loss)
         rec = optim.recommend()
-        after_es = calc_score(rec.value, graph, args)
+        grid, grid_in, _ = initial_fill(nodes, device_topology, manual=rec.value)
+        fix_grid_bins(grid_in)
+        after_es = calc_score(grid_in, graph)
         if final_es > after_es:
-            final_value = rec.value
+            final_value = grid_in
             final_es = after_es
         print('best score found:', final_es)
         if args.debug:

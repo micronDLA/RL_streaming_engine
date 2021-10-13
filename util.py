@@ -113,7 +113,7 @@ def initial_fill(num_nodes, grid_shape, manual = None):
         grid[c, y, x] = i+1 #zero is unassigned
         grid_in.append([c, y, x])
     grid_in = np.array(grid_in)
-    return grid, grid_in
+    return grid, grid_in, place
 
 
 def inc_coords(grid, inc):

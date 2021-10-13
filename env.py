@@ -5,7 +5,7 @@ import networkx as nx
 import random
 from matplotlib import pyplot as plt
 import numpy as np
-from util import positional_encoding
+from util import positional_encoding, calc_score, initial_fill, ROW, COL, fix_grid_bins
 
 class StreamingEngineEnv:
 
@@ -191,7 +191,7 @@ class GridEnv():
     def __init__(self, args, grid_init = None, graph = None):
         # args.nodes, grid_depth, grid_size
         self.args = args
-        self.grid_shape = (args.grid_depth, args.grid_size, args.grid_size)
+        self.grid_shape = (args.nodes, COL, ROW)
 
         self.state_dim = args.nodes * 3 + args.nodes # actor input
         # concat of node coord and onehot to select which node to place next
@@ -205,8 +205,10 @@ class GridEnv():
     def reset(self):
         if self.rst_graph:
             self.graph = dgl.from_networkx(nx.generators.directed.gn_graph(self.args.nodes))
-            _, self.grid_init = initial_fill(self.args.nodes, self.grid_shape)
-        score_test = calc_score(self.grid_init, self.graph, self.args)
+            _, self.grid_init, _ = initial_fill(self.args.nodes, self.grid_shape)
+            fix_grid_bins(self.grid_init)
+
+        score_test = calc_score(self.grid_init, self.graph)
         self.grid = self.grid_init.copy()
         return self.grid, -score_test
 
@@ -219,7 +221,8 @@ class GridEnv():
             ndt = self.grid.tolist().index(new_coord)# get node in the new coord
             self.grid[ndt] = self.grid[node]
         self.grid[node] = new_coord
-        reward = -calc_score(self.grid, self.graph, self.args) #RL maximize reward, we want to minimize time
+        fix_grid_bins(self.grid)
+        reward = -calc_score(self.grid, self.graph) #RL maximize reward, we want to minimize time
         return self.grid, reward
 
 if __name__ == "__main__":
