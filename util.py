@@ -15,7 +15,7 @@ PIPE_CYCLE = 4
 
 def positional_encoding(pos, feat_size=16, timescale=10000):
     '''
-    pos : [N X D] matrix of positions
+    pos : [N X D] matrix of positions. N is the number of slices.
 
     returns a positional encoding of [N x (D * feat_size)]
     '''

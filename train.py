@@ -24,7 +24,7 @@ import time
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=0, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- DQN 4-sinkhorn')
+    arg('--mode', type=int, default=4, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- DQN 4-sinkhorn')
 
     arg('--grid_size',   type=int, default=4, help='number of sqrt PE')
     arg('--grid_depth',   type=int, default=3, help='PE pipeline depth')
@@ -87,11 +87,19 @@ if __name__ == "__main__":
     #            56,
     #           ]
     # define the part of FFT graph
-    src_ids = [0, 0, 1, 2, 3]#, 3, 4, 4, 5, 7, 6, 8, 8, 13, 14, 15, 16]
-    dst_ids = [1, 2, 3, 4, 5]#, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    # src_ids = [0, 0, 1, 2, 3]#, 3, 4, 4, 5, 7, 6, 8, 8, 13, 14, 15, 16]
+    # dst_ids = [1, 2, 3, 4, 5]#, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
 
     # src_ids = [0, 1, 2, 3, 4]
     # dst_ids = [1, 2, 3, 4, 5]
+
+    # Old FFT graph sync flow 1
+    # src_ids = [0, 0, 1, 1, 2, 3, 4, 4, 5]
+    # dst_ids = [1, 2, 3, 4, 4, 6, 5, 8, 7]
+
+    # Latest FFT graph sync flow 2
+    src_ids = [1, 1, 2, 2, 3, 4, 6, 6, 8]
+    dst_ids = [2, 3, 4, 6, 6, 5, 7, 8, 9]
     sar_fn_graphdef = (src_ids, dst_ids)
     # random generate a directed acyclic graph
     if sar_fn_graphdef is None:
@@ -353,7 +361,8 @@ if __name__ == "__main__":
 
                 reward_buf.append(reward.mean())
             if episode % 100 == 0:
-                print(episode, epoch, reward, loss.item(), np.mean(reward_buf))
+                print(f'Episode: {episode} | Epoch: {epoch} | Reward: {reward} | Loss: {loss.item()} | Mean Reward: {np.mean(reward_buf)}')
+                # TODO: Is mean of reward buffer the total mean up until now?
 
             if episode % 100 == 0:
                 plt.imshow(old_scores[0].exp().detach(), vmin=0, vmax=1)
