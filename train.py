@@ -25,11 +25,7 @@ import time
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-<<<<<<< HEAD
     arg('--mode', type=int, default=4, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- DQN 4-sinkhorn')
-=======
-    arg('--mode', type=int, default=1, help='0 random search, 1 CMA-ES search, 2- RL PPO 4-sinkhorn')
->>>>>>> 6b7f831f6eea5524e390afcc032969b59a7155d5
 
     arg('--grid_size',   type=int, default=4, help='number of sqrt PE')
     arg('--grid_depth',   type=int, default=3, help='PE pipeline depth')
@@ -92,7 +88,6 @@ if __name__ == "__main__":
     args = get_args()  # Holds all the input arguments
     print('Arguments:', args)
 
-<<<<<<< HEAD
 
     # define the distance function graph
     # src_ids = [0, 1, 2, 2, 2, 3, 4, 4, 5, 5, 6, 7, 8, 8, 11, 12, 12, 13, 13, 14, 14, 14, 15, 16, 17, 18, 19, 19, 20, 20,
@@ -133,9 +128,6 @@ if __name__ == "__main__":
     src_ids = [1, 1, 2, 2, 3, 4, 6, 6, 8]
     dst_ids = [2, 3, 4, 6, 6, 5, 7, 8, 9]
     sar_fn_graphdef = (src_ids, dst_ids)
-=======
-    graphdef = PREDEF_GRAPHS["FFT_SIMPLE"]
->>>>>>> 6b7f831f6eea5524e390afcc032969b59a7155d5
     # random generate a directed acyclic graph
     if graphdef is None:
         a = nx.generators.directed.gn_graph(args.nodes)
