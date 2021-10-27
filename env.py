@@ -20,10 +20,12 @@ class StreamingEngineEnv:
                  device_feat_size=48, graph_feat_size=32):
 
         # Represent the streaming engine as a vector of positional encodings
+        # Generate meshgrid so we can consider all possible assignments for (tile_x, tile_y, spoke)
         coords = torch.meshgrid(*[torch.arange(i) for i in device_topology])
         coords = [coord.unsqueeze(-1) for coord in coords]
         coords = torch.cat(coords, -1)
-        coords = coords.view(-1, coords.shape[-1])
+        # coords represents all possible SE slices after next operation
+        coords = coords.view(-1, coords.shape[-1])  # Shape: (no_of_tiles * no_of_spokes, 3)
 
         assert device_feat_size % len(device_topology) == 0, '\
         device_feat_size must be a multiple of device topology dimension'
@@ -32,7 +34,7 @@ class StreamingEngineEnv:
         multiple of 2'
 
         feat_size = device_feat_size // len(device_topology)
-        device_encoding = positional_encoding(coords, feat_size, 1000)
+        device_encoding = positional_encoding(coords, feat_size, 1000)  # Shape: (No of slices, 48)
 
         # TODO: Make compute_graph_def a text file and load it here
         if type(compute_graph_def) != tuple: raise NotImplementedError
@@ -80,12 +82,12 @@ class StreamingEngineEnv:
             node_coord[nodes_a.long(), 1] = -i
 
         feat_size = self.graph_feat_size // 2
-        encoding = positional_encoding(node_coord, feat_size // 2, 1000)
-        rand_enc = encoding.clone().detach().normal_(generator=generator)
+        encoding = positional_encoding(node_coord, feat_size // 2, 1000)  # Shape: (no_of_graph_nodes, 16)
+        rand_enc = encoding.clone().detach().normal_(generator=generator)  # Shape: (no_of_graph_nodes, 16)
 
         # Adding random vector to encoding helps distinguish between similar
         # nodes. This works pretty well, but maybe other solutions exist?
-        node_feat = torch.cat([encoding, rand_enc], -1)
+        node_feat = torch.cat([encoding, rand_enc], -1)  # Shape: (no_of_graph_nodes, 32)
         graph.ndata['feat'] = node_feat
 
         self.compute_graph = graph
@@ -126,8 +128,8 @@ class StreamingEngineEnv:
         node_coord: [node][coord c,y,x]
         self.compute_graph: dgl
         '''
-        reward = torch.zeros(self.compute_graph.num_nodes())
-        ready_time = torch.zeros(self.compute_graph.num_nodes())
+        reward = torch.zeros(self.compute_graph.num_nodes())  # Shape: (no_of_graph_nodes,)
+        ready_time = torch.zeros(self.compute_graph.num_nodes())  # Shape: (no_of_graph_nodes,)
 
         num_nodes = self.compute_graph.num_nodes()
         max_dist = sum(self.device_topology)
@@ -148,28 +150,29 @@ class StreamingEngineEnv:
                 # if placed, check for time taken
                 dst_ready_time = 0
                 for src in self.compute_graph.predecessors(dst):
-                    src_coord = node_coord[src]
-                    src_done_time = ready_time[src].item()
+                    src_coord = node_coord[src]  # Coordinate of source node in SE
+                    src_done_time = ready_time[src].item()  # Done time of source node
 
                     if src_done_time < 0: # not ready
                         dst_ready_time = -1
                         break
 
-                    abs_dist = (src_coord - dst_coord)[:2].abs().sum()
+                    abs_dist = (src_coord - dst_coord)[:2].abs().sum()  # Absolute dist betwn source and destination
                     if self.device_cross_connections: # linear representation
                         _dist = int(math.ceil(abs_dist / 2.)) * 2 - 2
                         src_done_time += _dist / 2 + _dist + 1
                     else: # grid representation
-                        src_done_time += abs_dist + (abs_dist - 1) * 2
+                        # src_done_time += abs_dist + (abs_dist - 1) * 2
+                        src_done_time += abs_dist - 1  # At src_done_time, node is ready to be consumed 1 hop away
 
                     if src_done_time > dst_ready_time: # get largest from all predecessors
-                        dst_ready_time = src_done_time
+                        dst_ready_time = src_done_time  #TODO: Isn't variable dst_ready_time more like dst start time
 
                 if dst_ready_time == 0: # placed fine
                     ready_time[dst] = dst_coord[2] + 4
                 elif dst_ready_time == -1: # not placed
                     ready_time[dst] = -2
-                elif dst_ready_time % self.device_topology[2] == dst_coord[2]: # placed fine
+                elif dst_ready_time % self.device_topology[2] == dst_coord[2]: # If ready_time % spoke_count is correct
                     ready_time[dst] = dst_ready_time + 4
                 else: # fail place
                     ready_time[dst] = -1
@@ -181,7 +184,9 @@ class StreamingEngineEnv:
         self.compute_graph.ndata['node_coord'] = node_coord
 
         if (ready_time >= 0).all():
-            print(ready_time, node_coord)
+            print('Possible assignment ->')
+            print(f'Node ready times: {ready_time}')
+            print(f'Assigned node coordinate: {node_coord}')
 
         return reward
 

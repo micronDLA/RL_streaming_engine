@@ -25,7 +25,7 @@ import time
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=1, help='0 random search, 1 CMA-ES search, 2- RL PPO 4-sinkhorn')
+    arg('--mode', type=int, default=4, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- DQN 4-sinkhorn')
 
     arg('--grid_size',   type=int, default=4, help='number of sqrt PE')
     arg('--grid_depth',   type=int, default=3, help='PE pipeline depth')
@@ -88,7 +88,46 @@ if __name__ == "__main__":
     args = get_args()  # Holds all the input arguments
     print('Arguments:', args)
 
-    graphdef = PREDEF_GRAPHS["FFT_SIMPLE"]
+
+    # define the distance function graph
+    # src_ids = [0, 1, 2, 2, 2, 3, 4, 4, 5, 5, 6, 7, 8, 8, 11, 12, 12, 13, 13, 14, 14, 14, 15, 16, 17, 18, 19, 19, 20, 20,
+    #            21, 22]
+    # dst_ids = [1, 2, 3, 4, 5, 4, 5, 6, 6, 7, 7, 8, 9, 10, 12, 13, 19, 15, 14, 16, 17, 18, 19, 17, 18, 19, 20, 21, 21,
+    #            22, 22, 23]
+    # define the FFT graph
+    # src_ids = [0,
+    #            2, 3,
+    #            5, 6, 6, 7, 8, 9, 10, 11, 12,
+    #            14, 15, 16, 17, 18, 19, 20, 21, 17, 17,
+    #            23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
+    #            35, 35, 36, 37, 38, 38, 39, 39, 40, 42, 41, 43, 43, 48, 49, 50, 51,
+    #            53,
+    #            55,
+    #           ]
+    # dst_ids = [1,
+    #            3, 4,
+    #            6, 7, 8, 9, 9, 10, 11, 12, 13,
+    #            15, 16, 17, 18, 19, 20, 21, 22, 19, 21,
+    #            24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34,
+    #            36, 37, 38, 39, 40, 42, 41, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
+    #            54,
+    #            56,
+    #           ]
+    # define the part of FFT graph
+    # src_ids = [0, 0, 1, 2, 3]#, 3, 4, 4, 5, 7, 6, 8, 8, 13, 14, 15, 16]
+    # dst_ids = [1, 2, 3, 4, 5]#, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+
+    # src_ids = [0, 1, 2, 3, 4]
+    # dst_ids = [1, 2, 3, 4, 5]
+
+    # Old FFT graph sync flow 1
+    # src_ids = [0, 0, 1, 1, 2, 3, 4, 4, 5]
+    # dst_ids = [1, 2, 3, 4, 4, 6, 5, 8, 7]
+
+    # Latest FFT graph sync flow 2
+    src_ids = [1, 1, 2, 2, 3, 4, 6, 6, 8]
+    dst_ids = [2, 3, 4, 6, 6, 5, 7, 8, 9]
+    sar_fn_graphdef = (src_ids, dst_ids)
     # random generate a directed acyclic graph
     if graphdef is None:
         a = nx.generators.directed.gn_graph(args.nodes)
@@ -292,7 +331,8 @@ if __name__ == "__main__":
 
                 reward_buf.append(reward.mean())
             if episode % 100 == 0:
-                print(episode, epoch, reward, loss.item(), np.mean(reward_buf))
+                print(f'Episode: {episode} | Epoch: {epoch} | Reward: {reward} | Loss: {loss.item()} | Mean Reward: {np.mean(reward_buf)}')
+                # TODO: Is mean of reward buffer the total mean up until now?
 
             if episode % 100 == 0:
                 plt.imshow(old_scores[0].exp().detach(), vmin=0, vmax=1)
