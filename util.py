@@ -7,6 +7,7 @@ import networkx as nx
 from collections import deque
 import torch
 import math
+import json
 
 ROW = 2
 COL = 2
@@ -93,6 +94,22 @@ def calc_score_0(grid, graph, args):
 
     return time
 
+def output_instr_json(grid_in, grid_shape, filename='output.json'):
+    data = {}
+    a = np.prod(grid_shape[1:3])
+    for idx in range(a):
+        y, x = np.unravel_index(idx, grid_shape[1:3])
+        data[str((y, x))] = []
+    max_spokes = np.amax(grid_in, axis=0)
+    for spoke in range(max_spokes[0]):
+        for nd_id, nd in enumerate(grid_in):
+            if spoke == nd[0]:
+                data[str((nd[1], nd[2]))].append(nd_id)
+            else:
+                data[str((nd[1], nd[2]))].append(-1) # -1 is a nop instr. title is doing nothing
+    with open(filename, 'w') as outfile:
+        json.dump(data, outfile)
+
 def initial_fill(num_nodes, grid_shape, manual = None):
     '''
     fill array random:
@@ -113,7 +130,7 @@ def initial_fill(num_nodes, grid_shape, manual = None):
         grid[c, y, x] = i+1 #zero is unassigned
         grid_in.append([c, y, x])
     grid_in = np.array(grid_in)
-    return grid, grid_in
+    return grid, grid_in, place
 
 
 def inc_coords(grid, inc):

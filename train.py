@@ -13,18 +13,23 @@ from env import StreamingEngineEnv
 from tqdm import tqdm
 import random
 from matplotlib import pyplot as plt
-from util import calc_score, initial_fill, ROW, COL, fix_grid_bins
+from util import calc_score, initial_fill, ROW, COL, fix_grid_bins, output_instr_json
 
 from env import GridEnv
 from torch.utils.tensorboard import SummaryWriter
 import time
 
 #torch.autograd.set_detect_anomaly(True)
+# random.seed(10)
 
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
+<<<<<<< HEAD
     arg('--mode', type=int, default=4, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- DQN 4-sinkhorn')
+=======
+    arg('--mode', type=int, default=1, help='0 random search, 1 CMA-ES search, 2- RL PPO 4-sinkhorn')
+>>>>>>> 6b7f831f6eea5524e390afcc032969b59a7155d5
 
     arg('--grid_size',   type=int, default=4, help='number of sqrt PE')
     arg('--grid_depth',   type=int, default=3, help='PE pipeline depth')
@@ -57,10 +62,37 @@ def get_args():
     args = parser.parse_args()
     return args
 
+PREDEF_GRAPHS = {
+    "DISTANCE": ([0, 1, 2, 2, 2, 3, 4, 4, 5, 5, 6, 7, 8, 8, 11, 12, 12, 13, 13, 14, 14, 14, 15, 16, 17, 18, 19, 19, 20, 20, 21, 22],
+                 [1, 2, 3, 4, 5, 4, 5, 6, 6, 7, 7, 8, 9, 10, 12, 13, 19, 15, 14, 16, 17, 18, 19, 17, 18, 19, 20, 21, 21, 22, 22, 23]), # (src_ids, dst_ids)
+    "FFT_OLD":
+             ([0,
+               2, 3,
+               5, 6, 6, 7, 8, 9, 10, 11, 12,
+               14, 15, 16, 17, 18, 19, 20, 21, 17, 17,
+               23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
+               35, 35, 36, 37, 38, 38, 39, 39, 40, 42, 41, 43, 43, 48, 49, 50, 51,
+               53,
+               55,
+              ],
+              [1,
+               3, 4,
+               6, 7, 8, 9, 9, 10, 11, 12, 13,
+               15, 16, 17, 18, 19, 20, 21, 22, 19, 21,
+               24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34,
+               36, 37, 38, 39, 40, 42, 41, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
+               54,
+               56,
+              ]),
+    "FFT_SIMPLE": ([0, 0, 1, 1, 2, 3, 4, 4, 5], [1, 2, 3, 4, 4, 6, 5, 8, 7])
+}
+
+
 if __name__ == "__main__":
     args = get_args()  # Holds all the input arguments
     print('Arguments:', args)
 
+<<<<<<< HEAD
 
     # define the distance function graph
     # src_ids = [0, 1, 2, 2, 2, 3, 4, 4, 5, 5, 6, 7, 8, 8, 11, 12, 12, 13, 13, 14, 14, 14, 15, 16, 17, 18, 19, 19, 20, 20,
@@ -101,12 +133,15 @@ if __name__ == "__main__":
     src_ids = [1, 1, 2, 2, 3, 4, 6, 6, 8]
     dst_ids = [2, 3, 4, 6, 6, 5, 7, 8, 9]
     sar_fn_graphdef = (src_ids, dst_ids)
+=======
+    graphdef = PREDEF_GRAPHS["FFT_SIMPLE"]
+>>>>>>> 6b7f831f6eea5524e390afcc032969b59a7155d5
     # random generate a directed acyclic graph
-    if sar_fn_graphdef is None:
+    if graphdef is None:
         a = nx.generators.directed.gn_graph(args.nodes)
         graph = dgl.from_networkx(a)
     else:
-        graph = dgl.graph((torch.Tensor(src_ids).int(), torch.Tensor(dst_ids).int()))
+        graph = dgl.graph((torch.Tensor(graphdef[0]).int(), torch.Tensor(graphdef[1]).int()))
 
     args.nodes = nodes = graph.number_of_nodes()
 
@@ -119,8 +154,7 @@ if __name__ == "__main__":
 
     # randomly occupy with nodes (not occupied=0 value):
     device_topology = (nodes, COL, ROW)
-    grid, grid_in = initial_fill(nodes, device_topology)
-    # grid, grid_in = initial_fill(nodes, device_topology, manual=[i for i in range(nodes)])
+    grid, grid_in, place = initial_fill(nodes, device_topology)
     fix_grid_bins(grid_in)
 
     # testing grid placement scoring:
@@ -139,7 +173,7 @@ if __name__ == "__main__":
 
         print('Running Random search optimization ...')
         for i in tqdm(range(args.epochs)):
-            grid, grid_in = initial_fill(nodes, grid.shape)
+            grid, grid_in, _ = initial_fill(nodes, grid.shape)
             fix_grid_bins(grid_in)
             after_rs = calc_score(grid_in, graph)
             if before_rs > after_rs:
@@ -158,9 +192,8 @@ if __name__ == "__main__":
 
         budget = args.epochs  # How many steps of training we will do before concluding.
         workers = 16
-        # param = ng.p.Array(shape=(nodes, 3)).set_integer_casting() #3 coord: x, y, pipe
-        param = ng.p.Array(init=grid_in).set_integer_casting() \
-            .set_bounds(lower=0, upper=max(args.grid_size, args.grid_depth))
+        # param = ng.p.Array(shape=(int(nodes), 1)).set_integer_casting().set_bounds(lower=0, upper=ROW*COL*nodes)
+        param = ng.p.Array(init=place).set_integer_casting().set_bounds(lower=0, upper=ROW * COL * nodes)
         # ES optim
         names = "CMA"
         optim = ng.optimizers.registry[names](parametrization=param, budget=budget, num_workers=workers)
@@ -172,12 +205,16 @@ if __name__ == "__main__":
         print('Running ES optimization ...')
         for _ in tqdm(range(budget)):
             x = optim.ask()
-            loss = calc_score(x.value, graph, args)
+            grid, grid_in, _ = initial_fill(nodes, device_topology, manual=x.value)
+            fix_grid_bins(grid_in)
+            loss = calc_score(grid_in, graph)
             optim.tell(x, loss)
         rec = optim.recommend()
-        after_es = calc_score(rec.value, graph, args)
+        grid, grid_in, _ = initial_fill(nodes, device_topology, manual=rec.value)
+        fix_grid_bins(grid_in)
+        after_es = calc_score(grid_in, graph)
         if final_es > after_es:
-            final_value = rec.value
+            final_value = grid_in
             final_es = after_es
         print('best score found:', final_es)
         if args.debug:
@@ -254,70 +291,11 @@ if __name__ == "__main__":
 
                 running_reward = avg_improve = 0
 
-    # DQN
-    if args.mode == 3:
-        from qlearn import DQNAgent
-
-        # RL RNN place each node
-        env = GridEnv(args, grid_in, graph)
-        dqn = DQNAgent(args, env)
-
-        # logging variables
-        running_reward = 0
-        time_step = 0
-        final_rl = -score_test  # invert score. RL maximize reward
-        writer = SummaryWriter(comment='train')
-
-        # training loop:
-        print('Starting DQN training...')
-        for i_episode in range(1, args.epochs + 1):
-            state, _ = env.reset()
-            for node in range(args.nodes):
-                time_step += 1
-                state = torch.FloatTensor(state).view(1, -1)
-                action = dqn.select_action(state, i_episode)
-                next_state, reward = env.step(action.cpu().numpy(), node)
-                next_state = torch.FloatTensor(next_state).view(1, -1)
-                reward = torch.IntTensor([int(reward)])
-
-                if node == (args.nodes - 1):
-                    done = True
-                    next_state = None
-                else:
-                    done = False
-
-                # update memory and states:
-                dqn.memory.push(state, action, next_state, reward)
-                state = next_state
-
-                # learning:
-                dqn.optimize_model()
-                running_reward += reward.item()
-
-            # final score
-            if final_rl < reward.item():
-                final_rl = reward.item()  # last reward is score with all nodes placed
-                # save if final score is better
-                torch.save(dqn.policy_net.state_dict(), 'model_epoch_' + str(int(final_rl)) + '.pth')
-
-            # logging
-            if i_episode % args.log_interval == 0:
-                running_reward = int((running_reward / args.log_interval))
-                writer.add_scalar('running_reward/episode', running_reward, i_episode)
-                print('Episode {} \t Avg reward: {}'.format(i_episode, running_reward))
-                writer.add_scalar('final_reward/episode', final_rl, i_episode)
-                print('Episode {} \t Final reward: {}'.format(i_episode, final_rl))
-                running_reward = 0
-
-        # print('Q-Learn')
-        # ag = Q_learn(args, graph)
-        # ag.play(5000)
-        # ag.test()
 
     # sinkhorn
-    if args.mode == 4:
+    if args.mode == 3:
         # initialize Environment, Network and Optimizer
-        env    = StreamingEngineEnv(sar_fn_graphdef,
+        env    = StreamingEngineEnv(graphdef,
                                     (args.grid_size, args.grid_size, args.grid_depth),
                                     device_feat_size=48, graph_feat_size=32)
         policy = PolicyNet(32, 64, 1, 48, 4, 128, 0.1, 4, 100)
@@ -369,3 +347,8 @@ if __name__ == "__main__":
                 plt.pause(1e-6)
                 #plt.show()
                 #env.render()
+
+    #create output
+    output_instr_json(grid_in, device_topology)
+
+
