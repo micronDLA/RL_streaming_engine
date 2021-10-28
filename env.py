@@ -24,8 +24,9 @@ class StreamingEngineEnv:
         coords = torch.meshgrid(*[torch.arange(i) for i in device_topology])
         coords = [coord.unsqueeze(-1) for coord in coords]
         coords = torch.cat(coords, -1)
+        coords = coords.view(-1, coords.shape[-1])  
+        # Shape: (no_of_tiles * no_of_spokes, 3)
         # coords represents all possible SE slices after next operation
-        coords = coords.view(-1, coords.shape[-1])  # Shape: (no_of_tiles * no_of_spokes, 3)
 
         assert device_feat_size % len(device_topology) == 0, '\
         device_feat_size must be a multiple of device topology dimension'
@@ -159,11 +160,13 @@ class StreamingEngineEnv:
 
                     abs_dist = (src_coord - dst_coord)[:2].abs().sum()  # Absolute dist betwn source and destination
                     if self.device_cross_connections: # linear representation
-                        _dist = int(math.ceil(abs_dist / 2.)) * 2 - 2
-                        src_done_time += _dist / 2 + _dist + 1
+                        # _dist = int(math.ceil(abs_dist / 2.)) * 2 - 2
+                        # src_done_time += _dist / 2 + _dist + 1
+                        src_done_time += int(abs_dist/2) + abs_dist % 2 - 1
                     else: # grid representation
                         # src_done_time += abs_dist + (abs_dist - 1) * 2
-                        src_done_time += abs_dist - 1  # At src_done_time, node is ready to be consumed 1 hop away
+                        # At src_done_time, node is ready to be consumed 1 hop away
+                        src_done_time += abs_dist - 1  
 
                     if src_done_time > dst_ready_time: # get largest from all predecessors
                         dst_ready_time = src_done_time  #TODO: Isn't variable dst_ready_time more like dst start time

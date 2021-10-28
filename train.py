@@ -25,10 +25,10 @@ import time
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=4, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- DQN 4-sinkhorn')
+    arg('--mode', type=int, default=3, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- DQN 4-sinkhorn')
 
     arg('--grid_size',   type=int, default=4, help='number of sqrt PE')
-    arg('--grid_depth',   type=int, default=3, help='PE pipeline depth')
+    arg('--spokes',   type=int, default=3, help='Number of spokes')
     arg('--epochs',   type=int, default=10000, help='number of iterations')
     arg('--nodes', type=int, default=20,  help='number of nodes')
     arg('--debug', dest='debug', action='store_true', default=False, help='debug mode')
@@ -58,9 +58,10 @@ def get_args():
     args = parser.parse_args()
     return args
 
+# Specify graph as (src_ids, dst_ids) edges, node ordering starts from 0 regardless of specification
 PREDEF_GRAPHS = {
     "DISTANCE": ([0, 1, 2, 2, 2, 3, 4, 4, 5, 5, 6, 7, 8, 8, 11, 12, 12, 13, 13, 14, 14, 14, 15, 16, 17, 18, 19, 19, 20, 20, 21, 22],
-                 [1, 2, 3, 4, 5, 4, 5, 6, 6, 7, 7, 8, 9, 10, 12, 13, 19, 15, 14, 16, 17, 18, 19, 17, 18, 19, 20, 21, 21, 22, 22, 23]), # (src_ids, dst_ids)
+                 [1, 2, 3, 4, 5, 4, 5, 6, 6, 7, 7, 8, 9, 10, 12, 13, 19, 15, 14, 16, 17, 18, 19, 17, 18, 19, 20, 21, 21, 22, 22, 23]), 
     "FFT_OLD":
              ([0,
                2, 3,
@@ -245,15 +246,26 @@ if __name__ == "__main__":
 
                 running_reward = avg_improve = 0
 
-
-    # sinkhorn
+    # inkhorn
     if args.mode == 3:
         # initialize Environment, Network and Optimizer
-        env    = StreamingEngineEnv(graphdef,
-                                    (args.grid_size, args.grid_size, args.grid_depth),
-                                    device_feat_size=48, graph_feat_size=32)
-        policy = PolicyNet(32, 64, 1, 48, 4, 128, 0.1, 4, 100)
-        optim  = Adam(policy.parameters(), lr=args.lr)
+        env = StreamingEngineEnv(compute_graph_def=graphdef,
+                                 device_topology=(16,#args.grid_size, 
+                                                  1,#args.grid_size, 
+                                                  args.spokes),
+                                 device_cross_connections=True,
+                                 device_feat_size=48, 
+                                 graph_feat_size=32)
+        policy = PolicyNet(cg_in_feats=32, 
+                           cg_hidden_dim=64, 
+                           cg_conv_k=1, 
+                           transformer_dim=48, 
+                           transformer_nhead=4, 
+                           transformer_ffdim=128, 
+                           transformer_dropout=0.1, 
+                           transformer_num_layers=4, 
+                           sinkhorn_iters=100)
+        optim = Adam(policy.parameters(), lr=args.lr)
 
         # to keep track of average reward
         reward_buf = deque(maxlen=100)
