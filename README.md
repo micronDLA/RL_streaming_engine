@@ -11,28 +11,24 @@ NOTE: If you feel like the training is stuck and is not improving; wait for quie
 
 ## Random search
 
-`python3 grid_placement.py --mode 0`
+`python3 train.py --mode 0`
 
 ## ES search
 
-`python3 grid_placement.py --mode 1`
+`python3 train.py --mode 1`
 
 ## RL PPO
 
-`python3 grid_placement.py --mode 3`
+`python3 train.py --mode 2`
 
-## RL Q-learn
+## RL Sinkhorn
 
-`python3 grid_placement.py --mode 4`
-
-## run all methods
-
-`python3 grid_placement.py --mode 2`
+`python3 train.py --mode 3`
 
 ## Debug
 See the graph and all prints
 
-`python3 grid_placement.py --mode 2 --debug`
+`python3 train.py --mode 2 --debug`
 
 ## Dependencies
 
