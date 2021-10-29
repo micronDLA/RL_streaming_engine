@@ -1,3 +1,4 @@
+from numpy.lib.shape_base import tile
 import torch
 import dgl
 from scipy.spatial import distance
@@ -109,6 +110,30 @@ def output_instr_json(grid_in, grid_shape, filename='output.json'):
                 data[str((nd[1], nd[2]))].append(-1) # -1 is a nop instr. title is doing nothing
     with open(filename, 'w') as outfile:
         json.dump(data, outfile)
+
+def output_json(instr_coords, no_of_tiles=16, spoke_count=3 ,out_file_name='mapping.json'):
+    """[summary]
+
+    Args:
+        instr_coords (np.array): Array w/ shape [Number of slices, 3]
+        out_file (str, optional): Output json name. Defaults to 'mapping.json'.
+    """    
+    data = {}
+    #TODO: Change when using variable spoke count for each tile
+    num_spokes = [spoke_count for _ in range(no_of_tiles)]
+    data['num_tiles'] = no_of_tiles
+    data['num_spokes'] = num_spokes
+    mappings = [{'tile_id': tile_idx, 'spoke_map': ['' for _ in range(spoke_count)]} for \
+                tile_idx in range (no_of_tiles)]
+    # Iterate over assignment
+    for instr_idx, tile_coord in enumerate(instr_coords):
+        tile_idx = int(tile_coord[0])
+        spoke_no = int(tile_coord[2])
+        mappings[tile_idx]['spoke_map'][spoke_no] = f'instruction ID#{instr_idx}'
+
+    data['mappings'] = mappings
+    with open(out_file_name, 'w') as outfile:
+        json.dump(data, outfile, indent=4)
 
 def initial_fill(num_nodes, grid_shape, manual = None):
     '''
