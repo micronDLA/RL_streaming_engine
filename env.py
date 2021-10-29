@@ -1,12 +1,14 @@
 import dgl
 import math
 import torch
+import pprint
 import networkx as nx
 import random
 from matplotlib import pyplot as plt
 import numpy as np
-from util import positional_encoding, calc_score, initial_fill, ROW, COL, fix_grid_bins
+from util import positional_encoding, calc_score, initial_fill, output_json, ROW, COL, fix_grid_bins
 
+pp =pprint.PrettyPrinter(indent=2)
 class StreamingEngineEnv:
 
     '''
@@ -52,6 +54,7 @@ class StreamingEngineEnv:
         self.device_cross_connections = device_cross_connections
         self.device_encoding = device_encoding
         self.compute_graph = None
+        self.no_of_valid_mappings = 0
 
         self._gen_compute_graph()
 
@@ -187,9 +190,14 @@ class StreamingEngineEnv:
         self.compute_graph.ndata['node_coord'] = node_coord
 
         if (ready_time >= 0).all():
+            # Print possible assignment when all nodes are mapped
             print('Possible assignment ->')
-            print(f'Node ready times: {ready_time}')
-            print(f'Assigned node coordinate: {node_coord}')
+            assignment_list = [f'Instr ID# {node_idx}: {int(t)} | {a}' for node_idx, (t, a) in \
+                               enumerate(zip(ready_time, node_coord.int().numpy()))]
+            print('Instr ID#  : Ready time | Tile slice')
+            pp.pprint(assignment_list)
+            output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_{self.no_of_valid_mappings}')
+            self.no_of_valid_mappings += 1
 
         return reward
 

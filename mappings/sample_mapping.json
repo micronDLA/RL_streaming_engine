@@ -1,0 +1,32 @@
+{
+    "num_tiles": 4, // 1 - 16
+    "num_spokes": [3, 3, 3, 3], // spoke count be different for each tile
+    "sf_start": ["sf_loop_head", "sf_catch_store_comp", "sf_loop_body", "sf_loop_init"], // you can ignore this line. it is related to the code in *.seal
+    "start_tid_lvl": 1, // ignore this. it is related to the number of nested loops.
+    "mappings": [
+        {
+        "tile_id": 0, // tile id# 0 - 15
+        "spoke_map": [
+            "instruction ID#", "instruction ID#", "instruction ID#"
+            ]
+         },
+        {
+        "tile_id": 1,
+        "spoke_map": [
+            "instruction ID#", "instruction ID#", ""
+            ]
+         },
+        {
+        "tile_id": 2,
+        "spoke_map": [
+            "instruction ID#", "", ""
+            ]
+         },
+        {
+        "tile_id": 3,
+        "spoke_map": [
+            "instruction ID#", "", ""
+            ]
+         }
+     ]
+}
