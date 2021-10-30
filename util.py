@@ -41,60 +41,6 @@ def positional_encoding(pos, feat_size=16, timescale=10000):
 
     return encoding
 
-def calc_score_0(grid, graph, args):
-    '''
-    calc score on grid assignment (grid_v6) returns single score
-    args.nodes, grid_depth, grid_size
-    grid: [node][coord c,y,x]
-    graph: dgl
-    '''
-    worst_dist_possible = args.nodes * np.sum((args.grid_depth, args.grid_size, args.grid_size))
-    time = 0
-    # Cycles Score
-    ready_time = np.zeros(graph.num_nodes())
-    # go through nodes in topological order
-    timing_error = False
-    for nodes in dgl.topological_nodes_generator(graph):
-        # break conditions - abort and give worst possible time:
-        break_1 = len(np.unique(grid, axis=0)) != len(grid) #make sure all nodes are placed in different spots
-        break_2 = grid.max(0)[0] > args.grid_depth or grid.max(0)[1] > args.grid_size or grid.max(0)[2] > args.grid_size
-        #make sure coord are valid
-        if break_1 or break_2:
-            time = worst_dist_possible  # worst score: all nodes traverse entire grid
-            break
-
-        maxdist = 0
-        src_a = np.array([])
-        for dst in nodes:
-            dst_coord = grid[dst]
-            # src_a = np.array([grid[src] for src in graph.predecessors(dst)])
-            dst_ready_time = 0
-            for src in graph.predecessors(dst):
-                # Time the src coord is ready + travel time
-                src_ready_time = ready_time[src].item()
-                if src_ready_time > dst_ready_time: #get slowest src
-                    src_a = np.array([grid[src]])
-                    dst_ready_time = src_ready_time
-
-            if len(src_a) > 0: #there is predecessor
-                # largest path to reach dst node
-                maxdist = distance.cdist(src_a, np.array([dst_coord]), 'cityblock') # manhattan distance
-                maxdist = np.max(maxdist) # get largest distance for all nodes in same rank
-
-            if dst_ready_time == 0:
-                ready_time[dst] = 4 + dst_coord[0]
-            elif dst_ready_time > 0:
-                ready_time[dst] = dst_ready_time + 4
-            else:
-                timing_error = True
-                time = worst_dist_possible  # worst score: all nodes traverse entire grid
-                break
-
-        # step in the graph: all nodes can ran in parallel if not for data dependence
-        time += maxdist
-
-    return time
-
 def output_instr_json(grid_in, grid_shape, filename='output.json'):
     data = {}
     a = np.prod(grid_shape[1:3])
@@ -151,9 +97,9 @@ def initial_fill(num_nodes, grid_shape, manual = None):
     else:
         place = random.sample(range(gg), num_nodes) # list of unique elements chosen from the population sequence
     for i, idx in enumerate(place):
-        c, y, x = np.unravel_index(idx, grid_shape) # index to [coord c, y, x]
-        grid[c, y, x] = i+1 #zero is unassigned
-        grid_in.append([c, y, x])
+        x, y, c = np.unravel_index(idx, grid_shape) # index to [coord c, y, x]
+        grid[x, y, c] = i+1 #zero is unassigned
+        grid_in.append([x, y, c])
     grid_in = np.array(grid_in)
     return grid, grid_in, place
 
@@ -243,8 +189,8 @@ def fix_grid_bins(grid_in):
             dic[t] = 1
 
 def get_coord(a): # get grid coord y, x
-    # a[z,y,x]
-    return a[1:3]
+    # a[x,y,z]
+    return a[0:2]
 
 def delete_multiple_element(list_object, indices):
     indices = sorted(indices, reverse=True)
@@ -279,7 +225,7 @@ def calc_score(grid, graph):
         for i, node in enumerate(placed_node):
             # node placed location
             dst_coord = get_coord(grid[node])
-            if node_level[tuple(dst_coord)] < grid[node][0]:
+            if node_level[tuple(dst_coord)] < grid[node][2]:
                 continue  # there is another node to be placed here before
 
             src_nodes = [src.item() for src in graph.predecessors(node)]

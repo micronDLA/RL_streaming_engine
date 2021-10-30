@@ -199,7 +199,7 @@ class StreamingEngineEnv:
             output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_{self.no_of_valid_mappings}')
             self.no_of_valid_mappings += 1
 
-        return reward
+        return reward, ready_time
 
 
 # environment for grid:

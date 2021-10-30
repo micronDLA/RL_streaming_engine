@@ -25,7 +25,7 @@ import time
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=3, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- DQN 4-sinkhorn')
+    arg('--mode', type=int, default=3, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
 
     arg('--grid_size',   type=int, default=4, help='number of sqrt PE')
     arg('--spokes',   type=int, default=3, help='Number of spokes')
@@ -89,6 +89,7 @@ PREDEF_GRAPHS = {
 if __name__ == "__main__":
     args = get_args()  # Holds all the input arguments
     print('Arguments:', args)
+    writer = SummaryWriter()
 
     graphdef = PREDEF_GRAPHS["FFT_SYNC2"]
     # random generate a directed acyclic graph
@@ -107,21 +108,20 @@ if __name__ == "__main__":
         nx.draw(nx_g, nx.nx_agraph.graphviz_layout(nx_g, prog='dot'), with_labels=True)
         plt.show()
 
-    # randomly occupy with nodes (not occupied=0 value):
-    device_topology = (nodes, COL, ROW)
-    grid, grid_in, place = initial_fill(nodes, device_topology)
-    fix_grid_bins(grid_in)
-
-    # testing grid placement scoring:
-    score_test = calc_score(grid_in, graph)
-
-    print('Initial score: ', score_test)
-    if args.debug:
-        print('Initial placement: ', grid_in)
-        print('grid placement: ', grid)
-
     # random search
     if args.mode == 0:
+        # randomly occupy with nodes (not occupied=0 value):
+        device_topology = (ROW, COL, nodes)
+        grid, grid_in, place = initial_fill(nodes, device_topology)
+        fix_grid_bins(grid_in)
+
+        # testing grid placement scoring:
+        score_test = calc_score(grid_in, graph)
+
+        if args.debug:
+            print('Initial placement: ', grid_in)
+            print('grid placement: ', grid)
+
         # random search
         before_rs = score_test
         best_grid = grid_in.copy()
@@ -143,6 +143,18 @@ if __name__ == "__main__":
 
     # ES search
     if args.mode == 1:
+        # randomly occupy with nodes (not occupied=0 value):
+        device_topology = (ROW, COL, nodes)
+        grid, grid_in, place = initial_fill(nodes, device_topology)
+        fix_grid_bins(grid_in)
+
+        # testing grid placement scoring:
+        score_test = calc_score(grid_in, graph)
+
+        if args.debug:
+            print('Initial placement: ', grid_in)
+            print('grid placement: ', grid)
+
         import nevergrad as ng
 
         budget = args.epochs  # How many steps of training we will do before concluding.
@@ -188,11 +200,7 @@ if __name__ == "__main__":
         time_step = 0
         avg_improve = 0
 
-        writer = SummaryWriter(comment='train')
-        # writer.add_hparams(vars(args), {'hparam': 0})
         start = time.time()
-
-
         # training loop:
         print('Starting PPO training...')
         for i_episode in range(1, args.epochs + 1):
@@ -246,7 +254,7 @@ if __name__ == "__main__":
 
                 running_reward = avg_improve = 0
 
-    # inkhorn
+    # sinkhorn
     if args.mode == 3:
         # initialize Environment, Network and Optimizer
         env = StreamingEngineEnv(compute_graph_def=graphdef,
@@ -281,13 +289,13 @@ if __name__ == "__main__":
             # only one trajectory step
             with torch.no_grad():
                 old_action, old_logp, old_entropy, old_scores = policy(*state)
-                old_reward = env.step(old_action)
+                old_reward, _ = env.step(old_action)
 
             # use 'trajectory' to train network
             for epoch in range(args.ppo_epoch):
 
                 action, logp, entropy, scores = policy(*state)
-                reward = env.step(action)
+                reward, ready_time = env.step(action)
 
                 ratio = torch.exp(logp) / (torch.exp(old_logp) + 1e-8)
                 surr1 = ratio * reward
@@ -305,16 +313,17 @@ if __name__ == "__main__":
 
                 reward_buf.append(reward.mean())
             if episode % 100 == 0:
-                print(f'Episode: {episode} | Epoch: {epoch} | Reward: {reward} | Loss: {loss.item()} | Mean Reward: {np.mean(reward_buf)}')
+                print(f'Episode: {episode} | Epoch: {epoch} | Ready time: {ready_time.max().item()} | Loss: {loss.item()} | Mean Reward: {np.mean(reward_buf)}')
                 # TODO: Is mean of reward buffer the total mean up until now?
+                writer.add_scalar('loss/episode', loss.item(), episode)
+                writer.add_scalar('total time/episode', ready_time.max().item(), episode)
+                writer.flush()
 
-            if episode % 100 == 0:
+            if episode % 100 == 0 and args.debug:
                 plt.imshow(old_scores[0].exp().detach(), vmin=0, vmax=1)
                 plt.pause(1e-6)
                 #plt.show()
                 #env.render()
 
-    #create output
-    output_instr_json(grid_in, device_topology)
 
 
