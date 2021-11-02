@@ -19,7 +19,8 @@ class StreamingEngineEnv:
 
     def __init__(self, compute_graph_def,
                  device_topology=(4, 4, 3), device_cross_connections=False,
-                 device_feat_size=48, graph_feat_size=32):
+                 device_feat_size=48, graph_feat_size=32,
+                 init_place=None, emb_mode='topological'):
 
         # Represent the streaming engine as a vector of positional encodings
         # Generate meshgrid so we can consider all possible assignments for (tile_x, tile_y, spoke)
@@ -48,14 +49,14 @@ class StreamingEngineEnv:
 
         self.compute_graph_def = compute_graph_def
         self.graph_feat_size = graph_feat_size
-
+        self.initial_place = init_place
         self.coords = coords
         self.device_topology = device_topology
         self.device_cross_connections = device_cross_connections
         self.device_encoding = device_encoding
         self.compute_graph = None
         self.no_of_valid_mappings = 0
-
+        self.emb_mode = emb_mode
         self._gen_compute_graph()
 
     def _gen_compute_graph(self):
@@ -76,14 +77,16 @@ class StreamingEngineEnv:
             # to get consistent states, but also have a random vector per node
             generator.manual_seed(0)
 
+        if self.emb_mode == 'topological':
         # use topological rank and reverse topological rank as feat
-        node_coord = torch.zeros(graph.num_nodes(), 2)
-
-        asc = dgl.topological_nodes_generator(graph)
-        dsc = dgl.topological_nodes_generator(graph, True)
-        for i, (nodes_a, nodes_d) in enumerate(zip(asc, dsc)):
-            node_coord[nodes_a.long(), 0] = i
-            node_coord[nodes_a.long(), 1] = -i
+            node_coord = torch.zeros(graph.num_nodes(), 2)
+            asc = dgl.topological_nodes_generator(graph)
+            dsc = dgl.topological_nodes_generator(graph, True)
+            for i, (nodes_a, nodes_d) in enumerate(zip(asc, dsc)):
+                node_coord[nodes_a.long(), 0] = i
+                node_coord[nodes_a.long(), 1] = -i
+        else:
+            node_coord = self.initial_place[:, 0:2]
 
         feat_size = self.graph_feat_size // 2
         encoding = positional_encoding(node_coord, feat_size // 2, 1000)  # Shape: (no_of_graph_nodes, 16)
@@ -134,7 +137,7 @@ class StreamingEngineEnv:
         '''
         reward = torch.zeros(self.compute_graph.num_nodes())  # Shape: (no_of_graph_nodes,)
         ready_time = torch.zeros(self.compute_graph.num_nodes())  # Shape: (no_of_graph_nodes,)
-
+        isvalid = False
         num_nodes = self.compute_graph.num_nodes()
         max_dist = sum(self.device_topology)
 
@@ -198,8 +201,9 @@ class StreamingEngineEnv:
             pp.pprint(assignment_list)
             output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_{self.no_of_valid_mappings}')
             self.no_of_valid_mappings += 1
+            isvalid = True
 
-        return reward, ready_time
+        return reward, ready_time, isvalid
 
 
 # environment for grid:

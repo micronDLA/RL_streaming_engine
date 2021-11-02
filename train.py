@@ -13,9 +13,7 @@ from env import StreamingEngineEnv
 from tqdm import tqdm
 import random
 from matplotlib import pyplot as plt
-from util import calc_score, initial_fill, ROW, COL, fix_grid_bins, output_instr_json
-
-from env import GridEnv
+from util import calc_score, initial_fill, ROW, COL, fix_grid_bins
 from torch.utils.tensorboard import SummaryWriter
 import time
 
@@ -25,7 +23,7 @@ import time
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=3, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
+    arg('--mode', type=int, default=1, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
 
     arg('--grid_size',   type=int, default=4, help='number of sqrt PE')
     arg('--spokes',   type=int, default=3, help='Number of spokes')
@@ -49,11 +47,6 @@ def get_args():
     arg('--loss_value_c', type=float, default=0.5, help='coefficient for value term in loss')
     arg('--model', type=str, default='', help='load saved model')
     arg('--log_interval', type=int, default=100, help='interval for log')
-
-    #Q-learn
-    arg('--decay_gamma', type=float, default=0.9, help='q-learn decay gamma')
-    arg('--q_lr', type=float, default=0.2, help='q-learn learn rate')
-    arg('--exp_rate', type=float, default=0.3, help='q-learn exploration rate')
 
     args = parser.parse_args()
     return args
@@ -111,27 +104,29 @@ if __name__ == "__main__":
     # random search
     if args.mode == 0:
         # randomly occupy with nodes (not occupied=0 value):
-        device_topology = (ROW, COL, nodes)
+        device_topology = (16, 1, args.spokes)
+        # device_topology = (args.grid_size, args.grid_size, args.spokes)
         grid, grid_in, place = initial_fill(nodes, device_topology)
-        fix_grid_bins(grid_in)
+
+        env = StreamingEngineEnv(compute_graph_def=graphdef,
+                                 device_topology=device_topology,
+                                 device_cross_connections=True,
+                                 device_feat_size=48,
+                                 graph_feat_size=32)
 
         # testing grid placement scoring:
-        score_test = calc_score(grid_in, graph)
-
-        if args.debug:
-            print('Initial placement: ', grid_in)
-            print('grid placement: ', grid)
+        _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
 
         # random search
-        before_rs = score_test
+        before_rs = ready_time.max().item() if valid else float('inf')
         best_grid = grid_in.copy()
 
         print('Running Random search optimization ...')
-        for i in tqdm(range(args.epochs)):
+        for i in tqdm(range(args.num_episode)):
             grid, grid_in, _ = initial_fill(nodes, grid.shape)
-            fix_grid_bins(grid_in)
-            after_rs = calc_score(grid_in, graph)
-            if before_rs > after_rs:
+            _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
+            after_rs = ready_time.max().item()
+            if before_rs > after_rs and valid:
                 before_rs = after_rs
                 best_grid = grid_in.copy()
                 if args.debug:
@@ -144,45 +139,48 @@ if __name__ == "__main__":
     # ES search
     if args.mode == 1:
         # randomly occupy with nodes (not occupied=0 value):
-        device_topology = (ROW, COL, nodes)
+        device_topology = (16, 1, args.spokes)
+        # device_topology = (args.grid_size, args.grid_size, args.spokes)
         grid, grid_in, place = initial_fill(nodes, device_topology)
-        fix_grid_bins(grid_in)
+
+        env = StreamingEngineEnv(compute_graph_def=graphdef,
+                                 device_topology=device_topology,
+                                 device_cross_connections=True,
+                                 device_feat_size=48,
+                                 graph_feat_size=32)
 
         # testing grid placement scoring:
-        score_test = calc_score(grid_in, graph)
-
-        if args.debug:
-            print('Initial placement: ', grid_in)
-            print('grid placement: ', grid)
+        _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
+        final_es = ready_time.max().item() if valid else float('inf')
+        final_value = grid_in if valid else None
 
         import nevergrad as ng
 
-        budget = args.epochs  # How many steps of training we will do before concluding.
+        budget = args.num_episode  # How many steps of training we will do before concluding.
         workers = 16
         # param = ng.p.Array(shape=(int(nodes), 1)).set_integer_casting().set_bounds(lower=0, upper=ROW*COL*nodes)
-        param = ng.p.Array(init=place).set_integer_casting().set_bounds(lower=0, upper=ROW * COL * nodes)
+        param = ng.p.Array(init=place).set_integer_casting().set_bounds(lower=0, upper= np.prod(device_topology))
         # ES optim
         names = "CMA"
         optim = ng.optimizers.registry[names](parametrization=param, budget=budget, num_workers=workers)
         # optim = ng.optimizers.RandomSearch(parametrization=param, budget=budget, num_workers=workers)
         # optim = ng.optimizers.NGOpt(parametrization=param, budget=budget, num_workers=workers)
 
-        final_es = score_test
-        final_value = grid_in
         print('Running ES optimization ...')
         for _ in tqdm(range(budget)):
             x = optim.ask()
             grid, grid_in, _ = initial_fill(nodes, device_topology, manual=x.value)
-            fix_grid_bins(grid_in)
-            loss = calc_score(grid_in, graph)
+            _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
+            loss = ready_time.max().item() if valid else float('inf')
             optim.tell(x, loss)
+            if final_es > loss:
+                final_value = grid_in
+                final_es = loss
+
         rec = optim.recommend()
         grid, grid_in, _ = initial_fill(nodes, device_topology, manual=rec.value)
-        fix_grid_bins(grid_in)
-        after_es = calc_score(grid_in, graph)
-        if final_es > after_es:
-            final_value = grid_in
-            final_es = after_es
+        _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
+        
         print('best score found:', final_es)
         if args.debug:
             print('optim placement:\n', final_value)
@@ -191,8 +189,14 @@ if __name__ == "__main__":
     if args.mode == 2:
         from ppo_discrete import PPO
 
+        device_topology = (16, 1, args.spokes)
         # RL RNN place each node
-        env = GridEnv(args, grid_in, graph)
+        env = StreamingEngineEnv(compute_graph_def=graphdef,
+                                 device_topology=device_topology,
+                                 device_cross_connections=True,
+                                 device_feat_size=48,
+                                 graph_feat_size=32)
+        # env = GridEnv(args, grid_in, graph)
         ppo = PPO(args, env)
 
         # logging variables
@@ -249,21 +253,23 @@ if __name__ == "__main__":
                 print('Execution time {} s'.format(end - start))
                 # writer.add_scalar('avg improvement/episode', avg_improve, i_episode)
                 # print('Episode {} \t Avg improvement: {}'.format(i_episode, avg_improve))
-
                 torch.save(ppo.policy.state_dict(), 'model_epoch_' + str(avg_improve) + '.pth')
-
                 running_reward = avg_improve = 0
 
     # sinkhorn
     if args.mode == 3:
+        device_topology = (16, 1, args.spokes)
+        # device_topology = (args.grid_size, args.grid_size, args.spokes)
+        grid, grid_in, place = initial_fill(nodes, device_topology)
+
         # initialize Environment, Network and Optimizer
         env = StreamingEngineEnv(compute_graph_def=graphdef,
-                                 device_topology=(16,#args.grid_size, 
-                                                  1,#args.grid_size, 
-                                                  args.spokes),
+                                 device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=48, 
-                                 graph_feat_size=32)
+                                 graph_feat_size=32,
+                                 init_place=torch.tensor(grid_in),
+                                 emb_mode='init')
         policy = PolicyNet(cg_in_feats=32, 
                            cg_hidden_dim=64, 
                            cg_conv_k=1, 
@@ -289,13 +295,13 @@ if __name__ == "__main__":
             # only one trajectory step
             with torch.no_grad():
                 old_action, old_logp, old_entropy, old_scores = policy(*state)
-                old_reward, _ = env.step(old_action)
+                old_reward, _, _ = env.step(old_action)
 
             # use 'trajectory' to train network
             for epoch in range(args.ppo_epoch):
 
                 action, logp, entropy, scores = policy(*state)
-                reward, ready_time = env.step(action)
+                reward, ready_time, _ = env.step(action)
 
                 ratio = torch.exp(logp) / (torch.exp(old_logp) + 1e-8)
                 surr1 = ratio * reward

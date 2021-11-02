@@ -89,7 +89,7 @@ def initial_fill(num_nodes, grid_shape, manual = None):
       grid_in: list of node and its placed coord
       manual: list of index coord for each node
     '''
-    grid = np.zeros(grid_shape)
+    grid = -np.ones(grid_shape)# -1 is unassigned
     grid_in = []
     gg = np.prod(grid_shape)
     if isinstance(manual, list):
@@ -98,7 +98,7 @@ def initial_fill(num_nodes, grid_shape, manual = None):
         place = random.sample(range(gg), num_nodes) # list of unique elements chosen from the population sequence
     for i, idx in enumerate(place):
         x, y, c = np.unravel_index(idx, grid_shape) # index to [coord c, y, x]
-        grid[x, y, c] = i+1 #zero is unassigned
+        grid[x, y, c] = i
         grid_in.append([x, y, c])
     grid_in = np.array(grid_in)
     return grid, grid_in, place
