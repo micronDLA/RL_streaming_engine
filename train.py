@@ -23,7 +23,7 @@ import time
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=1, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
+    arg('--mode', type=int, default=2, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
 
     arg('--grid_size',   type=int, default=4, help='number of sqrt PE')
     arg('--spokes',   type=int, default=3, help='Number of spokes')
@@ -185,7 +185,7 @@ if __name__ == "__main__":
         if args.debug:
             print('optim placement:\n', final_value)
 
-    # PPO
+    # PPO Feedforward FF
     if args.mode == 2:
         from ppo_discrete import PPO
 
@@ -196,65 +196,58 @@ if __name__ == "__main__":
                                  device_cross_connections=True,
                                  device_feat_size=48,
                                  graph_feat_size=32)
-        # env = GridEnv(args, grid_in, graph)
-        ppo = PPO(args, env)
+        ppo = PPO(args, state_dim=args.nodes*2, action_dim=48)
 
         # logging variables
-        running_reward = 0
+        reward = best_reward = 0
+        reward_buf = deque(maxlen=100)
+        reward_buf.append(0)
         time_step = 0
-        avg_improve = 0
-
         start = time.time()
         # training loop:
         print('Starting PPO training...')
         for i_episode in range(1, args.epochs + 1):
-            state, initial_rl = env.reset()
-            gr_edges = torch.stack(env.graph.edges()).unsqueeze(0).float()
-            best_reward = initial_rl
-            for node in range(args.nodes):
-                time_step += 1
+            env.reset()
+            gr_edges = torch.stack(env.compute_graph.edges()).unsqueeze(0).float()
+            state = -torch.ones(args.nodes)*2 #ready time: -2 not placed
+            action = -torch.ones(args.nodes, 3)
+            time_step += 1 #number of epoch to train model
+            for node in range(0, args.nodes):
                 node_1hot = torch.zeros(args.nodes)
                 node_1hot[node] = 1.0
                 rl_state = torch.cat((torch.FloatTensor(state).view(-1), node_1hot))  # grid, node to place
-                action = ppo.select_action(rl_state, gr_edges)
-                state, reward = env.step(action, node)
-                # print('node: ', node); print('action: ', action); print('reward: ', reward); print('state: ', state)
-                # input()
+                assigment = ppo.select_action(rl_state, gr_edges) # node assigment index
+                action = ppo.get_coord(assigment, action, node, device_topology) # put node assigment to vector of node assigments
+                reward, state, _ = env._calculate_reward(action)
                 # Saving reward and is_terminals:
-                ppo.buffer.rewards.append(reward)
+                ppo.buffer.rewards.append(reward.mean())
                 if node == (args.nodes - 1):
                     done = True
                 else:
                     done = False
                 ppo.buffer.is_terminals.append(done)
+                best_reward = max(best_reward, state.max().item())
+                reward_buf.append(reward.mean())
+            # learning:
+            if time_step % args.update_timestep == 0:
+                ppo.update()
+                time_step = 0
 
-                # learning:
-                if time_step % args.update_timestep == 0:
-                    ppo.update()
-                    time_step = 0
-                running_reward += reward
-                best_reward = max(best_reward, reward)
-
-            # print(final_rl, best_reward, (abs(final_rl) - abs(best_reward)))
-            avg_improve += (abs(initial_rl) - abs(best_reward))
-
-            if initial_rl > best_reward:
-                print('got worse: ', initial_rl, best_reward)
 
             # logging
             if i_episode % args.log_interval == 0:
-                running_reward = int((running_reward / args.log_interval))
-                avg_improve = int(avg_improve / args.log_interval)
-                writer.add_scalar('running_reward/episode', running_reward, i_episode)
-                print('Episode {} \t Avg reward: {}'.format(i_episode, running_reward))
-                writer.add_scalar('final_reward/episode', best_reward, i_episode)
-                print('Episode {} \t Final reward: {}'.format(i_episode, best_reward))
+                print(
+                    f'Episode: {i_episode} | Ready time: {best_reward} | Mean Reward: {np.mean(reward_buf)}')
+                # TODO: Is mean of reward buffer the total mean up until now?
+                writer.add_scalar('mean reward/episode', np.mean(reward_buf), i_episode)
+                writer.add_scalar('total time/episode', best_reward, i_episode)
+                writer.flush()
                 end = time.time()
                 print('Execution time {} s'.format(end - start))
                 # writer.add_scalar('avg improvement/episode', avg_improve, i_episode)
                 # print('Episode {} \t Avg improvement: {}'.format(i_episode, avg_improve))
-                torch.save(ppo.policy.state_dict(), 'model_epoch_' + str(avg_improve) + '.pth')
-                running_reward = avg_improve = 0
+                torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
+                running_reward = 0
 
     # sinkhorn
     if args.mode == 3:
@@ -269,7 +262,7 @@ if __name__ == "__main__":
                                  device_feat_size=48, 
                                  graph_feat_size=32,
                                  init_place=torch.tensor(grid_in),
-                                 emb_mode='init')
+                                 emb_mode='')
         policy = PolicyNet(cg_in_feats=32, 
                            cg_hidden_dim=64, 
                            cg_conv_k=1, 
@@ -280,6 +273,9 @@ if __name__ == "__main__":
                            transformer_num_layers=4, 
                            sinkhorn_iters=100)
         optim = Adam(policy.parameters(), lr=args.lr)
+        if args.model != '':
+            policy.load_state_dict(torch.load(args.pre_train)['model_state_dict'])
+            optim.load_state_dict(torch.load(args.pre_train)['optimizer_state_dict'])
 
         # to keep track of average reward
         reward_buf = deque(maxlen=100)
@@ -318,18 +314,23 @@ if __name__ == "__main__":
                 optim.step()
 
                 reward_buf.append(reward.mean())
-            if episode % 100 == 0:
+            if episode % args.log_interval == 0:
                 print(f'Episode: {episode} | Epoch: {epoch} | Ready time: {ready_time.max().item()} | Loss: {loss.item()} | Mean Reward: {np.mean(reward_buf)}')
                 # TODO: Is mean of reward buffer the total mean up until now?
-                writer.add_scalar('loss/episode', loss.item(), episode)
+                writer.add_scalar('mean reward/episode', np.mean(reward_buf), episode)
                 writer.add_scalar('total time/episode', ready_time.max().item(), episode)
                 writer.flush()
 
-            if episode % 100 == 0 and args.debug:
+            if episode % args.log_interval == 0 and args.debug:
                 plt.imshow(old_scores[0].exp().detach(), vmin=0, vmax=1)
                 plt.pause(1e-6)
                 #plt.show()
                 #env.render()
 
-
+            if episode % 1000 == 0:
+                torch.save({
+                    'model_state_dict': policy.state_dict(),
+                    'optimizer_state_dict': optim.state_dict(),
+                    'mean_reward': np.mean(reward_buf)
+                }, 'models/model'+ str(episode) +'.pth')
 
