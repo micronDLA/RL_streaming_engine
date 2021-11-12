@@ -16,6 +16,7 @@ from matplotlib import pyplot as plt
 from util import calc_score, initial_fill, ROW, COL, fix_grid_bins
 from torch.utils.tensorboard import SummaryWriter
 import time
+from ppo_discrete import PPO
 
 #torch.autograd.set_detect_anomaly(True)
 # random.seed(10)
@@ -187,10 +188,8 @@ if __name__ == "__main__":
 
     # PPO Feedforward FF
     if args.mode == 2:
-        from ppo_discrete import PPO
-
         device_topology = (16, 1, args.spokes)
-        # RL RNN place each node
+        # RL place each node
         env = StreamingEngineEnv(compute_graph_def=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,

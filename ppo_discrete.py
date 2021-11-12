@@ -94,17 +94,19 @@ class ACRNN(nn.Module): # rnn ppo
         return y
 
 class ActorCritic(nn.Module):
-    def __init__(self, device, state_dim, emb_size, action_dim, graph_size):
+    def __init__(self, device, state_dim, emb_size, action_dim, graph_size, mode):
         self.device = device
         super(ActorCritic, self).__init__()
         self.graph_model = GraphEmb_Conv(graph_size)
 
         # action mean range -1 to 1
-        self.actor = ACFF(state_dim+graph_size, emb_size, action_dim, mode='soft')
-        # self.actor = ACRNN(state_dim+graph_size, emb_size, action_dim, mode='soft')
-        # critic
-        self.critic = ACFF(state_dim+graph_size, emb_size, 1, mode='')
-        # self.critic = ACRNN(state_dim+graph_size, emb_size, 1, mode='')
+        if mode == 'rnn':
+            self.actor = ACRNN(state_dim+graph_size, emb_size, action_dim, mode='soft')
+            self.critic = ACRNN(state_dim + graph_size, emb_size, 1, mode='')
+        else:
+            self.actor = ACFF(state_dim+graph_size, emb_size, action_dim, mode='soft')
+            self.critic = ACFF(state_dim+graph_size, emb_size, 1, mode='')
+        self.mode = mode
 
     def reset_lstm(self):
         self.actor.reset_lstm()
@@ -134,7 +136,7 @@ class ActorCritic(nn.Module):
 
 
 class PPO:
-    def __init__(self, args, state_dim, action_dim):
+    def __init__(self, args, state_dim, action_dim, mode=''):
         #args.emb_size, betas, lr, gamma, K_epoch, eps_clip, loss_value_c, loss_entropy_c
         self.args = args
         self.device = device
@@ -148,19 +150,25 @@ class PPO:
                                   self.state_dim,
                                   self.args.emb_size,
                                   self.action_dim,
-                                  self.args.graph_size).to(self.device)
+                                  self.args.graph_size, mode).to(self.device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.args.lr, betas=self.args.betas)
         
         self.policy_old = ActorCritic(self.device,
                                       self.state_dim,
                                       self.args.emb_size,
                                       self.action_dim,
-                                      self.args.graph_size).to(self.device)
+                                      self.args.graph_size, mode).to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         if args.model != '':
             self.load(args.model)
 
         self.MseLoss = nn.MSELoss()
+        self.mode = mode
+
+    def reset_lstm(self):
+        if self.mode == 'rnn':
+            self.policy.reset_lstm()
+            self.policy_old.reset_lstm()
 
     def get_coord(self, assigment, action, node, grid_shape):
         # put node assigment to vector of node assigments
