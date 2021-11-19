@@ -68,11 +68,17 @@ class StreamingEngineEnv:
             a = nx.generators.directed.gn_graph(nodes)
             graph = dgl.from_networkx(a)
         else:
-            src_ids, dst_ids = self.compute_graph_def
+            addnl_isolated_nodes = 0
+            if len(self.compute_graph_def) == 3:
+                src_ids, dst_ids, addnl_isolated_nodes = self.compute_graph_def
+            else:
+                src_ids, dst_ids = self.compute_graph_def
 
             src_ids = torch.Tensor(src_ids).int()
             dst_ids = torch.Tensor(dst_ids).int()
             graph = dgl.graph((src_ids, dst_ids))
+
+            graph.add_nodes(addnl_isolated_nodes)
 
             # to get consistent states, but also have a random vector per node
             generator.manual_seed(0)

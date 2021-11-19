@@ -52,10 +52,11 @@ def get_args():
     args = parser.parse_args()
     return args
 
-# Specify graph as (src_ids, dst_ids) edges, node ordering starts from 0 regardless of specification
+# Specify graph as ([src_ids], [dst_ids], extra isolated nodes) edges, node ordering
+# starts from 0 regardless of specification
 PREDEF_GRAPHS = {
     "DISTANCE": ([0, 1, 2, 2, 2, 3, 4, 4, 5, 5, 6, 7, 8, 8, 11, 12, 12, 13, 13, 14, 14, 14, 15, 16, 17, 18, 19, 19, 20, 20, 21, 22],
-                 [1, 2, 3, 4, 5, 4, 5, 6, 6, 7, 7, 8, 9, 10, 12, 13, 19, 15, 14, 16, 17, 18, 19, 17, 18, 19, 20, 21, 21, 22, 22, 23]), 
+                 [1, 2, 3, 4, 5, 4, 5, 6, 6, 7, 7, 8, 9, 10, 12, 13, 19, 15, 14, 16, 17, 18, 19, 17, 18, 19, 20, 21, 21, 22, 22, 23]),
     "FFT_OLD":
              ([0,
                2, 3,
@@ -76,7 +77,9 @@ PREDEF_GRAPHS = {
                56,
               ]),
     "FFT_SIMPLE": ([0, 0, 1, 1, 2, 3, 4, 4, 5], [1, 2, 3, 4, 4, 6, 5, 8, 7]),
-    "FFT_SYNC2": ([1, 1, 2, 2, 3, 4, 6, 6, 8], [2, 3, 4, 6, 6, 5, 7, 8, 9])
+    "FFT_SYNC2": ([1, 1, 2, 2, 3, 4, 6, 6, 8], [2, 3, 4, 6, 6, 5, 7, 8, 9]),
+    # Complete FFT graph
+    "FFT": ([1, 1, 2, 2, 3, 4, 6, 6, 8, 10, 11, 11], [2, 3, 4, 6, 6, 5, 7, 8, 9, 11, 12, 13], 3)
 }
 
 
@@ -85,13 +88,16 @@ if __name__ == "__main__":
     print('Arguments:', args)
     writer = SummaryWriter()
 
-    graphdef = PREDEF_GRAPHS["FFT_SYNC2"]
+    graphdef = PREDEF_GRAPHS["FFT"]
     # random generate a directed acyclic graph
     if graphdef is None:
         a = nx.generators.directed.gn_graph(args.nodes)
         graph = dgl.from_networkx(a)
     else:
         graph = dgl.graph((torch.Tensor(graphdef[0]).int(), torch.Tensor(graphdef[1]).int()))
+        if len(graphdef) == 3:
+            graph.add_nodes(graphdef[2])
+
 
     args.nodes = nodes = graph.number_of_nodes()
 
@@ -181,7 +187,7 @@ if __name__ == "__main__":
         rec = optim.recommend()
         grid, grid_in, _ = initial_fill(nodes, device_topology, manual=rec.value)
         _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
-        
+
         print('best score found:', final_es)
         if args.debug:
             print('optim placement:\n', final_value)
@@ -258,18 +264,18 @@ if __name__ == "__main__":
         env = StreamingEngineEnv(compute_graph_def=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
-                                 device_feat_size=48, 
+                                 device_feat_size=48,
                                  graph_feat_size=32,
                                  init_place=torch.tensor(grid_in),
                                  emb_mode='')
-        policy = PolicyNet(cg_in_feats=32, 
-                           cg_hidden_dim=64, 
-                           cg_conv_k=1, 
-                           transformer_dim=48, 
-                           transformer_nhead=4, 
-                           transformer_ffdim=128, 
-                           transformer_dropout=0.1, 
-                           transformer_num_layers=4, 
+        policy = PolicyNet(cg_in_feats=32,
+                           cg_hidden_dim=64,
+                           cg_conv_k=1,
+                           transformer_dim=48,
+                           transformer_nhead=4,
+                           transformer_ffdim=128,
+                           transformer_dropout=0.1,
+                           transformer_num_layers=4,
                            sinkhorn_iters=100)
         optim = Adam(policy.parameters(), lr=args.lr)
         if args.model != '':
