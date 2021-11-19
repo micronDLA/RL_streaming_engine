@@ -183,7 +183,7 @@ class GraphNet(nn.Module):
         x = F.relu(self.l2(x))
         return self.lo(x)
 
-    def train_step(self, model, train_loader, criterion, optimizer, train=True):
+    def train_step(self, model, train_loader, criterion, optimizer, train=True, device='cpu'):
         self.to(device)
         if train:
             model.train()

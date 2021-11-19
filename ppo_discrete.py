@@ -48,34 +48,69 @@ class GraphEmb_Conv(nn.Module):
         x = self.dropout(self.norm(x))
         return x
 
+class ACFF(nn.Module): # feedforward ppo
+    def __init__(self, in_dim, emb_size, out_dim, mode='soft'):
+        super(ACFF, self).__init__()
+        self.fc = nn.Linear(in_dim, emb_size)
+        self.tanh = nn.Tanh()
+        self.fc1 = nn.Linear(emb_size, emb_size)
+        self.fc2 = nn.Linear(emb_size, out_dim)
+        self.soft = nn.Softmax(dim=-1)  # if discrete
+        self.emb_size = emb_size
+        self.mode = mode
+
+    def forward(self, x):
+        y = self.tanh(self.fc(x))
+        y = self.tanh(self.fc1(y))
+        y = self.fc2(y)
+        if self.mode == 'soft':
+            y = self.soft(y)
+        return y
+
+class ACRNN(nn.Module): # rnn ppo
+    def __init__(self, in_dim, emb_size, out_dim, mode='soft'):
+        super(ACRNN, self).__init__()
+
+        # action mean range -1 to 1
+        self.fc = nn.Linear(in_dim, emb_size)
+        self.tanh = nn.Tanh()
+        self.fc1 = nn.LSTM(emb_size, emb_size)
+        self.fc2 = nn.Linear(emb_size, out_dim)
+        self.soft = nn.Softmax(dim=-1)  # if discrete
+        self.emb_size = emb_size
+        self.mode = mode
+        self.nlstm = 1
+        self.hidden = (torch.zeros(self.nlstm, 1, emb_size), torch.zeros(self.nlstm, 1, emb_size))
+
+    def reset_lstm(self):
+        self.hidden = (torch.zeros(self.nlstm, 1, self.emb_size), torch.zeros(self.nlstm, 1, self.emb_size))
+
+    def forward(self, x):
+        y = self.tanh(self.fc(x))
+        y, self.hidden = self.fc1(y, self.hidden)
+        y = self.fc2(y)
+        if self.mode == 'soft':
+            y = self.soft(y)
+        return y
+
 class ActorCritic(nn.Module):
-    def __init__(self, device, state_dim, emb_size, action_dim, graph_size):
+    def __init__(self, device, state_dim, emb_size, action_dim, graph_size, mode):
         self.device = device
         super(ActorCritic, self).__init__()
         self.graph_model = GraphEmb_Conv(graph_size)
 
         # action mean range -1 to 1
-        self.actor = nn.Sequential(
-                nn.Linear(state_dim+graph_size, emb_size),
-                nn.Tanh(),
-                # nn.Linear(emb_size, emb_size),
-                # nn.Tanh(),
-                nn.Linear(emb_size, emb_size),
-                nn.Tanh(),
-                nn.Linear(emb_size, action_dim),
-                # nn.Tanh() # if continuous
-                nn.Softmax(dim=-1) # if discrete
-                )
-        # critic
-        self.critic = nn.Sequential(
-                nn.Linear(state_dim+graph_size, emb_size),
-                nn.Tanh(),
-                # nn.Linear(emb_size, emb_size),
-                # nn.Tanh(),
-                nn.Linear(emb_size, emb_size),
-                nn.Tanh(),
-                nn.Linear(emb_size, 1)
-                )
+        if mode == 'rnn':
+            self.actor = ACRNN(state_dim+graph_size, emb_size, action_dim, mode='soft')
+            self.critic = ACRNN(state_dim + graph_size, emb_size, 1, mode='')
+        else:
+            self.actor = ACFF(state_dim+graph_size, emb_size, action_dim, mode='soft')
+            self.critic = ACFF(state_dim+graph_size, emb_size, 1, mode='')
+        self.mode = mode
+
+    def reset_lstm(self):
+        self.actor.reset_lstm()
+        self.critic.reset_lstm()
 
     def forward(self):
         raise NotImplementedError
@@ -101,13 +136,13 @@ class ActorCritic(nn.Module):
 
 
 class PPO:
-    def __init__(self, args, env):
+    def __init__(self, args, state_dim, action_dim, mode=''):
         #args.emb_size, betas, lr, gamma, K_epoch, eps_clip, loss_value_c, loss_entropy_c
         self.args = args
         self.device = device
 
-        self.state_dim = env.state_dim
-        self.action_dim = env.action_dim
+        self.state_dim = state_dim #input ready time (nodes, 1)
+        self.action_dim = action_dim #output (nodes, 48)
 
         self.buffer = RolloutBuffer()
         
@@ -115,20 +150,31 @@ class PPO:
                                   self.state_dim,
                                   self.args.emb_size,
                                   self.action_dim,
-                                  self.args.graph_size).to(self.device)
+                                  self.args.graph_size, mode).to(self.device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.args.lr, betas=self.args.betas)
         
         self.policy_old = ActorCritic(self.device,
                                       self.state_dim,
                                       self.args.emb_size,
                                       self.action_dim,
-                                      self.args.graph_size).to(self.device)
+                                      self.args.graph_size, mode).to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         if args.model != '':
             self.load(args.model)
 
         self.MseLoss = nn.MSELoss()
-    
+        self.mode = mode
+
+    def reset_lstm(self):
+        if self.mode == 'rnn':
+            self.policy.reset_lstm()
+            self.policy_old.reset_lstm()
+
+    def get_coord(self, assigment, action, node, grid_shape):
+        # put node assigment to vector of node assigments
+        action[node] = torch.tensor(np.unravel_index(assigment, grid_shape))
+        return action
+
     def select_action(self, state, graph_info):
         with torch.no_grad():
             state = torch.FloatTensor(state).to(self.device)
