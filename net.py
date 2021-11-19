@@ -4,7 +4,7 @@ import dgl
 from torch import nn
 from dgl import nn as gnn
 import torch.nn.functional as F
-
+import numpy as np
 
 from util import positional_encoding
 
@@ -190,7 +190,7 @@ class GraphNet(nn.Module):
         else:
             model.eval()
         train_loss = 0
-        for _, (sample, target) in tqdm(enumerate(train_loader), total=len(train_loader)):
+        for _, (sample, target) in enumerate(train_loader):
             input_tensor = sample.to(device) # (bs, 2, edges)
             target = target.to(device) # (bs, nodes)
             optimizer.zero_grad()
@@ -202,3 +202,23 @@ class GraphNet(nn.Module):
                 optimizer.step()
             train_loss += loss.item()
         return train_loss / len(train_loader)
+
+
+class NormalHashLinear(nn.Module): #from briancheung/superposition
+    def __init__(self, n_in, n_out, period, key_pick='hash', learn_key=True):
+        super(NormalHashLinear, self).__init__()
+        self.key_pick = key_pick
+        w = nn.init.xavier_normal_(torch.empty(n_in, n_out))
+        o = torch.from_numpy(np.random.randn(n_in, period).astype(np.float32))
+
+        self.w = nn.Parameter(w)
+        self.bias = nn.Parameter(torch.zeros(n_out))
+        self.o = nn.Parameter(o)
+        if not learn_key:
+            self.o.requires_grad = False
+
+    def forward(self, x, time):
+        o = self.o[:, int(time)]
+        m = x*o
+        r = torch.mm(m, self.w)
+        return r
