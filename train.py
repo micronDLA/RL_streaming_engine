@@ -24,9 +24,9 @@ from ppo_discrete import PPO
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=2, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
+    arg('--mode', type=int, default=5, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
 
-    arg('--grid_size',   type=int, default=4, help='number of sqrt PE')
+    arg('--device_topology',   type=tuple, default=(16, 1, 3), help='number of PE')
     arg('--spokes',   type=int, default=3, help='Number of spokes')
     arg('--epochs',   type=int, default=5000, help='number of iterations')
     arg('--nodes', type=int, default=20,  help='number of nodes')
@@ -253,6 +253,7 @@ if __name__ == "__main__":
                 torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
                 running_reward = 0
 
+    # PPO multiple graphs
     elif args.mode == 4:
         device_topology = (16, 1, args.spokes)
 
@@ -324,6 +325,67 @@ if __name__ == "__main__":
                     end = time.time()
                     print('Execution time {} s'.format(end - start))
                     # torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
+
+    # PPO Sequence Transformer
+    elif args.mode == 5:
+        device_topology = (16, 1, args.spokes)
+        action_dim = 48
+        # RL place each node
+        env = StreamingEngineEnv(graphs=[graph],
+                                 device_topology=device_topology,
+                                 device_cross_connections=True,
+                                 device_feat_size=action_dim,
+                                 graph_feat_size=32)
+        ppo = PPO(args, state_dim=args.nodes, action_dim=action_dim, mode='transformer')
+
+        # logging variables
+        reward = best_reward = 0
+        reward_buf = deque(maxlen=100)
+        reward_buf.append(0)
+        time_step = 0
+        start = time.time()
+        # training loop:
+        print('Starting PPO Sequence training...')
+        for i_episode in range(1, args.epochs + 1):
+            env.reset()
+            gr_edges = torch.stack(env.compute_graph.edges()).unsqueeze(0).float()
+            time_step += 1 #number of epoch to train model
+            state = -torch.ones(args.nodes) * 2  # ready time: -2 not placed
+            action = -torch.ones(args.nodes, 3)
+            state_in = torch.zeros(args.nodes, 1, action_dim)
+            for node in range(0, args.nodes):
+                rl_state = (state_in, torch.tensor(node)) # grid, node to place
+                assigment = ppo.select_action(rl_state, gr_edges) # node assigment index
+                action = ppo.get_coord(assigment, action, node, device_topology) # put node assigment to vector of node assigments
+                reward, state, _ = env._calculate_reward(action)
+                state_in[node, :, assigment] = state[node]
+                # Saving reward and is_terminals:
+                ppo.buffer.rewards.append(reward.mean())
+                if node == (args.nodes - 1):
+                    done = True
+                else:
+                    done = False
+                ppo.buffer.is_terminals.append(done)
+                best_reward = max(best_reward, state.max().item())
+                reward_buf.append(reward.mean())
+            # learning:
+            if time_step % args.update_timestep == 0:
+                ppo.update()
+                time_step = 0
+
+
+            # logging
+            if i_episode % args.log_interval == 0:
+                print(f'Episode: {i_episode} | Ready time: {best_reward} | Mean Reward: {np.mean(reward_buf)}')
+                writer.add_scalar('mean reward/episode', np.mean(reward_buf), i_episode)
+                writer.add_scalar('total time/episode', best_reward, i_episode)
+                writer.flush()
+                end = time.time()
+                print('Execution time {} s'.format(end - start))
+                # writer.add_scalar('avg improvement/episode', avg_improve, i_episode)
+                # print('Episode {} \t Avg improvement: {}'.format(i_episode, avg_improve))
+                torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
+                running_reward = 0
 
 
     # sinkhorn
