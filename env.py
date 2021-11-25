@@ -17,10 +17,13 @@ class StreamingEngineEnv:
     device_topology: [Rows, Cols, Spokes] for a given streaming engine setup
     '''
 
-    def __init__(self, compute_graph_def,
-                 device_topology=(4, 4, 3), device_cross_connections=False,
-                 device_feat_size=48, graph_feat_size=32,
-                 init_place=None, emb_mode='topological'):
+    def __init__(self, graphs,
+                 device_topology=(4, 4, 3),
+                 device_cross_connections=False,
+                 device_feat_size=48,
+                 graph_feat_size=32,
+                 init_place=None,
+                 emb_mode='topological'):
 
         # Represent the streaming engine as a vector of positional encodings
         # Generate meshgrid so we can consider all possible assignments for (tile_x, tile_y, spoke)
@@ -40,14 +43,10 @@ class StreamingEngineEnv:
         feat_size = device_feat_size // len(device_topology)
         device_encoding = positional_encoding(coords, feat_size, 1000)  # Shape: (No of slices, 48)
 
-        # TODO: Make compute_graph_def a text file and load it here
-        if type(compute_graph_def) != tuple: raise NotImplementedError
-
         if device_cross_connections:
             assert device_topology[0] == 1 or device_topology[1] == 1, \
                 "Device layout needs to be linear"
 
-        self.compute_graph_def = compute_graph_def
         self.graph_feat_size = graph_feat_size
         self.initial_place = init_place
         self.coords = coords
@@ -57,31 +56,22 @@ class StreamingEngineEnv:
         self.compute_graph = None
         self.no_of_valid_mappings = 0
         self.emb_mode = emb_mode
-        self._gen_compute_graph()
 
-    def _gen_compute_graph(self):
+        self.graphs = graphs
+        if type(graphs) == list: #list
+            for graph in self.graphs:
+                self._gen_compute_graph(graph)
+        else:
+            raise NotImplementedError
+
+    def get_graph(self, id):
+        self.compute_graph = self.graphs[id]
+
+    def _gen_compute_graph(self, graph):
 
         generator = torch.Generator()
-
-        if self.compute_graph_def is None:
-            nodes = random.randrange(10, 30, 5)
-            a = nx.generators.directed.gn_graph(nodes)
-            graph = dgl.from_networkx(a)
-        else:
-            addnl_isolated_nodes = 0
-            if len(self.compute_graph_def) == 3:
-                src_ids, dst_ids, addnl_isolated_nodes = self.compute_graph_def
-            else:
-                src_ids, dst_ids = self.compute_graph_def
-
-            src_ids = torch.Tensor(src_ids).int()
-            dst_ids = torch.Tensor(dst_ids).int()
-            graph = dgl.graph((src_ids, dst_ids))
-
-            graph.add_nodes(addnl_isolated_nodes)
-
-            # to get consistent states, but also have a random vector per node
-            generator.manual_seed(0)
+        # to get consistent states, but also have a random vector per node
+        generator.manual_seed(0)
 
         if self.emb_mode == 'topological':
         # use topological rank and reverse topological rank as feat
@@ -110,7 +100,8 @@ class StreamingEngineEnv:
 
     def reset(self):
         # Generate a new compute graph
-        self._gen_compute_graph()
+        for graph in self.graphs:
+            self._gen_compute_graph(graph)
         return self.obs()
 
     def render(self, debug=False):

@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from torch.distributions import Categorical # discrete
 import gym
 import numpy as np
+from net import NormalHashLinear, TransformerModel
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -47,6 +48,26 @@ class GraphEmb_Conv(nn.Module):
         x = self.avg_pool(x).flatten(1)
         x = self.dropout(self.norm(x))
         return x
+
+class ACFF_SP(nn.Module): # feedforward ppo superposed model
+    def __init__(self, in_dim, emb_size, out_dim, ntasks, mode='soft'):
+        # ntasks: number of tasks
+        super(ACFF_SP, self).__init__()
+        self.fc = NormalHashLinear(in_dim, emb_size, ntasks)
+        self.tanh = nn.Tanh()
+        self.fc1 = NormalHashLinear(emb_size, emb_size, ntasks)
+        self.fc2 = NormalHashLinear(emb_size, out_dim, ntasks)
+        self.soft = nn.Softmax(dim=-1)  # if discrete
+        self.emb_size = emb_size
+        self.mode = mode
+
+    def forward(self, x, task):
+        y = self.tanh(self.fc(x, task))
+        y = self.tanh(self.fc1(y, task))
+        y = self.fc2(y, task)
+        if self.mode == 'soft':
+            y = self.soft(y)
+        return y
 
 class ACFF(nn.Module): # feedforward ppo
     def __init__(self, in_dim, emb_size, out_dim, mode='soft'):
@@ -94,15 +115,24 @@ class ACRNN(nn.Module): # rnn ppo
         return y
 
 class ActorCritic(nn.Module):
-    def __init__(self, device, state_dim, emb_size, action_dim, graph_size, mode):
-        self.device = device
+    def __init__(self, device, state_dim, emb_size, action_dim, graph_size,
+                 mode = 'linear', ntasks = 1):
         super(ActorCritic, self).__init__()
+        self.device = device
         self.graph_model = GraphEmb_Conv(graph_size)
-
-        # action mean range -1 to 1
         if mode == 'rnn':
             self.actor = ACRNN(state_dim+graph_size, emb_size, action_dim, mode='soft')
             self.critic = ACRNN(state_dim + graph_size, emb_size, 1, mode='')
+
+        elif mode == 'transformer':
+            # ntokens: 1hot device topology
+            self.model = TransformerModel(ntoken=action_dim, ninp=16, nhead=4, nhid=emb_size, nlayers=2)
+            self.actor = ACFF(16*state_dim+graph_size, emb_size, action_dim, mode='soft')
+            self.critic = ACFF(16*state_dim+graph_size, emb_size, 1, mode='')
+
+        elif mode == 'super':
+            self.actor = ACFF_SP(state_dim + graph_size, emb_size, action_dim, ntasks=ntasks, mode='soft')
+            self.critic = ACFF_SP(state_dim + graph_size, emb_size, 1, ntasks=ntasks, mode='')
         else:
             self.actor = ACFF(state_dim+graph_size, emb_size, action_dim, mode='soft')
             self.critic = ACFF(state_dim+graph_size, emb_size, 1, mode='')
@@ -114,19 +144,28 @@ class ActorCritic(nn.Module):
 
     def forward(self):
         raise NotImplementedError
-    
-    def act(self, state, graph_info):
+
+    def act_seq(self, state, graph_info):
+        state_in = state[0].to(self.device)
+        mask = state[1].to(self.device)
         emb = self.graph_model(graph_info).squeeze()
-        act_in = torch.cat((state, emb))
+        o = self.model(state_in)
+        o = o.view(-1)
+        act_in = torch.cat((o, emb))
         action_probs = self.actor(act_in)
         dist = Categorical(action_probs)
         action = dist.sample()
         action_logprob = dist.log_prob(action)
         return action.detach(), action_logprob.detach()
-    
-    def evaluate(self, state, action, graph_info):
+
+    def evaluate_seq(self, state, action, graph_info):
+        state_in = state[0]
+        mask = state[1]
         emb = self.graph_model(graph_info)
-        act_in = torch.cat((state, emb), dim=1)
+        o = self.model(state_in)
+        o = torch.permute(o, (1, 0, 2)).contiguous()
+        o = o.view(o.shape[0], -1)
+        act_in = torch.cat((o[mask], emb), dim=1)
         action_probs = self.actor(act_in)
         dist = Categorical(action_probs)
         action_logprobs = dist.log_prob(action)
@@ -134,30 +173,63 @@ class ActorCritic(nn.Module):
         state_values = self.critic(act_in)
         return action_logprobs, state_values, dist_entropy
 
+    def act(self, state, graph_info, taskid=None):
+        emb = self.graph_model(graph_info).squeeze()
+        act_in = torch.cat((state, emb))
+        if self.mode == 'super':
+            act_in = act_in.unsqueeze(0)
+            action_probs = self.actor(act_in, taskid)
+        else:
+            action_probs = self.actor(act_in)
+        dist = Categorical(action_probs)
+        action = dist.sample()
+        action_logprob = dist.log_prob(action)
+        return action.detach(), action_logprob.detach()
+
+    def evaluate(self, state, action, graph_info, taskid=None):
+        emb = self.graph_model(graph_info)
+        act_in = torch.cat((state, emb), dim=1)
+        if self.mode == 'super':
+            action_probs = self.actor(act_in, taskid)
+        else:
+            action_probs = self.actor(act_in)
+        dist = Categorical(action_probs)
+        action_logprobs = dist.log_prob(action)
+        dist_entropy = dist.entropy()
+        if self.mode == 'super':
+            state_values = self.critic(act_in, taskid)
+        else:
+            state_values = self.critic(act_in)
+        return action_logprobs, state_values, dist_entropy
 
 class PPO:
-    def __init__(self, args, state_dim, action_dim, mode=''):
+    def __init__(self, args, state_dim, action_dim, mode='', ntasks = 1):
         #args.emb_size, betas, lr, gamma, K_epoch, eps_clip, loss_value_c, loss_entropy_c
+        #ntasks: number of different graphs
         self.args = args
         self.device = device
-
+        self.ntasks = ntasks
         self.state_dim = state_dim #input ready time (nodes, 1)
         self.action_dim = action_dim #output (nodes, 48)
 
         self.buffer = RolloutBuffer()
-        
+        self.ntokens = args.device_topology
         self.policy = ActorCritic(self.device,
                                   self.state_dim,
                                   self.args.emb_size,
                                   self.action_dim,
-                                  self.args.graph_size, mode).to(self.device)
+                                  self.args.graph_size,
+                                  mode=mode,
+                                  ntasks=ntasks).to(self.device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.args.lr, betas=self.args.betas)
         
         self.policy_old = ActorCritic(self.device,
                                       self.state_dim,
                                       self.args.emb_size,
                                       self.action_dim,
-                                      self.args.graph_size, mode).to(self.device)
+                                      self.args.graph_size,
+                                      mode=mode,
+                                      ntasks=ntasks).to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         if args.model != '':
             self.load(args.model)
@@ -175,20 +247,22 @@ class PPO:
         action[node] = torch.tensor(np.unravel_index(assigment, grid_shape))
         return action
 
-    def select_action(self, state, graph_info):
+    def select_action(self, state, graph_info, taskid=None, mask=None):
         with torch.no_grad():
-            state = torch.FloatTensor(state).to(self.device)
             graph_info = graph_info.to(self.device)
-            action, action_logprob = self.policy_old.act(state, graph_info)
+            if self.mode=='transformer':
+                action, action_logprob = self.policy_old.act_seq(state, graph_info)
+            else:
+                state = torch.FloatTensor(state).to(self.device)
+                action, action_logprob = self.policy_old.act(state, graph_info, taskid)
         
         self.buffer.states.append(state)
         self.buffer.actions.append(action)
         self.buffer.graphs.append(graph_info)
         self.buffer.logprobs.append(action_logprob)
-
         return action.item()
     
-    def update(self):
+    def update(self, taskid=None):
         # Monte Carlo estimate of rewards:
         rewards = []
         discounted_reward = 0
@@ -204,16 +278,27 @@ class PPO:
         # rewards = rewards.float().squeeze()
         
         # convert list to tensor
-        old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(self.device)
+        old_masks = 0
+        if self.mode == 'transformer':
+            s = [i for i, _ in self.buffer.states]
+            old_states = torch.squeeze(torch.stack(s, dim=0)).detach().to(self.device)
+            old_states = torch.permute(old_states, (1, 0, 2))
+            m = [i for _, i in self.buffer.states]
+            old_masks = torch.squeeze(torch.stack(m, dim=0)).detach().to(self.device)
+        else:
+            old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(self.device)
         old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(self.device)
         old_graph = torch.squeeze(torch.stack(self.buffer.graphs, dim=0)).detach().to(self.device)
         old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(self.device)
-        
+
         # Optimize policy for K epochs
         for _ in range(self.args.K_epochs):
 
             # Evaluating old actions and values
-            logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions, old_graph)
+            if self.mode == 'transformer':
+                logprobs, state_values, dist_entropy = self.policy.evaluate_seq((old_states, old_masks), old_actions, old_graph)
+            else:
+                logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions, old_graph, taskid)
 
             # match state_values tensor dimensions with rewards tensor
             state_values = torch.squeeze(state_values)

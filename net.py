@@ -4,8 +4,8 @@ import dgl
 from torch import nn
 from dgl import nn as gnn
 import torch.nn.functional as F
-
-
+import numpy as np
+import math
 from util import positional_encoding
 
 def arange_like(x, dim: int):
@@ -190,7 +190,7 @@ class GraphNet(nn.Module):
         else:
             model.eval()
         train_loss = 0
-        for _, (sample, target) in tqdm(enumerate(train_loader), total=len(train_loader)):
+        for _, (sample, target) in enumerate(train_loader):
             input_tensor = sample.to(device) # (bs, 2, edges)
             target = target.to(device) # (bs, nodes)
             optimizer.zero_grad()
@@ -202,3 +202,65 @@ class GraphNet(nn.Module):
                 optimizer.step()
             train_loss += loss.item()
         return train_loss / len(train_loader)
+
+
+class NormalHashLinear(nn.Module): #from briancheung/superposition
+    def __init__(self, n_in, n_out, period, key_pick='hash', learn_key=True):
+        super(NormalHashLinear, self).__init__()
+        self.key_pick = key_pick
+        w = nn.init.xavier_normal_(torch.empty(n_in, n_out))
+        o = torch.from_numpy(np.random.randn(n_in, period).astype(np.float32))
+
+        self.w = nn.Parameter(w)
+        self.bias = nn.Parameter(torch.zeros(n_out))
+        self.o = nn.Parameter(o)
+        if not learn_key:
+            self.o.requires_grad = False
+
+    def forward(self, x, time):
+        o = self.o[:, int(time)]
+        m = x*o
+        r = torch.mm(m, self.w)
+        return r
+
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
+
+class TransformerModel(nn.Module):
+    def __init__(self, ntoken, ninp, nhead, nhid, nlayers, dropout=0.5):
+        super(TransformerModel, self).__init__()
+        self.pos_encoder = PositionalEncoding(ninp, dropout)
+        encoder_layers = nn.TransformerEncoderLayer(ninp, nhead, nhid, dropout)
+        self.tanh = nn.Tanh()
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, nlayers)
+        self.encoder = nn.Linear(ntoken, ninp)
+        self.ninp = ninp
+        self.init_weights()
+
+    def generate_square_subsequent_mask(self, sz):
+        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+        return mask
+
+    def init_weights(self):
+        initrange = 0.1
+        self.encoder.weight.data.uniform_(-initrange, initrange)
+
+    def forward(self, src, src_mask=None):
+        src = self.tanh(self.encoder(src)) * math.sqrt(self.ninp)
+        src = self.pos_encoder(src)
+        output = self.transformer_encoder(src)
+        return output
