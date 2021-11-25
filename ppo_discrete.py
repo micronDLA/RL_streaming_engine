@@ -10,7 +10,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 # from torch.distributions import MultivariateNormal # continuous
 from torch.distributions import Categorical # discrete
-import gym
 import numpy as np
 from net import NormalHashLinear, TransformerModel
 
