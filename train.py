@@ -24,7 +24,7 @@ from ppo_discrete import PPO
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=5, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
+    arg('--mode', type=int, default=2, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
 
     arg('--device_topology',   type=tuple, default=(16, 1, 3), help='number of PE')
     arg('--spokes',   type=int, default=3, help='Number of spokes')
@@ -201,7 +201,8 @@ if __name__ == "__main__":
                                  device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=48,
-                                 graph_feat_size=32)
+                                 graph_feat_size=32,
+                                 placement_mode='one_node')
         ppo = PPO(args, state_dim=args.nodes*2, action_dim=48)
 
         # logging variables
@@ -214,7 +215,7 @@ if __name__ == "__main__":
         print('Starting PPO training...')
         for i_episode in range(1, args.epochs + 1):
             env.reset()
-            gr_edges = torch.stack(env.compute_graph.edges()).unsqueeze(0).float()
+            gr_edges = torch.stack(env.compute_graph.edges()).unsqueeze(0).float()  # [[src_nodes], [dst_nodes]] 
             state = -torch.ones(args.nodes)*2 #ready time: -2 not placed
             action = -torch.ones(args.nodes, 3)
             time_step += 1 #number of epoch to train model
@@ -222,9 +223,9 @@ if __name__ == "__main__":
                 node_1hot = torch.zeros(args.nodes)
                 node_1hot[node] = 1.0
                 rl_state = torch.cat((torch.FloatTensor(state).view(-1), node_1hot))  # grid, node to place
-                assigment = ppo.select_action(rl_state, gr_edges) # node assigment index
-                action = ppo.get_coord(assigment, action, node, device_topology) # put node assigment to vector of node assigments
-                reward, state, _ = env._calculate_reward(action)
+                assigment = ppo.select_action(rl_state, gr_edges) # node assigment index in streaming eng slice
+                action = ppo.get_coord(assigment, action, node, device_topology) # put node assigment to vector of node assigments, 2D tensor
+                reward, state, _ = env.step(action)
                 # Saving reward and is_terminals:
                 ppo.buffer.rewards.append(reward.mean())
                 if node == (args.nodes - 1):
@@ -272,7 +273,8 @@ if __name__ == "__main__":
                                  device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=48,
-                                 graph_feat_size=32)
+                                 graph_feat_size=32,
+                                 placement_mode='one_node')
         ppo = PPO(args, state_dim=args.nodes*2, action_dim=48,)
                  # mode='super', ntasks = len(graphs))
 
@@ -335,7 +337,8 @@ if __name__ == "__main__":
                                  device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=action_dim,
-                                 graph_feat_size=32)
+                                 graph_feat_size=32,
+                                 placement_mode='one_node')
         ppo = PPO(args, state_dim=args.nodes, action_dim=action_dim, mode='transformer')
 
         # logging variables
@@ -396,12 +399,13 @@ if __name__ == "__main__":
 
         # initialize Environment, Network and Optimizer
         env = StreamingEngineEnv(graphs=[graph],
-                                 device_topology=device_topology,
+                                 device_topology=device_topology, 
                                  device_cross_connections=True,
                                  device_feat_size=48,
                                  graph_feat_size=32,
                                  init_place=torch.tensor(grid_in),
-                                 emb_mode='')
+                                 emb_mode='',
+                                 placement_mode='all_node')
         policy = PolicyNet(cg_in_feats=32,
                            cg_hidden_dim=64,
                            cg_conv_k=1,

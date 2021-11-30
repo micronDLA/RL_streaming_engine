@@ -23,7 +23,8 @@ class StreamingEngineEnv:
                  device_feat_size=48,
                  graph_feat_size=32,
                  init_place=None,
-                 emb_mode='topological'):
+                 emb_mode='topological',
+                 placement_mode='one_node'):
 
         # Represent the streaming engine as a vector of positional encodings
         # Generate meshgrid so we can consider all possible assignments for (tile_x, tile_y, spoke)
@@ -47,6 +48,7 @@ class StreamingEngineEnv:
             assert device_topology[0] == 1 or device_topology[1] == 1, \
                 "Device layout needs to be linear"
 
+        self.placement_mode = placement_mode
         self.graph_feat_size = graph_feat_size
         self.initial_place = init_place
         self.coords = coords
@@ -117,14 +119,19 @@ class StreamingEngineEnv:
         '''
         action = list of coordinate idx
         '''
-        node_coord = -torch.ones(self.compute_graph.num_nodes(), 3)
-        for op_idx, coord_idx in enumerate(assignment):
-            if coord_idx == -1: continue
-            node_coord[op_idx] = self.coords[coord_idx]
+        if self.placement_mode == 'all_node':
+            # For sinkhorn, when assignment contains all nodes
+            node_coord = -torch.ones(self.compute_graph.num_nodes(), 3)
+            for op_idx, coord_idx in enumerate(assignment):
+                if coord_idx == -1: continue
+                node_coord[op_idx] = self.coords[coord_idx]
 
-        reward = self._calculate_reward(node_coord)
+            return self._calculate_reward(node_coord)
 
-        return reward
+        elif self.placement_mode == 'one_node':
+            # When placing one node at a time
+            return self._calculate_reward(assignment)
+        
 
     def _calculate_reward(self, node_coord):
         '''
