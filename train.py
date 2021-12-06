@@ -79,18 +79,52 @@ PREDEF_GRAPHS = {
     "FFT_SIMPLE": ([0, 0, 1, 1, 2, 3, 4, 4, 5], [1, 2, 3, 4, 4, 6, 5, 8, 7]),
     "FFT_SYNC2": ([1, 1, 2, 2, 3, 4, 6, 6, 8], [2, 3, 4, 6, 6, 5, 7, 8, 9]),
     # Complete FFT graph
-    "FFT": ([1, 1, 2, 2, 3, 4, 6, 6, 8, 10, 11, 11], [2, 3, 4, 6, 6, 5, 7, 8, 9, 11, 12, 13], 3)
+            # ([src_nodes],[dst_nodes], extra nodes to add)
+    "FFT": {'graphdef': ([1, 1, 2, 2, 3, 4, 6, 6, 8, 10, 11, 11], [2, 3, 4, 6, 6, 5, 7, 8, 9, 11, 12, 13], 3),
+            # instr_ID: [required TM index]
+            'tile_memory_req': {0: [4], 1: [0], 2: [5], 3: [9], 4: [7], 5: [3], 6: [8], 7: [1], 8: [6], 9: [1], 10: [12,14], 11: [12,14], 12: [13], 13: [13], 14: [2,10], 15: [2,11], 16: [0]}
+           }
 }
 
-def create_graph(edges, numnodes = 10):
+TILE_MEMORY_MAP = {
+    0: None,
+    1: 'TM_inDataA',
+    2: 'TM_inDataB',
+    3: 'TM_table',
+    4: 'TM_half_pnts',
+    5: 'TM_mask',
+    6: 'TM_halfsize',
+    7: 'TM_tablestep',
+    8: 'TM_size',
+    9: 'TM_I',
+    10: 'TM_right',
+    11: 'TM_left',
+    12: 'TM_righti',
+    13: 'TM_lefti',
+    14: 'TMtablei'
+}
+
+TM_IDX_TOTAL = max(TILE_MEMORY_MAP.keys())
+
+def create_graph(graphdef, numnodes = 10):
     # random generate a directed acyclic graph
-    if edges is None:
+    if graphdef is None:
         a = nx.generators.directed.gn_graph(numnodes)
         graph = dgl.from_networkx(a)
     else:
-        graph = dgl.graph((torch.Tensor(graphdef[0]).int(), torch.Tensor(graphdef[1]).int()))
-        if len(graphdef) == 3:
-            graph.add_nodes(graphdef[2])
+        tile_memory_req = graphdef['tile_memory_req']
+        edges = graphdef['graphdef']
+        graph = dgl.graph((torch.Tensor(edges[0]).int(), torch.Tensor(edges[1]).int()))
+        if len(edges) == 3:
+            graph.add_nodes(edges[2])
+
+        # Add tile memory constraints as features to graph
+        tm_req_feat = torch.zeros(graph.num_nodes(), TM_IDX_TOTAL + 1)
+        for instr_ID, tm_req_ids in tile_memory_req.items():
+            for tm_req_id in tm_req_ids:
+                tm_req_feat[instr_ID][tm_req_id] = 1
+        
+        graph.ndata['tm_req'] = tm_req_feat
     return graph
 
 if __name__ == "__main__":
@@ -248,7 +282,7 @@ if __name__ == "__main__":
                 writer.add_scalar('total time/episode', best_reward, i_episode)
                 writer.flush()
                 end = time.time()
-                print('Execution time {} s'.format(end - start))
+                print('Training time elpased: {:.2f} s'.format(end - start))
                 # writer.add_scalar('avg improvement/episode', avg_improve, i_episode)
                 # print('Episode {} \t Avg improvement: {}'.format(i_episode, avg_improve))
                 torch.save(ppo.policy.state_dict(), 'model_epoch.pth')

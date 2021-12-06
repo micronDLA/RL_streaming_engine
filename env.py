@@ -28,12 +28,12 @@ class StreamingEngineEnv:
 
         # Represent the streaming engine as a vector of positional encodings
         # Generate meshgrid so we can consider all possible assignments for (tile_x, tile_y, spoke)
-        coords = torch.meshgrid(*[torch.arange(i) for i in device_topology])
-        coords = [coord.unsqueeze(-1) for coord in coords]
-        coords = torch.cat(coords, -1)
-        coords = coords.view(-1, coords.shape[-1])  
+        tile_coords = torch.meshgrid(*[torch.arange(i) for i in device_topology])
+        tile_coords = [coord.unsqueeze(-1) for coord in tile_coords]
+        tile_coords = torch.cat(tile_coords, -1)
+        tile_coords = tile_coords.view(-1, tile_coords.shape[-1])  
         # Shape: (no_of_tiles * no_of_spokes, 3)
-        # coords represents all possible SE slices after next operation
+        # tile_coords represents all possible SE slices [tile_x, tile_y, spoke_no]
 
         assert device_feat_size % len(device_topology) == 0, '\
         device_feat_size must be a multiple of device topology dimension'
@@ -42,7 +42,7 @@ class StreamingEngineEnv:
         multiple of 2'
 
         feat_size = device_feat_size // len(device_topology)
-        device_encoding = positional_encoding(coords, feat_size, 1000)  # Shape: (No of slices, 48)
+        device_encoding = positional_encoding(tile_coords, feat_size, 1000)  # Shape: (No of slices, 48)
 
         if device_cross_connections:
             assert device_topology[0] == 1 or device_topology[1] == 1, \
@@ -51,7 +51,7 @@ class StreamingEngineEnv:
         self.placement_mode = placement_mode
         self.graph_feat_size = graph_feat_size
         self.initial_place = init_place
-        self.coords = coords
+        self.tile_coords = tile_coords
         self.device_topology = device_topology
         self.device_cross_connections = device_cross_connections
         self.device_encoding = device_encoding
@@ -124,7 +124,7 @@ class StreamingEngineEnv:
             node_coord = -torch.ones(self.compute_graph.num_nodes(), 3)
             for op_idx, coord_idx in enumerate(assignment):
                 if coord_idx == -1: continue
-                node_coord[op_idx] = self.coords[coord_idx]
+                node_coord[op_idx] = self.tile_coords[coord_idx]
 
             return self._calculate_reward(node_coord)
 
