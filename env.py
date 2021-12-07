@@ -1,5 +1,6 @@
 import dgl
 import math
+from numpy.lib.shape_base import tile
 import torch
 import pprint
 import networkx as nx
@@ -18,6 +19,8 @@ class StreamingEngineEnv:
     '''
 
     def __init__(self, graphs,
+                 graphdef,  # TODO make graph class and remove this double ref to graph
+                 tm_idx_total,
                  device_topology=(4, 4, 3),
                  device_cross_connections=False,
                  device_feat_size=48,
@@ -48,6 +51,10 @@ class StreamingEngineEnv:
             assert device_topology[0] == 1 or device_topology[1] == 1, \
                 "Device layout needs to be linear"
 
+        self.graphdef = graphdef
+        self.tm_idx_total = tm_idx_total
+        self.nodes_per_tm = self.get_tm_to_node_mapping()
+        print(self.nodes_per_tm)
         self.placement_mode = placement_mode
         self.graph_feat_size = graph_feat_size
         self.initial_place = init_place
@@ -96,6 +103,16 @@ class StreamingEngineEnv:
         graph.ndata['feat'] = node_feat
 
         self.compute_graph = graph
+
+    def get_tm_to_node_mapping(self):
+        tile_memory_req = self.graphdef['tile_memory_req']
+        nodes_per_tm = {tm_idx:[] for tm_idx in range(1, self.tm_idx_total+1)}
+        for instr_idx, tm_idxs in tile_memory_req.items():
+            for tm_idx in tm_idxs:
+                if tm_idx != 0:
+                    nodes_per_tm[tm_idx].append(instr_idx)
+
+        return nodes_per_tm
 
     def obs(self):
         return self.compute_graph, self.device_encoding
@@ -190,6 +207,32 @@ class StreamingEngineEnv:
                 else: # fail place
                     ready_time[dst] = -1
 
+        # Check if tile memory constraints are satisfied
+        # Iterate over TMs and check if nodes associated with it are on same tiles  
+        for tm_idx, nodes in self.nodes_per_tm.items():
+            tile_idx = -1  # Tile idx on which all nodes with same tm_idx req should be scheduled
+            nodes_on_same_tile = True  # Are all nodes with same tm_idx req on same tile
+            
+            for node in nodes:
+                if node_coord[node].sum() == -3:
+                    continue
+                if tile_idx == -1:
+                    tile_idx = node_coord[node][0]
+                if tile_idx != node_coord[node][0]:
+                    # Two nodes which should be on the same tile
+                    # because of tile memory constraints are not
+                    nodes_on_same_tile = False
+                    # Debug
+                    print(f'Nodes {nodes} should be on same TM idx {tm_idx} but are not')
+                    break
+            
+            if not nodes_on_same_tile:
+                for node in nodes:
+                    if node_coord[node].sum() == -3:
+                        continue
+                    ready_time[node] = -1  # Set node placement as fail
+
+        # Assign reward based on ready time
         reward[ready_time == -2] = 0 # node not placed
         reward[ready_time == -1] = -1 # node place fail
         reward[ready_time >= 0]  = (max_dist*num_nodes - ready_time[ready_time >= 0])/num_nodes

@@ -101,7 +101,7 @@ TILE_MEMORY_MAP = {
     11: 'TM_left',
     12: 'TM_righti',
     13: 'TM_lefti',
-    14: 'TMtablei'
+    14: 'TM_tablei'
 }
 
 TM_IDX_TOTAL = max(TILE_MEMORY_MAP.keys())
@@ -120,9 +120,9 @@ def create_graph(graphdef, numnodes = 10):
 
         # Add tile memory constraints as features to graph
         tm_req_feat = torch.zeros(graph.num_nodes(), TM_IDX_TOTAL + 1)
-        for instr_ID, tm_req_ids in tile_memory_req.items():
-            for tm_req_id in tm_req_ids:
-                tm_req_feat[instr_ID][tm_req_id] = 1
+        for instr_idx, tm_idxs in tile_memory_req.items():
+            for tm_idx in tm_idxs:
+                tm_req_feat[instr_idx][tm_idx] = 1
         
         graph.ndata['tm_req'] = tm_req_feat
     return graph
@@ -232,11 +232,14 @@ if __name__ == "__main__":
         device_topology = (16, 1, args.spokes)
         # RL place each node
         env = StreamingEngineEnv(graphs=[graph],
+                                 graphdef=graphdef,
+                                 tm_idx_total=TM_IDX_TOTAL,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=48,
                                  graph_feat_size=32,
-                                 placement_mode='one_node')
+                                 placement_mode='one_node',
+                                 )
         ppo = PPO(args, state_dim=args.nodes*2, action_dim=48)
 
         # logging variables
