@@ -54,7 +54,6 @@ class StreamingEngineEnv:
         self.graphdef = graphdef
         self.tm_idx_total = tm_idx_total
         self.nodes_per_tm = self.get_tm_to_node_mapping()
-        print(self.nodes_per_tm)
         self.placement_mode = placement_mode
         self.graph_feat_size = graph_feat_size
         self.initial_place = init_place
@@ -222,11 +221,11 @@ class StreamingEngineEnv:
                     # Two nodes which should be on the same tile
                     # because of tile memory constraints are not
                     nodes_on_same_tile = False
-                    # Debug
-                    print(f'Nodes {nodes} should be on same TM idx {tm_idx} but are not')
                     break
             
             if not nodes_on_same_tile:
+                if (ready_time >= 0).all():
+                    print(f'All nodes placed by network but nodes {nodes} should be on same TM idx {tm_idx} but are not')
                 for node in nodes:
                     if node_coord[node].sum() == -3:
                         continue
