@@ -49,7 +49,7 @@ class PolicyNet(nn.Module):
 
     def forward(self, graph, device_feats, debug=False):
 
-        g = dgl.add_self_loop(graph)
+        g = dgl.add_self_loop(graph)  # For isolated nodes
 
         feat = g.ndata['feat']
         for layer in self.cg_conv:

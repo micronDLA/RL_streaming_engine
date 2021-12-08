@@ -24,7 +24,7 @@ from ppo_discrete import PPO
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=2, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
+    arg('--mode', type=int, default=3, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
 
     arg('--device_topology',   type=tuple, default=(16, 1, 3), help='number of PE')
     arg('--spokes',   type=int, default=3, help='Number of spokes')
@@ -436,14 +436,16 @@ if __name__ == "__main__":
 
         # initialize Environment, Network and Optimizer
         env = StreamingEngineEnv(graphs=[graph],
+                                 graphdef=graphdef,
+                                 tm_idx_total=TM_IDX_TOTAL,
                                  device_topology=device_topology, 
                                  device_cross_connections=True,
                                  device_feat_size=48,
                                  graph_feat_size=32,
-                                 init_place=torch.tensor(grid_in),
-                                 emb_mode='',
+                                 init_place=None, # torch.tensor(grid_in),
+                                 emb_mode='topological',
                                  placement_mode='all_node')
-        policy = PolicyNet(cg_in_feats=32,
+        policy = PolicyNet(cg_in_feats=48,
                            cg_hidden_dim=64,
                            cg_conv_k=1,
                            transformer_dim=48,

@@ -92,13 +92,18 @@ class StreamingEngineEnv:
         else:
             node_coord = self.initial_place[:, 0:2]
 
-        feat_size = self.graph_feat_size // 2
+        feat_size = self.graph_feat_size // 2  # TODO: Make this compatible with tile_mem_feat
         encoding = positional_encoding(node_coord, feat_size // 2, 1000)  # Shape: (no_of_graph_nodes, 16)
         rand_enc = encoding.clone().detach().normal_(generator=generator)  # Shape: (no_of_graph_nodes, 16)
 
         # Adding random vector to encoding helps distinguish between similar
         # nodes. This works pretty well, but maybe other solutions exist?
         node_feat = torch.cat([encoding, rand_enc], -1)  # Shape: (no_of_graph_nodes, 32)
+        # Add tile memory feature
+        # This is a manual hack right now since in IFFT, number of TM is 14
+        # and we have one more value for no TM
+        tile_mem_feat = torch.nn.functional.pad(graph.ndata['tm_req'],(0,1))
+        node_feat = torch.cat([node_feat, tile_mem_feat], -1)
         graph.ndata['feat'] = node_feat
 
         self.compute_graph = graph
@@ -225,7 +230,9 @@ class StreamingEngineEnv:
             
             if not nodes_on_same_tile:
                 if (ready_time >= 0).all():
-                    print(f'All nodes placed by network but nodes {nodes} should be on same TM idx {tm_idx} but are not')
+                    # This print statement will only show the first TM idx for which 
+                    # all nodes are not on same tile
+                    print(f'[INFO] All nodes placed by network but nodes {nodes} should be on same tile for TM idx {tm_idx} but are not')
                 for node in nodes:
                     if node_coord[node].sum() == -3:
                         continue
