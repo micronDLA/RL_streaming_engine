@@ -24,7 +24,7 @@ from ppo_discrete import PPO
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=3, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
+    arg('--mode', type=int, default=2, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
 
     arg('--device_topology',   type=tuple, default=(16, 1, 3), help='number of PE')
     arg('--spokes',   type=int, default=3, help='Number of spokes')
@@ -430,6 +430,7 @@ if __name__ == "__main__":
 
     # sinkhorn
     elif args.mode == 3:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         device_topology = (16, 1, args.spokes)
         # device_topology = (args.grid_size, args.grid_size, args.spokes)
         grid, grid_in, place = initial_fill(nodes, device_topology)
@@ -454,6 +455,7 @@ if __name__ == "__main__":
                            transformer_dropout=0.1,
                            transformer_num_layers=4,
                            sinkhorn_iters=100)
+        policy.to(device)
         optim = Adam(policy.parameters(), lr=args.lr)
         if args.model != '':
             policy.load_state_dict(torch.load(args.pre_train)['model_state_dict'])
@@ -497,6 +499,7 @@ if __name__ == "__main__":
 
                 reward_buf.append(reward.mean())
             if episode % args.log_interval == 0:
+                # TODO: Add number of nodes places to this prompt and also log it
                 print(f'Episode: {episode} | Epoch: {epoch} | Ready time: {ready_time.max().item()} | Loss: {loss.item()} | Mean Reward: {np.mean(reward_buf)}')
                 # TODO: Is mean of reward buffer the total mean up until now?
                 writer.add_scalar('mean reward/episode', np.mean(reward_buf), episode)

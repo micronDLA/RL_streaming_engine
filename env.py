@@ -160,10 +160,11 @@ class StreamingEngineEnv:
         node_coord: [node][coord c,y,x]
         self.compute_graph: dgl
         '''
-        reward = torch.zeros(self.compute_graph.num_nodes())  # Shape: (no_of_graph_nodes,)
-        ready_time = torch.zeros(self.compute_graph.num_nodes())  # Shape: (no_of_graph_nodes,)
-        isvalid = False
         num_nodes = self.compute_graph.num_nodes()
+        reward = torch.zeros(num_nodes)  # Shape: (no_of_graph_nodes,)
+        ready_time = torch.zeros(num_nodes)  # Shape: (no_of_graph_nodes,)
+        isvalid = False
+        
         max_dist = sum(self.device_topology)
 
         timing_error = False
