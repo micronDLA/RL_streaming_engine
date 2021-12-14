@@ -41,6 +41,22 @@ def positional_encoding(pos, feat_size=16, timescale=10000):
 
     return encoding
 
+def get_graph_json(path):
+    with open(path) as file:  # Use file to refer to the file object
+        data = json.load(file)
+        edge_src = []
+        edge_dst = []
+
+        nidx = 0
+        for graph in data['Program']:  # graphs
+            offset = nidx
+            for node in graph['SyncFlow']:  # nodes
+                for edges in node['SEInst']['Successors']:
+                    edge_src.append(nidx)
+                    edge_dst.append(edges + offset)
+                nidx += 1
+    return (edge_src, edge_dst)
+
 def output_instr_json(grid_in, grid_shape, filename='output.json'):
     data = {}
     a = np.prod(grid_shape[1:3])

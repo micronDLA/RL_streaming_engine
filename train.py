@@ -13,7 +13,7 @@ from env import StreamingEngineEnv
 from tqdm import tqdm
 import random
 from matplotlib import pyplot as plt
-from util import calc_score, initial_fill, ROW, COL, fix_grid_bins
+from util import calc_score, initial_fill, get_graph_json
 from torch.utils.tensorboard import SummaryWriter
 import time
 from ppo_discrete import PPO
@@ -24,13 +24,14 @@ from ppo_discrete import PPO
 def get_args():
     parser = argparse.ArgumentParser(description='grid placement')
     arg = parser.add_argument
-    arg('--mode', type=int, default=5, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn')
+    arg('--mode', type=int, default=2, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn, 4- multigraph, 5- transformer')
 
     arg('--device_topology',   type=tuple, default=(16, 1, 3), help='number of PE')
     arg('--spokes',   type=int, default=3, help='Number of spokes')
     arg('--epochs',   type=int, default=5000, help='number of iterations')
     arg('--nodes', type=int, default=20,  help='number of nodes')
     arg('--debug', dest='debug', action='store_true', default=False, help='debug mode')
+    arg('--input', type=str, default='mul_add_ir.json', help='load input json')
 
     # PPO
     arg('--num-episode', type=int, default=100000)
@@ -82,9 +83,9 @@ PREDEF_GRAPHS = {
     "FFT": ([1, 1, 2, 2, 3, 4, 6, 6, 8, 10, 11, 11], [2, 3, 4, 6, 6, 5, 7, 8, 9, 11, 12, 13], 3)
 }
 
-def create_graph(edges, numnodes = 10):
+def create_graph(graphdef, numnodes = 10):
     # random generate a directed acyclic graph
-    if edges is None:
+    if graphdef is None:
         a = nx.generators.directed.gn_graph(numnodes)
         graph = dgl.from_networkx(a)
     else:
@@ -98,7 +99,10 @@ if __name__ == "__main__":
     print('Arguments:', args)
     writer = SummaryWriter()
 
-    graphdef = PREDEF_GRAPHS["FFT"]
+    if args.input:
+        graphdef = get_graph_json(args.input)
+    else:
+        graphdef = PREDEF_GRAPHS["FFT"]
     graph = create_graph(graphdef)
     args.nodes = nodes = graph.number_of_nodes()
 
