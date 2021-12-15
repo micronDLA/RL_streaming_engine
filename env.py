@@ -205,12 +205,13 @@ class StreamingEngineEnv:
                     if src_done_time > dst_ready_time: # get largest from all predecessors
                         dst_ready_time = src_done_time  #TODO: Isn't variable dst_ready_time more like dst start time
 
-                if dst_ready_time == 0 and self.tile_slice_to_node.get(tuple(dst_coord.numpy()), None) is None: # placed fine
+                dst_coord_node = self.tile_slice_to_node.get(tuple(dst_coord.numpy()), -1)
+                if dst_ready_time == 0 and  dst_coord_node in [dst, -1] : # placed fine
                     ready_time[dst] = dst_coord[2] + 4
                     self.tile_slice_to_node[tuple(dst_coord.numpy())] = dst
                 elif dst_ready_time == -1: # not placed
                     ready_time[dst] = -2
-                elif dst_ready_time % self.device_topology[2] == dst_coord[2] and self.tile_slice_to_node.get(tuple(dst_coord.numpy()), None) is None: # If ready_time % spoke_count is correct
+                elif dst_ready_time % self.device_topology[2] == dst_coord[2] and dst_coord_node in [dst, -1]: # If ready_time % spoke_count is correct
                     ready_time[dst] = dst_ready_time + 4
                     self.tile_slice_to_node[tuple(dst_coord.numpy())] = dst
                 else: # fail place
