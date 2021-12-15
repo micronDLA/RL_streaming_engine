@@ -5,6 +5,7 @@
 # PPO from: https://github.com/nikhilbarhate99/PPO-PyTorch
 # discrete version!
 
+import dgl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -12,6 +13,7 @@ import torch.nn.functional as F
 from torch.distributions import Categorical # discrete
 import numpy as np
 from net import NormalHashLinear, TransformerModel
+from dgl import nn as gnn
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -118,7 +120,12 @@ class ActorCritic(nn.Module):
                  mode = 'linear', ntasks = 1):
         super(ActorCritic, self).__init__()
         self.device = device
-        self.graph_model = GraphEmb_Conv(graph_size)
+        # self.graph_model = GraphEmb_Conv(graph_size) 
+        self.graph_model = nn.ModuleList([
+            gnn.SGConv(48, 64, 1, False, nn.ReLU),
+            gnn.SGConv(64, 128, 1, False, nn.ReLU)
+        ])
+        self.graph_avg_pool = gnn.AvgPooling()
         if mode == 'rnn':
             self.actor = ACRNN(state_dim+graph_size, emb_size, action_dim, mode='soft')
             self.critic = ACRNN(state_dim + graph_size, emb_size, 1, mode='')
@@ -173,8 +180,16 @@ class ActorCritic(nn.Module):
         return action_logprobs, state_values, dist_entropy
 
     def act(self, state, graph_info, taskid=None):
-        emb = self.graph_model(graph_info).squeeze()
-        act_in = torch.cat((state, emb))
+        graph = dgl.add_self_loop(graph_info)
+        graph_feat = graph.ndata['feat']
+        for layer in self.graph_model:
+            graph_feat = layer(graph, graph_feat)
+        graph_feat = self.graph_avg_pool(graph, graph_feat)
+        graph_feat = graph_feat.squeeze()
+        # emb = self.graph_model(graph_info).squeeze()
+        # print('[INFO] state shape', state.shape)
+        # print('[INFO] graph_feat shape', graph_feat.shape)
+        act_in = torch.cat((state, graph_feat))
         if self.mode == 'super':
             act_in = act_in.unsqueeze(0)
             action_probs = self.actor(act_in, taskid)
