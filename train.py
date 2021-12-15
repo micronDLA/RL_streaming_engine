@@ -325,6 +325,9 @@ if __name__ == "__main__":
 
         for taskid in range(len(graphs)):
             print(f'Starting PPO Different Graphs training {taskid} ...')
+            print('[WARNING] Multiple graphs with feed forward PPO is not currently supported. \n \
+                    Check `evaluate()` functio \n \
+                    Remove this warning if issue has been patched')
             for i_episode in range(1, args.epochs + 1):
                 env.reset()
                 env.get_graph(taskid) #set compute_graph to a graph from collection of graphs

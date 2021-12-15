@@ -201,8 +201,14 @@ class ActorCritic(nn.Module):
         return action.detach(), action_logprob.detach()
 
     def evaluate(self, state, action, graph_info, taskid=None):
-        emb = self.graph_model(graph_info)
-        act_in = torch.cat((state, emb), dim=1)
+        graph = graph_info[0]
+        graph = dgl.add_self_loop(graph)
+        graph_feat = graph.ndata['feat']
+        for layer in self.graph_model:
+            graph_feat = layer(graph, graph_feat)
+        graph_feat = self.graph_avg_pool(graph, graph_feat)
+        # emb = self.graph_model(graph_info)
+        act_in = torch.cat((state, graph_feat.broadcast_to(state.shape[0], -1)), dim=1)
         if self.mode == 'super':
             action_probs = self.actor(act_in, taskid)
         else:
@@ -299,10 +305,11 @@ class PPO:
             old_states = torch.permute(old_states, (1, 0, 2))
             m = [i for _, i in self.buffer.states]
             old_masks = torch.squeeze(torch.stack(m, dim=0)).detach().to(self.device)
+            old_graph = torch.squeeze(torch.stack(self.buffer.graphs, dim=0)).detach().to(self.device)
         else:
             old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(self.device)
+            old_graph = [graph.to(self.device) for graph in self.buffer.graphs]
         old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(self.device)
-        old_graph = torch.squeeze(torch.stack(self.buffer.graphs, dim=0)).detach().to(self.device)
         old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(self.device)
 
         # Optimize policy for K epochs
