@@ -64,6 +64,7 @@ class StreamingEngineEnv:
         self.compute_graph = None
         self.no_of_valid_mappings = 0
         self.emb_mode = emb_mode
+        self.tile_slice_to_node = {}  # What tile slice has what node
 
         self.graphs = graphs
         if type(graphs) == list: #list
@@ -122,6 +123,7 @@ class StreamingEngineEnv:
         return self.compute_graph, self.device_encoding
 
     def reset(self):
+        self.tile_slice_to_node = {}
         # Generate a new compute graph
         for graph in self.graphs:
             self._gen_compute_graph(graph)
@@ -160,6 +162,7 @@ class StreamingEngineEnv:
         node_coord: [node][coord c,y,x]
         self.compute_graph: dgl
         '''
+        print(self.compute_graph.edges())
         num_nodes = self.compute_graph.num_nodes()
         reward = torch.zeros(num_nodes)  # Shape: (no_of_graph_nodes,)
         ready_time = torch.zeros(num_nodes)  # Shape: (no_of_graph_nodes,)
@@ -203,12 +206,14 @@ class StreamingEngineEnv:
                     if src_done_time > dst_ready_time: # get largest from all predecessors
                         dst_ready_time = src_done_time  #TODO: Isn't variable dst_ready_time more like dst start time
 
-                if dst_ready_time == 0: # placed fine
+                if dst_ready_time == 0 and self.tile_slice_to_node.get(tuple(dst_coord.numpy()), None) is None: # placed fine
                     ready_time[dst] = dst_coord[2] + 4
+                    self.tile_slice_to_node[tuple(dst_coord.numpy())] = dst
                 elif dst_ready_time == -1: # not placed
                     ready_time[dst] = -2
-                elif dst_ready_time % self.device_topology[2] == dst_coord[2]: # If ready_time % spoke_count is correct
+                elif dst_ready_time % self.device_topology[2] == dst_coord[2] and self.tile_slice_to_node.get(tuple(dst_coord.numpy()), None) is None: # If ready_time % spoke_count is correct
                     ready_time[dst] = dst_ready_time + 4
+                    self.tile_slice_to_node[tuple(dst_coord.numpy())] = dst
                 else: # fail place
                     ready_time[dst] = -1
 
