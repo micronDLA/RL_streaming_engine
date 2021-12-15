@@ -162,7 +162,6 @@ class StreamingEngineEnv:
         node_coord: [node][coord c,y,x]
         self.compute_graph: dgl
         '''
-        print(self.compute_graph.edges())
         num_nodes = self.compute_graph.num_nodes()
         reward = torch.zeros(num_nodes)  # Shape: (no_of_graph_nodes,)
         ready_time = torch.zeros(num_nodes)  # Shape: (no_of_graph_nodes,)
