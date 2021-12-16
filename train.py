@@ -374,6 +374,8 @@ if __name__ == "__main__":
         action_dim = 48
         # RL place each node
         env = StreamingEngineEnv(graphs=[graph],
+                                 graphdef=graphdef,
+                                 tm_idx_total=TM_IDX_TOTAL,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=action_dim,
