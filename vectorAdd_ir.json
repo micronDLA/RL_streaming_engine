@@ -1,0 +1,200 @@
+{
+    "Dispatch": {
+        "DispatchVar": [
+            "TM_A",
+            "TM_B",
+            "TM_C",
+            "TM_count"
+        ]
+    },
+    "TileMemories": {
+        "TM_A": {
+            "access_type": "T1",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_Ai": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 64,
+            "data": 0
+        },
+        "TM_B": {
+            "access_type": "T1",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_Bi": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 64,
+            "data": 0
+        },
+        "TM_C": {
+            "access_type": "T1",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_count": {
+            "access_type": "T1",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_iter_idx": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 64,
+            "data": 0
+        }
+    },
+    "Program": [
+        {
+            "SyncFlow": [
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_count"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "afMsgDest: loop_head",
+                            "afMsgSel: Loop"
+                        ],
+                        "Predecessors": [],
+                        "Successors": []
+                    }
+                }
+            ]
+        },
+        {
+            "SyncFlow": [
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "IterIdx"
+                        ],
+                        "SEInstDefine": [
+                            "iter_idx"
+                        ],
+                        "ops": [
+                            "MulU64",
+                            "8",
+                            "afMsgDest: TM_iter_idx",
+                            "afMsgSel: Data"
+                        ],
+                        "Predecessors": [],
+                        "Successors": [
+                            1,
+                            2
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "iter_idx",
+                            "TM_A"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "AddU64",
+                            "afMemReq: ld_ai",
+                            "afMsgSel: LdAddr"
+                        ],
+                        "Predecessors": [
+                            0
+                        ],
+                        "Successors": []
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "iter_idx",
+                            "TM_B"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "AddU64",
+                            "afMemReq: ld_bi",
+                            "afMsgSel: LdAddr"
+                        ],
+                        "Predecessors": [
+                            0
+                        ],
+                        "Successors": []
+                    }
+                }
+            ]
+        },
+        {
+            "SyncFlow": [
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_iter_idx",
+                            "TM_C"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "MulU64",
+                            "AddU64",
+                            "8",
+                            "afMemReq: store_ci",
+                            "afMsgSel: StAddr"
+                        ],
+                        "Predecessors": [],
+                        "Successors": [
+                            1
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_Ai",
+                            "TM_Bi"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "AddU64",
+                            "afMemReq: store_ci",
+                            "afMsgSel: StData"
+                        ],
+                        "Predecessors": [
+                            0
+                        ],
+                        "Successors": []
+                    }
+                }
+            ]
+        },
+        {
+            "SyncFlow": [
+                {
+                    "SEInst": {
+                        "SEInstUse": [],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "afMsgDest: loop_head",
+                            "afMsgSel: CompAndFree"
+                        ],
+                        "Predecessors": [],
+                        "Successors": []
+                    }
+                }
+            ]
+        }
+    ]
+}

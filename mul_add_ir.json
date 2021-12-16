@@ -1,0 +1,102 @@
+{
+    "Dispatch": {
+        "DispatchVar": [
+            "TM_A",
+            "TM_B",
+            "TM_C",
+            "TM_Addr"
+        ]
+    },
+    "TileMemories": {
+        "TM_A": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_Addr": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_B": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_C": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        }
+    },
+    "Program": [
+        {
+            "SyncFlow": [
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_A",
+                            "TM_B"
+                        ],
+                        "SEInstDefine": [
+                            "temp"
+                        ],
+                        "ops": [
+                            "MulI64",
+                            "AddI64",
+                            "42"
+                        ],
+                        "Predecessors": [],
+                        "Successors": [
+                            1
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "temp",
+                            "TM_C"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "AddI64",
+                            "afMemReq: store",
+                            "afMsgSel: StData"
+                        ],
+                        "Predecessors": [
+                            0
+                        ],
+                        "Successors": [
+                            2
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_Addr"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "afMemReq: store",
+                            "afMsgSel: StAddr"
+                        ],
+                        "Predecessors": [
+                            1
+                        ],
+                        "Successors": []
+                    }
+                }
+            ]
+        }
+    ]
+}
