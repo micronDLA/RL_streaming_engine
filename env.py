@@ -20,7 +20,6 @@ class StreamingEngineEnv:
 
     def __init__(self, graphs,
                  graphdef,  # TODO make graph class and remove this double ref to graph
-                 tm_idx_total,
                  device_topology=(4, 4, 3),
                  device_cross_connections=False,
                  device_feat_size=48,
@@ -52,7 +51,7 @@ class StreamingEngineEnv:
                 "Device layout needs to be linear"
 
         self.graphdef = graphdef
-        self.tm_idx_total = tm_idx_total
+        self.tm_idx_total = len(graphdef['tile_memory_map'].keys())
         self.nodes_per_tm = self.get_tm_to_node_mapping()
         self.placement_mode = placement_mode
         self.graph_feat_size = graph_feat_size
@@ -65,7 +64,7 @@ class StreamingEngineEnv:
         self.no_of_valid_mappings = 0
         self.emb_mode = emb_mode
         self.tile_slice_to_node = {}  # What tile slice has what node
-
+        self.best_time = float('inf')
         self.graphs = graphs
         if type(graphs) == list: #list
             for graph in self.graphs:
@@ -103,7 +102,8 @@ class StreamingEngineEnv:
         # Add tile memory feature
         # This is a manual hack right now since in IFFT, number of TM is 14
         # and we have one more value for no TM
-        tile_mem_feat = torch.nn.functional.pad(graph.ndata['tm_req'],(0,1))
+        # tile_mem_feat = torch.nn.functional.pad(graph.ndata['tm_req'],(0,1))
+        tile_mem_feat = graph.ndata['tm_req']
         node_feat = torch.cat([node_feat, tile_mem_feat], -1)
         graph.ndata['feat'] = node_feat
 
@@ -251,14 +251,16 @@ class StreamingEngineEnv:
 
         self.compute_graph.ndata['node_coord'] = node_coord
 
-        if (ready_time >= 0).all():
+        if (ready_time >= 0).all() and self.best_time > ready_time.max().item():
             # Print possible assignment when all nodes are mapped
-            print('Possible assignment ->')
+            self.best_time = ready_time.max().item()
+            print('Possible assignment -> best reward {} '.format(self.best_time))
             assignment_list = [f'Instr ID# {node_idx}: {int(t)} | {a}' for node_idx, (t, a) in \
                                enumerate(zip(ready_time, node_coord.int().numpy()))]
             print('Instr ID#  : Ready time | Tile slice')
             pp.pprint(assignment_list)
-            output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_{self.no_of_valid_mappings}')
+            # output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_{self.no_of_valid_mappings}')
+            output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_best')
             self.no_of_valid_mappings += 1
             isvalid = True
 

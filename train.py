@@ -55,6 +55,24 @@ def get_args():
 
 # Specify graph as ([src_ids], [dst_ids], extra isolated nodes) edges, node ordering
 # starts from 0 regardless of specification
+TILE_MEMORY_MAP = {
+'None':0,
+'TM_inDataA':1,
+'TM_inDataB':2,
+'TM_table':3,
+'TM_half_pnts':4,
+'TM_mask':5,
+'TM_halfsize':6,
+'TM_tablestep':7,
+'TM_size':8,
+'TM_I':9,
+'TM_right':10,
+'TM_left':11,
+'TM_righti':12,
+'TM_lefti':13,
+'TM_tablei':14
+}
+
 PREDEF_GRAPHS = {
     "DISTANCE": ([0, 1, 2, 2, 2, 3, 4, 4, 5, 5, 6, 7, 8, 8, 11, 12, 12, 13, 13, 14, 14, 14, 15, 16, 17, 18, 19, 19, 20, 20, 21, 22],
                  [1, 2, 3, 4, 5, 4, 5, 6, 6, 7, 7, 8, 9, 10, 12, 13, 19, 15, 14, 16, 17, 18, 19, 17, 18, 19, 20, 21, 21, 22, 22, 23]),
@@ -83,29 +101,11 @@ PREDEF_GRAPHS = {
             # ([src_nodes],[dst_nodes], extra nodes to add)
     "FFT": {'graphdef': ([1, 1, 2, 2, 3, 4, 6, 6, 8, 10, 11, 11], [2, 3, 4, 6, 6, 5, 7, 8, 9, 11, 12, 13], 3),
             # instr_ID: [required TM index]
-            'tile_memory_req': {0: [4], 1: [0], 2: [5], 3: [9], 4: [7], 5: [3], 6: [8], 7: [1], 8: [6], 9: [1], 10: [12,14], 11: [12,14], 12: [13], 13: [13], 14: [2,10], 15: [2,11], 16: [0]}
+            'tile_memory_req': {0: [4], 1: [0], 2: [5], 3: [9], 4: [7], 5: [3], 6: [8], 7: [1], 8: [6], 9: [1], 10: [12,14], 11: [12,14], 12: [13], 13: [13], 14: [2,10], 15: [2,11], 16: [0]},
+            'tile_memory_map':TILE_MEMORY_MAP
            }
 }
 
-TILE_MEMORY_MAP = {
-    0: None,
-    1: 'TM_inDataA',
-    2: 'TM_inDataB',
-    3: 'TM_table',
-    4: 'TM_half_pnts',
-    5: 'TM_mask',
-    6: 'TM_halfsize',
-    7: 'TM_tablestep',
-    8: 'TM_size',
-    9: 'TM_I',
-    10: 'TM_right',
-    11: 'TM_left',
-    12: 'TM_righti',
-    13: 'TM_lefti',
-    14: 'TM_tablei'
-}
-
-TM_IDX_TOTAL = max(TILE_MEMORY_MAP.keys())
 
 def create_graph(graphdef, numnodes = 10):
     # random generate a directed acyclic graph
@@ -116,11 +116,11 @@ def create_graph(graphdef, numnodes = 10):
         tile_memory_req = graphdef['tile_memory_req']
         edges = graphdef['graphdef']
         graph = dgl.graph((torch.Tensor(edges[0]).int(), torch.Tensor(edges[1]).int()))
-        if len(edges) == 3:
+        if len(edges) == 3 and edges[2] > 0:
             graph.add_nodes(edges[2])
-
+        tm_idx_total = len(graphdef['tile_memory_map'].keys())
         # Add tile memory constraints as features to graph
-        tm_req_feat = torch.zeros(graph.num_nodes(), TM_IDX_TOTAL + 1)
+        tm_req_feat = torch.zeros(graph.num_nodes(), tm_idx_total)
         for instr_idx, tm_idxs in tile_memory_req.items():
             for tm_idx in tm_idxs:
                 tm_req_feat[instr_idx][tm_idx] = 1
@@ -150,11 +150,12 @@ if __name__ == "__main__":
     # random search
     if args.mode == 0:
         # randomly occupy with nodes (not occupied=0 value):
-        device_topology = (16, 1, args.spokes)
+        device_topology = args.device_topology
         # device_topology = (args.grid_size, args.grid_size, args.spokes)
         grid, grid_in, place = initial_fill(nodes, device_topology)
 
         env = StreamingEngineEnv(graphs=[graph],
+                                 graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=48,
@@ -185,11 +186,12 @@ if __name__ == "__main__":
     # ES search
     elif args.mode == 1:
         # randomly occupy with nodes (not occupied=0 value):
-        device_topology = (16, 1, args.spokes)
+        device_topology = args.device_topology
         # device_topology = (args.grid_size, args.grid_size, args.spokes)
         grid, grid_in, place = initial_fill(nodes, device_topology)
 
         env = StreamingEngineEnv(graphs=[graph],
+                                 graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=48,
@@ -237,14 +239,13 @@ if __name__ == "__main__":
         # RL place each node
         env = StreamingEngineEnv(graphs=[graph],
                                  graphdef=graphdef,
-                                 tm_idx_total=TM_IDX_TOTAL,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=48,
                                  graph_feat_size=32,
                                  placement_mode='one_node',
                                  )
-        ppo = PPO(args, state_dim=args.nodes*2, action_dim=48)
+        ppo = PPO(args, state_dim=args.nodes*2, action_dim=48, gnn_in=env.compute_graph.ndata['feat'].shape[1])
 
         # logging variables
         reward = best_reward = 0
@@ -311,6 +312,7 @@ if __name__ == "__main__":
 
         # RL place each node
         env = StreamingEngineEnv(graphs=graphs,
+                                 graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=48,
@@ -379,7 +381,6 @@ if __name__ == "__main__":
         # RL place each node
         env = StreamingEngineEnv(graphs=[graph],
                                  graphdef=graphdef,
-                                 tm_idx_total=TM_IDX_TOTAL,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=action_dim,
@@ -447,8 +448,7 @@ if __name__ == "__main__":
         # initialize Environment, Network and Optimizer
         env = StreamingEngineEnv(graphs=[graph],
                                  graphdef=graphdef,
-                                 tm_idx_total=TM_IDX_TOTAL,
-                                 device_topology=device_topology, 
+                                 device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=48,
                                  graph_feat_size=32,
