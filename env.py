@@ -64,7 +64,7 @@ class StreamingEngineEnv:
         self.no_of_valid_mappings = 0
         self.emb_mode = emb_mode
         self.tile_slice_to_node = {}  # What tile slice has what node
-
+        self.best_time = float('inf')
         self.graphs = graphs
         if type(graphs) == list: #list
             for graph in self.graphs:
@@ -251,14 +251,16 @@ class StreamingEngineEnv:
 
         self.compute_graph.ndata['node_coord'] = node_coord
 
-        if (ready_time >= 0).all():
+        if (ready_time >= 0).all() and self.best_time > ready_time.max().item():
             # Print possible assignment when all nodes are mapped
-            print('Possible assignment ->')
+            self.best_time = ready_time.max().item()
+            print('Possible assignment -> best reward {} '.format(self.best_time))
             assignment_list = [f'Instr ID# {node_idx}: {int(t)} | {a}' for node_idx, (t, a) in \
                                enumerate(zip(ready_time, node_coord.int().numpy()))]
             print('Instr ID#  : Ready time | Tile slice')
             pp.pprint(assignment_list)
-            output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_{self.no_of_valid_mappings}')
+            # output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_{self.no_of_valid_mappings}')
+            output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_best')
             self.no_of_valid_mappings += 1
             isvalid = True
 
