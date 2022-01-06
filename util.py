@@ -46,7 +46,11 @@ def get_graph_json(path):
         data = json.load(file)
         edge_src = []
         edge_dst = []
-
+        tmem_map = {0: None}
+        nidx = 1
+        for mem in data['TileMemories'].keys():  # graphs
+            tmem_map[mem] = nidx
+            nidx += 1
         nidx = 0
         for graph in data['Program']:  # graphs
             offset = nidx
@@ -55,7 +59,21 @@ def get_graph_json(path):
                     edge_src.append(nidx)
                     edge_dst.append(edges + offset)
                 nidx += 1
-    return (edge_src, edge_dst)
+
+        extra_node = (nidx-1) - max(max(edge_src), max(edge_dst))
+        nidx = 0
+        tmem_req = {}
+        for graph in data['Program']:  # graphs
+            for node in graph['SyncFlow']:  # nodes
+                l = []
+                for var in node['SEInst']['SEInstUse']:
+                    if var in tmem_map:
+                        l.append(tmem_map[var])
+                if not l:
+                    l.append(0)  # add none to empty
+                tmem_req[nidx] = l
+                nidx += 1
+    return {'graphdef':(edge_src, edge_dst, extra_node), 'tile_memory_req':tmem_req, 'tile_memory_map': tmem_map}
 
 def output_instr_json(grid_in, grid_shape, filename='output.json'):
     data = {}

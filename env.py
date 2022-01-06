@@ -20,7 +20,6 @@ class StreamingEngineEnv:
 
     def __init__(self, graphs,
                  graphdef,  # TODO make graph class and remove this double ref to graph
-                 tm_idx_total,
                  device_topology=(4, 4, 3),
                  device_cross_connections=False,
                  device_feat_size=48,
@@ -52,7 +51,7 @@ class StreamingEngineEnv:
                 "Device layout needs to be linear"
 
         self.graphdef = graphdef
-        self.tm_idx_total = tm_idx_total
+        self.tm_idx_total = len(graphdef['tile_memory_map'].keys())
         self.nodes_per_tm = self.get_tm_to_node_mapping()
         self.placement_mode = placement_mode
         self.graph_feat_size = graph_feat_size
@@ -103,7 +102,8 @@ class StreamingEngineEnv:
         # Add tile memory feature
         # This is a manual hack right now since in IFFT, number of TM is 14
         # and we have one more value for no TM
-        tile_mem_feat = torch.nn.functional.pad(graph.ndata['tm_req'],(0,1))
+        # tile_mem_feat = torch.nn.functional.pad(graph.ndata['tm_req'],(0,1))
+        tile_mem_feat = graph.ndata['tm_req']
         node_feat = torch.cat([node_feat, tile_mem_feat], -1)
         graph.ndata['feat'] = node_feat
 

@@ -116,13 +116,19 @@ class ACRNN(nn.Module): # rnn ppo
         return y
 
 class ActorCritic(nn.Module):
-    def __init__(self, device, state_dim, emb_size, action_dim, graph_size,
+    def __init__(self,
+                 device,
+                 state_dim,
+                 emb_size,
+                 action_dim,
+                 graph_size,
+                 gnn_in,
                  mode = 'linear', ntasks = 1):
         super(ActorCritic, self).__init__()
         self.device = device
         # self.graph_model = GraphEmb_Conv(graph_size) 
         self.graph_model = nn.ModuleList([
-            gnn.SGConv(48, 64, 1, False, nn.ReLU),
+            gnn.SGConv(gnn_in, 64, 1, False, nn.ReLU),
             gnn.SGConv(64, 128, 1, False, nn.ReLU)
         ])
         self.graph_avg_pool = gnn.AvgPooling()
@@ -223,7 +229,12 @@ class ActorCritic(nn.Module):
         return action_logprobs, state_values, dist_entropy
 
 class PPO:
-    def __init__(self, args, state_dim, action_dim, mode='', ntasks = 1):
+    def __init__(self, args,
+                 state_dim,
+                 action_dim,
+                 gnn_in = 48,
+                 mode='',
+                 ntasks = 1):
         #args.emb_size, betas, lr, gamma, K_epoch, eps_clip, loss_value_c, loss_entropy_c
         #ntasks: number of different graphs
         self.args = args
@@ -234,20 +245,23 @@ class PPO:
 
         self.buffer = RolloutBuffer()
         self.ntokens = args.device_topology
-        self.policy = ActorCritic(self.device,
-                                  self.state_dim,
-                                  self.args.emb_size,
-                                  self.action_dim,
-                                  self.args.graph_size,
+
+        self.policy = ActorCritic(device=self.device,
+                                  state_dim=self.state_dim,
+                                  emb_size=self.args.emb_size,
+                                  action_dim=self.action_dim,
+                                  graph_size=self.args.graph_size,
+                                  gnn_in=gnn_in,
                                   mode=mode,
                                   ntasks=ntasks).to(self.device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.args.lr, betas=self.args.betas)
         
-        self.policy_old = ActorCritic(self.device,
-                                      self.state_dim,
-                                      self.args.emb_size,
-                                      self.action_dim,
-                                      self.args.graph_size,
+        self.policy_old = ActorCritic(device=self.device,
+                                      state_dim=self.state_dim,
+                                      emb_size=self.args.emb_size,
+                                      action_dim=self.action_dim,
+                                      graph_size=self.args.graph_size,
+                                      gnn_in=gnn_in,
                                       mode=mode,
                                       ntasks=ntasks).to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
