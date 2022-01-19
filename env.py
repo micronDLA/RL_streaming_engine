@@ -199,7 +199,9 @@ class StreamingEngineEnv:
                     if self.device_cross_connections: # linear representation
                         # _dist = int(math.ceil(abs_dist / 2.)) * 2 - 2
                         # src_done_time += _dist / 2 + _dist + 1
-                        src_done_time += int(abs_dist/2) + abs_dist % 2 - 1
+                        # src_done_time += int(abs_dist/2) + abs_dist % 2 - 1
+                        src_done_time += abs_dist - 1  
+
                     else: # grid representation
                         # src_done_time += abs_dist + (abs_dist - 1) * 2
                         # At src_done_time, node is ready to be consumed 1 hop away
@@ -269,7 +271,7 @@ class StreamingEngineEnv:
             print('Instr ID#  : Ready time | Tile slice')
             pp.pprint(assignment_list)
             # output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_{self.no_of_valid_mappings}')
-            output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_best')
+            output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_best.json')
             self.no_of_valid_mappings += 1
             isvalid = True
 
