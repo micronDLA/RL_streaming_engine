@@ -31,7 +31,7 @@ def get_args():
     arg('--epochs',   type=int, default=5000, help='number of iterations')
     arg('--nodes', type=int, default=20,  help='number of nodes')
     arg('--debug', dest='debug', action='store_true', default=False, help='debug mode')
-    arg('--input', type=str, default='vectorAdd_ir.json', help='load input json')
+    arg('--input', type=str, default='input_graphs/vectorAdd_ir.json', help='load input json')
 
     # PPO
     arg('--num-episode', type=int, default=100000)
@@ -235,12 +235,8 @@ if __name__ == "__main__":
 
     # PPO Feedforward FF
     elif args.mode == 2:
-<<<<<<< HEAD
         device_topology = args.device_topology
         action_dim = np.prod(args.device_topology)
-=======
-        device_topology = (4, 1, args.spokes)
->>>>>>> master
         # RL place each node
         env = StreamingEngineEnv(graphs=[graph],
                                  graphdef=graphdef,
@@ -250,11 +246,7 @@ if __name__ == "__main__":
                                  graph_feat_size=32,
                                  placement_mode='one_node',
                                  )
-<<<<<<< HEAD
         ppo = PPO(args, state_dim=args.nodes*2, action_dim=action_dim, gnn_in=env.compute_graph.ndata['feat'].shape[1])
-=======
-        ppo = PPO(args, state_dim=args.nodes*2, action_dim=device_topology[0]*args.spokes, gnn_in=env.compute_graph.ndata['feat'].shape[1])
->>>>>>> master
 
         # logging variables
         reward = best_reward = 0
