@@ -1,0 +1,633 @@
+{
+    "Dispatch": {
+        "DispatchVar": [
+            "ld_args"
+        ]
+    },
+    "TileMemories": {
+        "TM_I": {
+            "access_type": "T1",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_args": {
+            "access_type": "T2",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_half_pnts": {
+            "access_type": "T2",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_halfsize": {
+            "access_type": "T1",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_inDataA": {
+            "access_type": "T2",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_inDataB": {
+            "access_type": "T2",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_left": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 64,
+            "data": 0
+        },
+        "TM_lefti": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 64,
+            "data": 0
+        },
+        "TM_levels": {
+            "access_type": "T2",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_mask": {
+            "access_type": "T1",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_n": {
+            "access_type": "T2",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_right": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 64,
+            "data": 0
+        },
+        "TM_righti": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 64,
+            "data": 0
+        },
+        "TM_size": {
+            "access_type": "T1",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_table": {
+            "access_type": "T2",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
+        "TM_tablei": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 64,
+            "data": 0
+        },
+        "TM_tablestep": {
+            "access_type": "T1",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        }
+    },
+    "Program": [
+        {
+            "SyncFlow": [
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_levels"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "afMsgDest: loop_T1_head",
+                            "afMsgSel: Loop"
+                        ],
+                        "Predecessors": [],
+                        "Successors": []
+                    }
+                }
+            ]
+        },
+        {
+            "SyncFlow": [
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "IterIdx"
+                        ],
+                        "SEInstDefine": [
+                            "i"
+                        ],
+                        "ops": [
+                            "afMsgDest: TM_I",
+                            "afMsgSel: Data"
+                        ],
+                        "Predecessors": [],
+                        "Successors": [
+                            1,
+                            2,
+                            3,
+                            4
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "i"
+                        ],
+                        "SEInstDefine": [
+                            "i_sub"
+                        ],
+                        "ops": [
+                            "RsubU64",
+                            "16"
+                        ],
+                        "Predecessors": [
+                            0
+                        ],
+                        "Successors": [
+                            5
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "i"
+                        ],
+                        "SEInstDefine": [
+                            "i_add"
+                        ],
+                        "ops": [
+                            "AddU64",
+                            "1"
+                        ],
+                        "Predecessors": [
+                            0
+                        ],
+                        "Successors": [
+                            6
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "i"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "ShlU64",
+                            "1",
+                            "afMsgDest: TM_halfsize",
+                            "afMsgSel: Data"
+                        ],
+                        "Predecessors": [
+                            0
+                        ],
+                        "Successors": []
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "i"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "ShlU64",
+                            "2",
+                            "afMsgDest: TM_size",
+                            "afMsgSel: Data"
+                        ],
+                        "Predecessors": [
+                            0
+                        ],
+                        "Successors": []
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "i_sub"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "ShrU64",
+                            "65535",
+                            "afMsgDest: TM_mask",
+                            "afMsgSel: Data"
+                        ],
+                        "Predecessors": [
+                            1
+                        ],
+                        "Successors": []
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "i_add",
+                            "TM_n"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "ShrU64",
+                            "afMsgDest: TM_tablestep",
+                            "afMsgSel: Data"
+                        ],
+                        "Predecessors": [
+                            2
+                        ],
+                        "Successors": []
+                    }
+                }
+            ]
+        },
+        {
+            "SyncFlow": [
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_half_pnts"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "afMsgDest: loop_T0_head",
+                            "afMsgSel: Loop"
+                        ],
+                        "Predecessors": [],
+                        "Successors": []
+                    }
+                }
+            ]
+        },
+        {
+            "SyncFlow": [
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "IterIdx"
+                        ],
+                        "SEInstDefine": [
+                            "j"
+                        ],
+                        "ops": [],
+                        "Predecessors": [],
+                        "Successors": [
+                            1,
+                            4
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "j",
+                            "TM_mask"
+                        ],
+                        "SEInstDefine": [
+                            "pnt"
+                        ],
+                        "ops": [
+                            "AndAllTypes"
+                        ],
+                        "Predecessors": [
+                            0
+                        ],
+                        "Successors": [
+                            2,
+                            5
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "pnt",
+                            "TM_tablestep"
+                        ],
+                        "SEInstDefine": [
+                            "table_idx"
+                        ],
+                        "ops": [
+                            "MulU64"
+                        ],
+                        "Predecessors": [
+                            1
+                        ],
+                        "Successors": [
+                            3
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "table_idx",
+                            "TM_table"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "MulU64",
+                            "AddU64",
+                            "8",
+                            "afMemReq: ld_tablei",
+                            "afMsgSel: LdAddr"
+                        ],
+                        "Predecessors": [
+                            2
+                        ],
+                        "Successors": []
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "j",
+                            "TM_I"
+                        ],
+                        "SEInstDefine": [
+                            "stride"
+                        ],
+                        "ops": [
+                            "ShrU64"
+                        ],
+                        "Predecessors": [
+                            0
+                        ],
+                        "Successors": [
+                            5
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "stride",
+                            "TM_size",
+                            "pnt"
+                        ],
+                        "SEInstDefine": [
+                            "left"
+                        ],
+                        "ops": [
+                            "MulU64",
+                            "AddU64",
+                            "afMsgDest: TM_left",
+                            "afMsgSel: Data"
+                        ],
+                        "Predecessors": [
+                            1,
+                            4
+                        ],
+                        "Successors": [
+                            6,
+                            7
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "left",
+                            "TM_inDataA"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "MulU64",
+                            "AddU64",
+                            "8",
+                            "afMemReq: ld_lefti",
+                            "afMsgSel: LdAddr"
+                        ],
+                        "Predecessors": [
+                            5
+                        ],
+                        "Successors": []
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "left",
+                            "TM_halfsize"
+                        ],
+                        "SEInstDefine": [
+                            "right"
+                        ],
+                        "ops": [
+                            "AddU64",
+                            "afMsgDest: TM_right",
+                            "afMsgSel: Data"
+                        ],
+                        "Predecessors": [
+                            5
+                        ],
+                        "Successors": [
+                            8
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "right",
+                            "TM_inDataA"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "MulU64",
+                            "AddU64",
+                            "8",
+                            "afMemReq: ld_righti",
+                            "afMsgSel: LdAddr"
+                        ],
+                        "Predecessors": [
+                            7
+                        ],
+                        "Successors": []
+                    }
+                }
+            ]
+        },
+        {
+            "SyncFlow": [
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_righti",
+                            "TM_tablei"
+                        ],
+                        "SEInstDefine": [
+                            "tp_0"
+                        ],
+                        "ops": [
+                            "MulF32"
+                        ],
+                        "Predecessors": [],
+                        "Successors": [
+                            1
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_righti",
+                            "TM_tablei",
+                            "tp_0"
+                        ],
+                        "SEInstDefine": [
+                            "tp"
+                        ],
+                        "ops": [
+                            "MulF32",
+                            "AddcF32"
+                        ],
+                        "Predecessors": [
+                            0
+                        ],
+                        "Successors": [
+                            2,
+                            4
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_lefti",
+                            "tp"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "SubF32",
+                            "afMemReq: store_righti",
+                            "afMsgSel: StData"
+                        ],
+                        "Predecessors": [
+                            1
+                        ],
+                        "Successors": [
+                            3
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_right",
+                            "TM_inDataB"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "MulU64",
+                            "AddU64",
+                            "8",
+                            "afMemReq: store_righti",
+                            "afMsgSel: StAddr"
+                        ],
+                        "Predecessors": [
+                            2
+                        ],
+                        "Successors": []
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_lefti",
+                            "tp"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "AddF32",
+                            "afMemReq: store_lefti",
+                            "afMsgSel: StData"
+                        ],
+                        "Predecessors": [
+                            1
+                        ],
+                        "Successors": [
+                            5
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_left",
+                            "TM_inDataB"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "MulU64",
+                            "AddU64",
+                            "8",
+                            "afMemReq: store_lefti",
+                            "afMsgSel: StAddr"
+                        ],
+                        "Predecessors": [
+                            4
+                        ],
+                        "Successors": []
+                    }
+                }
+            ]
+        },
+        {
+            "SyncFlow": [
+                {
+                    "SEInst": {
+                        "SEInstUse": [],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "afMsgDest: loop_T0_head",
+                            "afMsgSel: CompAndFree"
+                        ],
+                        "Predecessors": [],
+                        "Successors": []
+                    }
+                }
+            ]
+        }
+    ]
+}
