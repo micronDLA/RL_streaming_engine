@@ -235,7 +235,7 @@ if __name__ == "__main__":
 
     # PPO Feedforward FF
     elif args.mode == 2:
-        device_topology = (16, 1, args.spokes)
+        device_topology = (4, 1, args.spokes)
         # RL place each node
         env = StreamingEngineEnv(graphs=[graph],
                                  graphdef=graphdef,
@@ -245,7 +245,7 @@ if __name__ == "__main__":
                                  graph_feat_size=32,
                                  placement_mode='one_node',
                                  )
-        ppo = PPO(args, state_dim=args.nodes*2, action_dim=48, gnn_in=env.compute_graph.ndata['feat'].shape[1])
+        ppo = PPO(args, state_dim=args.nodes*2, action_dim=device_topology[0]*args.spokes, gnn_in=env.compute_graph.ndata['feat'].shape[1])
 
         # logging variables
         reward = best_reward = 0
