@@ -64,6 +64,7 @@ class StreamingEngineEnv:
         self.no_of_valid_mappings = 0
         self.emb_mode = emb_mode
         self.tile_slice_to_node = {}  # What tile slice has what node
+        self.title_used = set()
         self.best_time = float('inf')
         self.graphs = graphs
         if type(graphs) == list: #list
@@ -124,6 +125,7 @@ class StreamingEngineEnv:
 
     def reset(self):
         self.tile_slice_to_node = {}
+        self.title_used.clear()
         # Generate a new compute graph
         for graph in self.graphs:
             self._gen_compute_graph(graph)
@@ -154,7 +156,8 @@ class StreamingEngineEnv:
         elif self.placement_mode == 'one_node':
             # When placing one node at a time
             return self._calculate_reward(assignment)
-        
+
+
 
     def _calculate_reward(self, node_coord):
         '''
@@ -207,15 +210,20 @@ class StreamingEngineEnv:
                     if src_done_time > dst_ready_time: # get largest from all predecessors
                         dst_ready_time = src_done_time  #TODO: Isn't variable dst_ready_time more like dst start time
 
-                dst_coord_node = self.tile_slice_to_node.get(tuple(dst_coord.numpy()), -1)
+                tile = dst_coord.numpy().astype(int)
+                dst_coord_node = self.tile_slice_to_node.get(tuple(tile), -1)
+                # if len(self.compute_graph.predecessors(dst)) == 0 and tuple(tile[:2]) in self.title_used:
+                #     ready_time[dst] = -1 #not placed
                 if dst_ready_time == 0 and  dst_coord_node in [dst, -1] : # placed fine
                     ready_time[dst] = dst_coord[2] + 4
-                    self.tile_slice_to_node[tuple(dst_coord.numpy())] = dst
+                    self.tile_slice_to_node[tuple(tile)] = dst
+                    # self.title_used.add(tuple(tile[:2]))
                 elif dst_ready_time == -1: # not placed
                     ready_time[dst] = -2
                 elif dst_ready_time % self.device_topology[2] == dst_coord[2] and dst_coord_node in [dst, -1]: # If ready_time % spoke_count is correct
                     ready_time[dst] = dst_ready_time + 4
-                    self.tile_slice_to_node[tuple(dst_coord.numpy())] = dst
+                    self.tile_slice_to_node[tuple(tile)] = dst
+                    # self.title_used.add(tuple(tile[:2]))
                 else: # fail place
                     ready_time[dst] = -1
 

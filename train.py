@@ -26,12 +26,12 @@ def get_args():
     arg = parser.add_argument
     arg('--mode', type=int, default=2, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn, 4- multigraph, 5- transformer')
 
-    arg('--device_topology',   type=tuple, default=(16, 1, 3), help='number of PE')
+    arg('--device_topology',   type=tuple, default=(4, 1, 3), help='number of PE')
     arg('--spokes',   type=int, default=3, help='Number of spokes')
     arg('--epochs',   type=int, default=5000, help='number of iterations')
     arg('--nodes', type=int, default=20,  help='number of nodes')
     arg('--debug', dest='debug', action='store_true', default=False, help='debug mode')
-    arg('--input', type=str, default='mul_add_ir.json', help='load input json')
+    arg('--input', type=str, default='input_graphs/vectorAdd_ir.json', help='load input json')
 
     # PPO
     arg('--num-episode', type=int, default=100000)
@@ -235,17 +235,18 @@ if __name__ == "__main__":
 
     # PPO Feedforward FF
     elif args.mode == 2:
-        device_topology = (4, 1, args.spokes)
+        device_topology = args.device_topology
+        action_dim = np.prod(args.device_topology)
         # RL place each node
         env = StreamingEngineEnv(graphs=[graph],
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
-                                 device_feat_size=48,
+                                 device_feat_size=action_dim,
                                  graph_feat_size=32,
                                  placement_mode='one_node',
                                  )
-        ppo = PPO(args, state_dim=args.nodes*2, action_dim=device_topology[0]*args.spokes, gnn_in=env.compute_graph.ndata['feat'].shape[1])
+        ppo = PPO(args, state_dim=args.nodes*2, action_dim=action_dim, gnn_in=env.compute_graph.ndata['feat'].shape[1])
 
         # logging variables
         reward = best_reward = 0
@@ -253,6 +254,7 @@ if __name__ == "__main__":
         reward_buf.append(0)
         time_step = 0
         start = time.time()
+        gprod = np.prod(device_topology[:2])
         # training loop:
         print('Starting PPO training...')
         for i_episode in range(1, args.epochs + 1):
@@ -261,22 +263,31 @@ if __name__ == "__main__":
             state = -torch.ones(args.nodes)*2 #ready time: -2 not placed
             action = -torch.ones(args.nodes, 3)
             time_step += 1 #number of epoch to train model
-            for node in range(0, args.nodes):
+
+            not_used = [ii for ii in range(gprod)]
+            for node_id in range(0, args.nodes):
+                if len(env.compute_graph.predecessors(node_id)) == 0:
+                    place = random.choice(not_used)
+                    not_used.remove(place)
+                    x, y = np.unravel_index(place, device_topology[:2])
+                    action[node_id] = torch.Tensor([x, y, 0])
+
+            for node_id in range(0, args.nodes):
+                if len(env.compute_graph.predecessors(node_id)) == 0:
+                    continue
                 node_1hot = torch.zeros(args.nodes)
-                node_1hot[node] = 1.0
+                node_1hot[node_id] = 1.0
                 rl_state = torch.cat((torch.FloatTensor(state).view(-1), node_1hot))  # grid, node to place
-                assigment = ppo.select_action(rl_state, graph) # node assigment index in streaming eng slice
-                action = ppo.get_coord(assigment, action, node, device_topology) # put node assigment to vector of node assigments, 2D tensor
+                assigment, tobuff = ppo.select_action(rl_state, graph) # node assigment index in streaming eng slice
+                action = ppo.get_coord(assigment, action, node_id, device_topology) # put node assigment to vector of node assigments, 2D tensor
                 reward, state, _ = env.step(action)
+
                 # Saving reward and is_terminals:
-                ppo.buffer.rewards.append(reward.mean())
-                if node == (args.nodes - 1):
-                    done = True
-                else:
-                    done = False
-                ppo.buffer.is_terminals.append(done)
+                done = node_id == (args.nodes - 1)
+                ppo.add_buffer(tobuff, reward, done)
                 best_reward = max(best_reward, state.max().item())
                 reward_buf.append(reward.mean())
+
             # learning:
             if time_step % args.update_timestep == 0:
                 ppo.update()
@@ -298,8 +309,8 @@ if __name__ == "__main__":
 
     # PPO multiple graphs
     elif args.mode == 4:
-        device_topology = (16, 1, args.spokes)
-
+        device_topology = args.device_topology
+        action_dim = np.prod(args.device_topology)
         # different graphs
         g_defs = [([1, 1, 2, 2, 3, 4, 6, 6, 8, 10, 11, 11], [2, 3, 4, 6, 6, 5, 7, 8, 9, 11, 12, 13], 0),
                   ([1, 1, 2, 3, 4, 6, 6, 8, 10, 11, 11], [2, 3, 4, 6, 5, 7, 8, 9, 11, 12, 13], 0),
@@ -315,10 +326,10 @@ if __name__ == "__main__":
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
-                                 device_feat_size=48,
+                                 device_feat_size=action_dim,
                                  graph_feat_size=32,
                                  placement_mode='one_node')
-        ppo = PPO(args, state_dim=args.nodes*2, action_dim=48,)
+        ppo = PPO(args, state_dim=args.nodes*2, action_dim=action_dim,)
                  # mode='super', ntasks = len(graphs))
 
         # logging variables
@@ -341,27 +352,28 @@ if __name__ == "__main__":
                 state = -torch.ones(args.nodes)*2 #ready time: -2 not placed
                 action = -torch.ones(args.nodes, 3)
                 time_step += 1 #number of epoch to train model
-                for node in range(0, args.nodes):
+
+                node_id = 0
+                while node_id < args.nodes:
                     node_1hot = torch.zeros(args.nodes)
-                    node_1hot[node] = 1.0
+                    node_1hot[node_id] = 1.0
                     rl_state = torch.cat((torch.FloatTensor(state).view(-1), node_1hot))  # grid, node to place
-                    assigment = ppo.select_action(rl_state, gr_edges)#, taskid=taskid) # node assigment index
-                    action = ppo.get_coord(assigment, action, node, device_topology) # put node assigment to vector of node assigments
+                    assigment, tobuff = ppo.select_action(rl_state, gr_edges)#, taskid=taskid) # node assigment index
+                    action = ppo.get_coord(assigment, action, node_id, device_topology) # put node assigment to vector of node assigments
                     reward, state, _ = env._calculate_reward(action)
-                    # Saving reward and is_terminals:
-                    ppo.buffer.rewards.append(reward.mean())
-                    if node == (args.nodes - 1):
-                        done = True
-                    else:
-                        done = False
-                    ppo.buffer.is_terminals.append(done)
-                    best_reward = max(best_reward, state.max().item())
-                    reward_buf.append(reward.mean())
+
+                    if not torch.any(state < 0):
+                        # Saving reward and is_terminals:
+                        done = node_id == (args.nodes - 1)
+                        ppo.add_buffer(tobuff, reward, done)
+                        best_reward = max(best_reward, state.max().item())
+                        reward_buf.append(reward.mean())
+                        node_id += 1
+
                 # learning:
                 if time_step % args.update_timestep == 0:
                     ppo.update(taskid=taskid)
                     time_step = 0
-
 
                 # logging
                 if i_episode % args.log_interval == 0:
@@ -376,8 +388,8 @@ if __name__ == "__main__":
 
     # PPO Sequence Transformer
     elif args.mode == 5:
-        device_topology = (16, 1, args.spokes)
-        action_dim = 48
+        device_topology = args.device_topology
+        action_dim = np.prod(args.device_topology)
         # RL place each node
         env = StreamingEngineEnv(graphs=[graph],
                                  graphdef=graphdef,
@@ -441,8 +453,8 @@ if __name__ == "__main__":
     # sinkhorn
     elif args.mode == 3:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        device_topology = (16, 1, args.spokes)
-        # device_topology = (args.grid_size, args.grid_size, args.spokes)
+        device_topology = args.device_topology
+        action_dim = np.prod(args.device_topology)
         grid, grid_in, place = initial_fill(nodes, device_topology)
 
         # initialize Environment, Network and Optimizer
@@ -450,15 +462,15 @@ if __name__ == "__main__":
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
-                                 device_feat_size=48,
+                                 device_feat_size=action_dim,
                                  graph_feat_size=32,
                                  init_place=None, # torch.tensor(grid_in),
                                  emb_mode='topological',
                                  placement_mode='all_node')
-        policy = PolicyNet(cg_in_feats=48,
+        policy = PolicyNet(cg_in_feats=action_dim,
                            cg_hidden_dim=64,
                            cg_conv_k=1,
-                           transformer_dim=48,
+                           transformer_dim=action_dim,
                            transformer_nhead=4,
                            transformer_ffdim=128,
                            transformer_dropout=0.1,
