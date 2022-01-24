@@ -254,6 +254,7 @@ if __name__ == "__main__":
         reward_buf.append(0)
         time_step = 0
         start = time.time()
+        gprod = np.prod(device_topology[:2])
         # training loop:
         print('Starting PPO training...')
         for i_episode in range(1, args.epochs + 1):
@@ -262,22 +263,31 @@ if __name__ == "__main__":
             state = -torch.ones(args.nodes)*2 #ready time: -2 not placed
             action = -torch.ones(args.nodes, 3)
             time_step += 1 #number of epoch to train model
-            for node in range(0, args.nodes):
+
+            not_used = [ii for ii in range(gprod)]
+            for node_id in range(0, args.nodes):
+                if len(env.compute_graph.predecessors(node_id)) == 0:
+                    place = random.choice(not_used)
+                    not_used.remove(place)
+                    x, y = np.unravel_index(place, device_topology[:2])
+                    action[node_id] = torch.Tensor([x, y, 0])
+
+            for node_id in range(0, args.nodes):
+                if len(env.compute_graph.predecessors(node_id)) == 0:
+                    continue
                 node_1hot = torch.zeros(args.nodes)
-                node_1hot[node] = 1.0
+                node_1hot[node_id] = 1.0
                 rl_state = torch.cat((torch.FloatTensor(state).view(-1), node_1hot))  # grid, node to place
-                assigment = ppo.select_action(rl_state, graph) # node assigment index in streaming eng slice
-                action = ppo.get_coord(assigment, action, node, device_topology) # put node assigment to vector of node assigments, 2D tensor
+                assigment, tobuff = ppo.select_action(rl_state, graph) # node assigment index in streaming eng slice
+                action = ppo.get_coord(assigment, action, node_id, device_topology) # put node assigment to vector of node assigments, 2D tensor
                 reward, state, _ = env.step(action)
+
                 # Saving reward and is_terminals:
-                ppo.buffer.rewards.append(reward.mean())
-                if node == (args.nodes - 1):
-                    done = True
-                else:
-                    done = False
-                ppo.buffer.is_terminals.append(done)
+                done = node_id == (args.nodes - 1)
+                ppo.add_buffer(tobuff, reward, done)
                 best_reward = max(best_reward, state.max().item())
                 reward_buf.append(reward.mean())
+
             # learning:
             if time_step % args.update_timestep == 0:
                 ppo.update()
@@ -342,27 +352,28 @@ if __name__ == "__main__":
                 state = -torch.ones(args.nodes)*2 #ready time: -2 not placed
                 action = -torch.ones(args.nodes, 3)
                 time_step += 1 #number of epoch to train model
-                for node in range(0, args.nodes):
+
+                node_id = 0
+                while node_id < args.nodes:
                     node_1hot = torch.zeros(args.nodes)
-                    node_1hot[node] = 1.0
+                    node_1hot[node_id] = 1.0
                     rl_state = torch.cat((torch.FloatTensor(state).view(-1), node_1hot))  # grid, node to place
-                    assigment = ppo.select_action(rl_state, gr_edges)#, taskid=taskid) # node assigment index
-                    action = ppo.get_coord(assigment, action, node, device_topology) # put node assigment to vector of node assigments
+                    assigment, tobuff = ppo.select_action(rl_state, gr_edges)#, taskid=taskid) # node assigment index
+                    action = ppo.get_coord(assigment, action, node_id, device_topology) # put node assigment to vector of node assigments
                     reward, state, _ = env._calculate_reward(action)
-                    # Saving reward and is_terminals:
-                    ppo.buffer.rewards.append(reward.mean())
-                    if node == (args.nodes - 1):
-                        done = True
-                    else:
-                        done = False
-                    ppo.buffer.is_terminals.append(done)
-                    best_reward = max(best_reward, state.max().item())
-                    reward_buf.append(reward.mean())
+
+                    if not torch.any(state < 0):
+                        # Saving reward and is_terminals:
+                        done = node_id == (args.nodes - 1)
+                        ppo.add_buffer(tobuff, reward, done)
+                        best_reward = max(best_reward, state.max().item())
+                        reward_buf.append(reward.mean())
+                        node_id += 1
+
                 # learning:
                 if time_step % args.update_timestep == 0:
                     ppo.update(taskid=taskid)
                     time_step = 0
-
 
                 # logging
                 if i_episode % args.log_interval == 0:

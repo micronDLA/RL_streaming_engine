@@ -212,19 +212,18 @@ class StreamingEngineEnv:
 
                 tile = dst_coord.numpy().astype(int)
                 dst_coord_node = self.tile_slice_to_node.get(tuple(tile), -1)
-                if len(self.compute_graph.predecessors(dst)) == 0 and tuple(tile[:2]) in self.title_used:
-                    ready_time[dst] = -1 #not placed
-
-                elif dst_ready_time == 0 and  dst_coord_node in [dst, -1] : # placed fine
+                # if len(self.compute_graph.predecessors(dst)) == 0 and tuple(tile[:2]) in self.title_used:
+                #     ready_time[dst] = -1 #not placed
+                if dst_ready_time == 0 and  dst_coord_node in [dst, -1] : # placed fine
                     ready_time[dst] = dst_coord[2] + 4
                     self.tile_slice_to_node[tuple(tile)] = dst
-                    self.title_used.add(tuple(tile[:2]))
+                    # self.title_used.add(tuple(tile[:2]))
                 elif dst_ready_time == -1: # not placed
                     ready_time[dst] = -2
                 elif dst_ready_time % self.device_topology[2] == dst_coord[2] and dst_coord_node in [dst, -1]: # If ready_time % spoke_count is correct
                     ready_time[dst] = dst_ready_time + 4
                     self.tile_slice_to_node[tuple(tile)] = dst
-                    self.title_used.add(tuple(tile[:2]))
+                    # self.title_used.add(tuple(tile[:2]))
                 else: # fail place
                     ready_time[dst] = -1
 

@@ -281,7 +281,7 @@ class PPO:
         action[node] = torch.tensor(np.unravel_index(assigment, grid_shape))
         return action
 
-    def select_action(self, state, graph_info, taskid=None, mask=None):
+    def select_action(self, state, graph_info, taskid=None):
         with torch.no_grad():
             graph_info = graph_info.to(self.device)
             if self.mode=='transformer':
@@ -289,13 +289,19 @@ class PPO:
             else:
                 state = torch.FloatTensor(state).to(self.device)
                 action, action_logprob = self.policy_old.act(state, graph_info, taskid)
-        
+
+        return action.item(), (state, action, graph_info, action_logprob)
+
+    def add_buffer(self, inbuff, reward, done):
+        state, action, graph_info, action_logprob = inbuff
         self.buffer.states.append(state)
         self.buffer.actions.append(action)
         self.buffer.graphs.append(graph_info)
         self.buffer.logprobs.append(action_logprob)
-        return action.item()
-    
+        self.buffer.rewards.append(reward.mean())
+        self.buffer.is_terminals.append(done)
+
+
     def update(self, taskid=None):
         # Monte Carlo estimate of rewards:
         rewards = []
