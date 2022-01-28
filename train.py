@@ -234,6 +234,95 @@ if __name__ == "__main__":
                 torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
                 running_reward = 0
 
+    # Sinkhorn
+    elif args.mode == 3:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device_topology = args.device_topology
+        action_dim = np.prod(args.device_topology)
+        grid, grid_in, place = initial_fill(nodes, device_topology)
+
+        # initialize Environment, Network and Optimizer
+        env = StreamingEngineEnv(graphs=[graph],
+                                 graphdef=graphdef,
+                                 device_topology=device_topology,
+                                 device_cross_connections=True,
+                                 device_feat_size=action_dim,
+                                 graph_feat_size=32,
+                                 init_place=None, # torch.tensor(grid_in),
+                                 emb_mode='topological',
+                                 placement_mode='all_node')
+        policy = PolicyNet(cg_in_feats=action_dim,
+                           cg_hidden_dim=64,
+                           cg_conv_k=1,
+                           transformer_dim=action_dim,
+                           transformer_nhead=4,
+                           transformer_ffdim=128,
+                           transformer_dropout=0.1,
+                           transformer_num_layers=4,
+                           sinkhorn_iters=100)
+        optim = Adam(policy.parameters(), lr=args.lr)
+        if args.model != '':
+            policy.load_state_dict(torch.load(args.pre_train)['model_state_dict'])
+            optim.load_state_dict(torch.load(args.pre_train)['optimizer_state_dict'])
+
+        # to keep track of average reward
+        reward_buf = deque(maxlen=100)
+        reward_buf.append(0)
+
+        # train
+        for episode in range(args.num_episode):
+
+            # reset env
+            state = env.reset()
+
+            # collect 'trajectory'
+            # only one trajectory step
+            with torch.no_grad():
+                old_action, old_logp, old_entropy, old_scores = policy(*state)
+                old_reward, _, _ = env.step(old_action)
+
+            # use 'trajectory' to train network
+            for epoch in range(args.ppo_epoch):
+
+                action, logp, entropy, scores = policy(*state)
+                reward, ready_time, _ = env.step(action)
+
+                ratio = torch.exp(logp) / (torch.exp(old_logp) + 1e-8)
+                surr1 = ratio * reward
+                surr2 = torch.clamp(ratio, 1-args.eps_clip, 1+args.eps_clip) * reward
+                action_loss = -torch.fmin(surr1, surr2)
+                entropy_loss = entropy * args.loss_entropy_c
+
+                loss = (action_loss + entropy)
+                loss = loss.mean()
+
+                optim.zero_grad()
+                loss.backward()
+                clip_grad_norm_(policy.parameters(), args.max_grad_norm)
+                optim.step()
+
+                reward_buf.append(reward.mean())
+            if episode % args.log_interval == 0:
+                # TODO: Add number of nodes places to this prompt and also log it
+                print(f'Episode: {episode} | Epoch: {epoch} | Ready time: {ready_time.max().item()} | Loss: {loss.item()} | Mean Reward: {np.mean(reward_buf)}')
+                # TODO: Is mean of reward buffer the total mean up until now?
+                writer.add_scalar('mean reward/episode', np.mean(reward_buf), episode)
+                writer.add_scalar('total time/episode', ready_time.max().item(), episode)
+                writer.flush()
+
+            if episode % args.log_interval == 0 and args.debug:
+                plt.imshow(old_scores[0].exp().detach(), vmin=0, vmax=1)
+                plt.pause(1e-6)
+                #plt.show()
+                #env.render()
+
+            if episode % 1000 == 0:
+                torch.save({
+                    'model_state_dict': policy.state_dict(),
+                    'optimizer_state_dict': optim.state_dict(),
+                    'mean_reward': np.mean(reward_buf)
+                }, 'models/model'+ str(episode) +'.pth')
+    
     # PPO multiple graphs
     elif args.mode == 4:
         device_topology = args.device_topology
@@ -375,94 +464,4 @@ if __name__ == "__main__":
                 # print('Episode {} \t Avg improvement: {}'.format(i_episode, avg_improve))
                 torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
                 running_reward = 0
-
-
-    # sinkhorn
-    elif args.mode == 3:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        device_topology = args.device_topology
-        action_dim = np.prod(args.device_topology)
-        grid, grid_in, place = initial_fill(nodes, device_topology)
-
-        # initialize Environment, Network and Optimizer
-        env = StreamingEngineEnv(graphs=[graph],
-                                 graphdef=graphdef,
-                                 device_topology=device_topology,
-                                 device_cross_connections=True,
-                                 device_feat_size=action_dim,
-                                 graph_feat_size=32,
-                                 init_place=None, # torch.tensor(grid_in),
-                                 emb_mode='topological',
-                                 placement_mode='all_node')
-        policy = PolicyNet(cg_in_feats=action_dim,
-                           cg_hidden_dim=64,
-                           cg_conv_k=1,
-                           transformer_dim=action_dim,
-                           transformer_nhead=4,
-                           transformer_ffdim=128,
-                           transformer_dropout=0.1,
-                           transformer_num_layers=4,
-                           sinkhorn_iters=100)
-        optim = Adam(policy.parameters(), lr=args.lr)
-        if args.model != '':
-            policy.load_state_dict(torch.load(args.pre_train)['model_state_dict'])
-            optim.load_state_dict(torch.load(args.pre_train)['optimizer_state_dict'])
-
-        # to keep track of average reward
-        reward_buf = deque(maxlen=100)
-        reward_buf.append(0)
-
-        # train
-        for episode in range(args.num_episode):
-
-            # reset env
-            state = env.reset()
-
-            # collect 'trajectory'
-            # only one trajectory step
-            with torch.no_grad():
-                old_action, old_logp, old_entropy, old_scores = policy(*state)
-                old_reward, _, _ = env.step(old_action)
-
-            # use 'trajectory' to train network
-            for epoch in range(args.ppo_epoch):
-
-                action, logp, entropy, scores = policy(*state)
-                reward, ready_time, _ = env.step(action)
-
-                ratio = torch.exp(logp) / (torch.exp(old_logp) + 1e-8)
-                surr1 = ratio * reward
-                surr2 = torch.clamp(ratio, 1-args.eps_clip, 1+args.eps_clip) * reward
-                action_loss = -torch.fmin(surr1, surr2)
-                entropy_loss = entropy * args.loss_entropy_c
-
-                loss = (action_loss + entropy)
-                loss = loss.mean()
-
-                optim.zero_grad()
-                loss.backward()
-                clip_grad_norm_(policy.parameters(), args.max_grad_norm)
-                optim.step()
-
-                reward_buf.append(reward.mean())
-            if episode % args.log_interval == 0:
-                # TODO: Add number of nodes places to this prompt and also log it
-                print(f'Episode: {episode} | Epoch: {epoch} | Ready time: {ready_time.max().item()} | Loss: {loss.item()} | Mean Reward: {np.mean(reward_buf)}')
-                # TODO: Is mean of reward buffer the total mean up until now?
-                writer.add_scalar('mean reward/episode', np.mean(reward_buf), episode)
-                writer.add_scalar('total time/episode', ready_time.max().item(), episode)
-                writer.flush()
-
-            if episode % args.log_interval == 0 and args.debug:
-                plt.imshow(old_scores[0].exp().detach(), vmin=0, vmax=1)
-                plt.pause(1e-6)
-                #plt.show()
-                #env.render()
-
-            if episode % 1000 == 0:
-                torch.save({
-                    'model_state_dict': policy.state_dict(),
-                    'optimizer_state_dict': optim.state_dict(),
-                    'mean_reward': np.mean(reward_buf)
-                }, 'models/model'+ str(episode) +'.pth')
 
