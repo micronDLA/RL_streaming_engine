@@ -13,7 +13,7 @@ from env import StreamingEngineEnv
 from tqdm import tqdm
 import random
 from matplotlib import pyplot as plt
-from util import calc_score, initial_fill, get_graph_json
+from util import calc_score, initial_fill, get_graph_json, create_graph
 from torch.utils.tensorboard import SummaryWriter
 import time
 from ppo_discrete import PPO
@@ -54,28 +54,6 @@ def get_args():
 
     args = parser.parse_args()
     return args
-
-
-def create_graph(graphdef, numnodes = 10):
-    # random generate a directed acyclic graph
-    if graphdef is None:
-        a = nx.generators.directed.gn_graph(numnodes)
-        graph = dgl.from_networkx(a)
-    else:
-        tile_memory_req = graphdef['tile_memory_req']
-        edges = graphdef['graphdef']
-        graph = dgl.graph((torch.Tensor(edges[0]).int(), torch.Tensor(edges[1]).int()))
-        if len(edges) == 3 and edges[2] > 0:
-            graph.add_nodes(edges[2])
-        tm_idx_total = len(graphdef['tile_memory_map'].keys())
-        # Add tile memory constraints as features to graph
-        tm_req_feat = torch.zeros(graph.num_nodes(), tm_idx_total)
-        for instr_idx, tm_idxs in tile_memory_req.items():
-            for tm_idx in tm_idxs:
-                tm_req_feat[instr_idx][tm_idx] = 1
-        
-        graph.ndata['tm_req'] = tm_req_feat
-    return graph
 
 if __name__ == "__main__":
     args = get_args()  # Holds all the input arguments

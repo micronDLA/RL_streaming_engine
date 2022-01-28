@@ -14,7 +14,27 @@ ROW = 2
 COL = 2
 PIPE_CYCLE = 4
 
-
+def create_graph(graphdef, numnodes = 10):
+    # random generate a directed acyclic graph
+    if graphdef is None:
+        a = nx.generators.directed.gn_graph(numnodes)
+        graph = dgl.from_networkx(a)
+    else:
+        tile_memory_req = graphdef['tile_memory_req']
+        edges = graphdef['graphdef']
+        graph = dgl.graph((torch.Tensor(edges[0]).int(), torch.Tensor(edges[1]).int()))
+        if len(edges) == 3 and edges[2] > 0:
+            graph.add_nodes(edges[2])
+        tm_idx_total = len(graphdef['tile_memory_map'].keys())
+        # Add tile memory constraints as features to graph
+        tm_req_feat = torch.zeros(graph.num_nodes(), tm_idx_total)
+        for instr_idx, tm_idxs in tile_memory_req.items():
+            for tm_idx in tm_idxs:
+                tm_req_feat[instr_idx][tm_idx] = 1
+        
+        graph.ndata['tm_req'] = tm_req_feat
+    return graph
+    
 def positional_encoding(pos, feat_size=16, timescale=10000):
     '''
     pos : [N X D] matrix of positions. N is the number of slices.
