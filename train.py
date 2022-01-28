@@ -23,19 +23,17 @@ from util import calc_score, initial_fill, get_graph_json, create_graph
 # random.seed(10)
 
 def get_args():
-    parser = argparse.ArgumentParser(description='grid placement')
+    parser = argparse.ArgumentParser(description='Streaming Engine RL Mapper')
     arg = parser.add_argument
-    arg('--mode', type=int, default=2, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn, 4- multigraph, 5- transformer')
+    arg('--mode', type=int, default=2, help='0 - random search, 1 - CMA-ES search, 2 - RL PPO, 3 - sinkhorn, 4 - multigraph, 5 - transformer')
 
-    arg('--device_topology',   type=tuple, default=(4, 1, 3), help='number of PE')
-    arg('--spokes',   type=int, default=3, help='Number of spokes')
-    arg('--epochs',   type=int, default=5000, help='number of iterations')
+    arg('--device_topology', nargs='+', type=int, default=(4, 1, 3), help='Device topology of Streaming Engine')
+    arg('--epochs', type=int, default=5000, help='number of epochs')
     arg('--nodes', type=int, default=20,  help='number of nodes')
-    arg('--debug', dest='debug', action='store_true', default=False, help='debug mode')
-    arg('--input', type=str, default='input_graphs/vectorAdd_ir.json', help='load input json')
+    arg('--debug', dest='debug', action='store_true', default=False, help='enable debug mode')
+    arg('--input', type=str, default='input_graphs/vectorAdd_ir.json', help='load input json from file')
 
     # PPO
-    arg('--num-episode', type=int, default=100000)
     arg('--ppo-epoch', type=int, default=4)
     arg('--max-grad-norm', type=float, default=1)
     arg('--graph_size', type=int, default=128, help='graph embedding size')
@@ -48,14 +46,15 @@ def get_args():
     arg('--betas', type=float, default=(0.9, 0.999), help='')
     arg('--loss_entropy_c', type=float, default=0.01, help='coefficient for entropy term in loss')
     arg('--loss_value_c', type=float, default=0.5, help='coefficient for value term in loss')
-    arg('--model', type=str, default='', help='load saved model')
-    arg('--log_interval', type=int, default=100, help='interval for log')
+    arg('--model', type=str, default='', help='load saved model from file')
+    arg('--log_interval', type=int, default=100, help='interval for logging data')
 
     args = parser.parse_args()
     return args
 
 if __name__ == "__main__":
     args = get_args()  # Holds all the input arguments
+    args.device_topology = tuple(args.device_topology)
     print('Arguments:', args)
     writer = SummaryWriter()
 
@@ -95,7 +94,7 @@ if __name__ == "__main__":
         best_grid = grid_in.copy()
 
         print('Running Random search optimization ...')
-        for i in tqdm(range(args.num_episode)):
+        for i in tqdm(range(args.epochs)):
             grid, grid_in, _ = initial_fill(nodes, grid.shape)
             _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
             after_rs = ready_time.max().item()
@@ -130,7 +129,7 @@ if __name__ == "__main__":
 
         import nevergrad as ng
 
-        budget = args.num_episode  # How many steps of training we will do before concluding.
+        budget = args.epochs  # How many steps of training we will do before concluding.
         workers = 16
         # param = ng.p.Array(shape=(int(nodes), 1)).set_integer_casting().set_bounds(lower=0, upper=ROW*COL*nodes)
         param = ng.p.Array(init=place).set_integer_casting().set_bounds(lower=0, upper= np.prod(device_topology))
@@ -269,7 +268,7 @@ if __name__ == "__main__":
         reward_buf.append(0)
 
         # train
-        for episode in range(args.num_episode):
+        for episode in range(args.epochs):
 
             # reset env
             state = env.reset()
