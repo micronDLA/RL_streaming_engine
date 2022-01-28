@@ -1,24 +1,23 @@
+import time
 import torch
+import random
 import argparse
+from collections import deque
+
+import dgl
 import numpy as np
 import networkx as nx
-from collections import deque
+from tqdm import tqdm
 from matplotlib import pyplot as plt
-import torch
 from torch.optim import Adam
 from torch.nn.utils import clip_grad_norm_
-import dgl
+from torch.utils.tensorboard import SummaryWriter
+
 from net import PolicyNet
 from env import StreamingEngineEnv
-from tqdm import tqdm
-import random
-from matplotlib import pyplot as plt
-from util import calc_score, initial_fill, get_graph_json, create_graph
-from torch.utils.tensorboard import SummaryWriter
-import time
 from ppo_discrete import PPO
-
 from graph_def import PREDEF_GRAPHS
+from util import calc_score, initial_fill, get_graph_json, create_graph
 
 #torch.autograd.set_detect_anomaly(True)
 # random.seed(10)
