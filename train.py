@@ -33,6 +33,10 @@ def get_args():
     arg('--debug', dest='debug', action='store_true', default=False, help='enable debug mode')
     arg('--input', type=str, default='input_graphs/vectorAdd_ir.json', help='load input json from file')
 
+    # Constraints
+    arg('--no-tm-constr', action='store_true', help='disable tile memory constraint')
+    arg('--no-sf-constr', action='store_true', help='disable sync flow constraint')
+
     # PPO
     arg('--ppo-epoch', type=int, default=4)
     arg('--max-grad-norm', type=float, default=1)
@@ -79,7 +83,8 @@ if __name__ == "__main__":
         # device_topology = (args.grid_size, args.grid_size, args.spokes)
         grid, grid_in, place = initial_fill(nodes, device_topology)
 
-        env = StreamingEngineEnv(graphs=[graph],
+        env = StreamingEngineEnv(args=args,
+                                 graphs=[graph],
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
@@ -115,7 +120,8 @@ if __name__ == "__main__":
         # device_topology = (args.grid_size, args.grid_size, args.spokes)
         grid, grid_in, place = initial_fill(nodes, device_topology)
 
-        env = StreamingEngineEnv(graphs=[graph],
+        env = StreamingEngineEnv(args=args,
+                                 graphs=[graph],
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
@@ -163,7 +169,8 @@ if __name__ == "__main__":
         device_topology = args.device_topology
         action_dim = np.prod(args.device_topology)
         # RL place each node
-        env = StreamingEngineEnv(graphs=[graph],
+        env = StreamingEngineEnv(args=args,
+                                 graphs=[graph],
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
@@ -189,16 +196,17 @@ if __name__ == "__main__":
             action = -torch.ones(args.nodes, 3)
             time_step += 1 #number of epoch to train model
 
-            not_used = [ii for ii in range(gprod)]
-            for node_id in range(0, args.nodes):
-                if len(env.compute_graph.predecessors(node_id)) == 0:
-                    place = random.choice(not_used)
-                    not_used.remove(place)
-                    x, y = np.unravel_index(place, device_topology[:2])
-                    action[node_id] = torch.Tensor([x, y, 0])
+            if not args.no_sf_constr:
+                not_used = [ii for ii in range(gprod)]
+                for node_id in range(0, args.nodes):
+                    if len(env.compute_graph.predecessors(node_id)) == 0:
+                        place = random.choice(not_used)
+                        not_used.remove(place)
+                        x, y = np.unravel_index(place, device_topology[:2])
+                        action[node_id] = torch.Tensor([x, y, 0])
 
             for node_id in range(0, args.nodes):
-                if len(env.compute_graph.predecessors(node_id)) == 0:
+                if not args.no_sf_constr and len(env.compute_graph.predecessors(node_id)) == 0:
                     continue
                 node_1hot = torch.zeros(args.nodes)
                 node_1hot[node_id] = 1.0
@@ -240,7 +248,8 @@ if __name__ == "__main__":
         grid, grid_in, place = initial_fill(nodes, device_topology)
 
         # initialize Environment, Network and Optimizer
-        env = StreamingEngineEnv(graphs=[graph],
+        env = StreamingEngineEnv(args=args,
+                                 graphs=[graph],
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
@@ -336,7 +345,8 @@ if __name__ == "__main__":
             graphs.append(g)
 
         # RL place each node
-        env = StreamingEngineEnv(graphs=graphs,
+        env = StreamingEngineEnv(args=args,
+                                 graphs=graphs,
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
@@ -405,7 +415,8 @@ if __name__ == "__main__":
         device_topology = args.device_topology
         action_dim = np.prod(args.device_topology)
         # RL place each node
-        env = StreamingEngineEnv(graphs=[graph],
+        env = StreamingEngineEnv(args=args,
+                                 graphs=[graph],
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
