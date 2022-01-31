@@ -1,40 +1,43 @@
+import time
 import torch
+import random
 import argparse
+from collections import deque
+
+import dgl
 import numpy as np
 import networkx as nx
-from collections import deque
+from tqdm import tqdm
 from matplotlib import pyplot as plt
-import torch
 from torch.optim import Adam
 from torch.nn.utils import clip_grad_norm_
-import dgl
+from torch.utils.tensorboard import SummaryWriter
+
 from net import PolicyNet
 from env import StreamingEngineEnv
-from tqdm import tqdm
-import random
-from matplotlib import pyplot as plt
-from util import calc_score, initial_fill, get_graph_json
-from torch.utils.tensorboard import SummaryWriter
-import time
 from ppo_discrete import PPO
+from graph_def import PREDEF_GRAPHS
+from util import calc_score, initial_fill, get_graph_json, create_graph
 
 #torch.autograd.set_detect_anomaly(True)
 # random.seed(10)
 
 def get_args():
-    parser = argparse.ArgumentParser(description='grid placement')
+    parser = argparse.ArgumentParser(description='Streaming Engine RL Mapper')
     arg = parser.add_argument
-    arg('--mode', type=int, default=2, help='0 random search, 1 CMA-ES search, 2- RL PPO, 3- sinkhorn, 4- multigraph, 5- transformer')
+    arg('--mode', type=int, default=2, help='0 - random search, 1 - CMA-ES search, 2 - RL PPO, 3 - sinkhorn, 4 - multigraph, 5 - transformer')
 
-    arg('--device_topology',   type=tuple, default=(4, 1, 3), help='number of PE')
-    arg('--spokes',   type=int, default=3, help='Number of spokes')
-    arg('--epochs',   type=int, default=5000, help='number of iterations')
+    arg('--device_topology', nargs='+', type=int, default=(4, 1, 3), help='Device topology of Streaming Engine')
+    arg('--epochs', type=int, default=5000, help='number of epochs')
     arg('--nodes', type=int, default=20,  help='number of nodes')
-    arg('--debug', dest='debug', action='store_true', default=False, help='debug mode')
-    arg('--input', type=str, default='input_graphs/vectorAdd_ir.json', help='load input json')
+    arg('--debug', dest='debug', action='store_true', default=False, help='enable debug mode')
+    arg('--input', type=str, default='input_graphs/vectorAdd_ir.json', help='load input json from file')
+
+    # Constraints
+    arg('--no-tm-constr', action='store_true', help='disable tile memory constraint')
+    arg('--no-sf-constr', action='store_true', help='disable sync flow constraint')
 
     # PPO
-    arg('--num-episode', type=int, default=100000)
     arg('--ppo-epoch', type=int, default=4)
     arg('--max-grad-norm', type=float, default=1)
     arg('--graph_size', type=int, default=128, help='graph embedding size')
@@ -47,89 +50,15 @@ def get_args():
     arg('--betas', type=float, default=(0.9, 0.999), help='')
     arg('--loss_entropy_c', type=float, default=0.01, help='coefficient for entropy term in loss')
     arg('--loss_value_c', type=float, default=0.5, help='coefficient for value term in loss')
-    arg('--model', type=str, default='', help='load saved model')
-    arg('--log_interval', type=int, default=100, help='interval for log')
+    arg('--model', type=str, default='', help='load saved model from file')
+    arg('--log_interval', type=int, default=100, help='interval for logging data')
 
     args = parser.parse_args()
     return args
 
-# Specify graph as ([src_ids], [dst_ids], extra isolated nodes) edges, node ordering
-# starts from 0 regardless of specification
-TILE_MEMORY_MAP = {
-'None':0,
-'TM_inDataA':1,
-'TM_inDataB':2,
-'TM_table':3,
-'TM_half_pnts':4,
-'TM_mask':5,
-'TM_halfsize':6,
-'TM_tablestep':7,
-'TM_size':8,
-'TM_I':9,
-'TM_right':10,
-'TM_left':11,
-'TM_righti':12,
-'TM_lefti':13,
-'TM_tablei':14
-}
-
-PREDEF_GRAPHS = {
-    "DISTANCE": ([0, 1, 2, 2, 2, 3, 4, 4, 5, 5, 6, 7, 8, 8, 11, 12, 12, 13, 13, 14, 14, 14, 15, 16, 17, 18, 19, 19, 20, 20, 21, 22],
-                 [1, 2, 3, 4, 5, 4, 5, 6, 6, 7, 7, 8, 9, 10, 12, 13, 19, 15, 14, 16, 17, 18, 19, 17, 18, 19, 20, 21, 21, 22, 22, 23]),
-    "FFT_OLD":
-             ([0,
-               2, 3,
-               5, 6, 6, 7, 8, 9, 10, 11, 12,
-               14, 15, 16, 17, 18, 19, 20, 21, 17, 17,
-               23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
-               35, 35, 36, 37, 38, 38, 39, 39, 40, 42, 41, 43, 43, 48, 49, 50, 51,
-               53,
-               55,
-              ],
-              [1,
-               3, 4,
-               6, 7, 8, 9, 9, 10, 11, 12, 13,
-               15, 16, 17, 18, 19, 20, 21, 22, 19, 21,
-               24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34,
-               36, 37, 38, 39, 40, 42, 41, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
-               54,
-               56,
-              ]),
-    "FFT_SIMPLE": ([0, 0, 1, 1, 2, 3, 4, 4, 5], [1, 2, 3, 4, 4, 6, 5, 8, 7]),
-    "FFT_SYNC2": ([1, 1, 2, 2, 3, 4, 6, 6, 8], [2, 3, 4, 6, 6, 5, 7, 8, 9]),
-    # Complete FFT graph
-            # ([src_nodes],[dst_nodes], extra nodes to add)
-    "FFT": {'graphdef': ([1, 1, 2, 2, 3, 4, 6, 6, 8, 10, 11, 11], [2, 3, 4, 6, 6, 5, 7, 8, 9, 11, 12, 13], 3),
-            # instr_ID: [required TM index]
-            'tile_memory_req': {0: [4], 1: [0], 2: [5], 3: [9], 4: [7], 5: [3], 6: [8], 7: [1], 8: [6], 9: [1], 10: [12,14], 11: [12,14], 12: [13], 13: [13], 14: [2,10], 15: [2,11], 16: [0]},
-            'tile_memory_map':TILE_MEMORY_MAP
-           }
-}
-
-
-def create_graph(graphdef, numnodes = 10):
-    # random generate a directed acyclic graph
-    if graphdef is None:
-        a = nx.generators.directed.gn_graph(numnodes)
-        graph = dgl.from_networkx(a)
-    else:
-        tile_memory_req = graphdef['tile_memory_req']
-        edges = graphdef['graphdef']
-        graph = dgl.graph((torch.Tensor(edges[0]).int(), torch.Tensor(edges[1]).int()))
-        if len(edges) == 3 and edges[2] > 0:
-            graph.add_nodes(edges[2])
-        tm_idx_total = len(graphdef['tile_memory_map'].keys())
-        # Add tile memory constraints as features to graph
-        tm_req_feat = torch.zeros(graph.num_nodes(), tm_idx_total)
-        for instr_idx, tm_idxs in tile_memory_req.items():
-            for tm_idx in tm_idxs:
-                tm_req_feat[instr_idx][tm_idx] = 1
-        
-        graph.ndata['tm_req'] = tm_req_feat
-    return graph
-
 if __name__ == "__main__":
     args = get_args()  # Holds all the input arguments
+    args.device_topology = tuple(args.device_topology)
     print('Arguments:', args)
     writer = SummaryWriter()
 
@@ -154,7 +83,8 @@ if __name__ == "__main__":
         # device_topology = (args.grid_size, args.grid_size, args.spokes)
         grid, grid_in, place = initial_fill(nodes, device_topology)
 
-        env = StreamingEngineEnv(graphs=[graph],
+        env = StreamingEngineEnv(args=args,
+                                 graphs=[graph],
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
@@ -169,7 +99,7 @@ if __name__ == "__main__":
         best_grid = grid_in.copy()
 
         print('Running Random search optimization ...')
-        for i in tqdm(range(args.num_episode)):
+        for i in tqdm(range(args.epochs)):
             grid, grid_in, _ = initial_fill(nodes, grid.shape)
             _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
             after_rs = ready_time.max().item()
@@ -190,7 +120,8 @@ if __name__ == "__main__":
         # device_topology = (args.grid_size, args.grid_size, args.spokes)
         grid, grid_in, place = initial_fill(nodes, device_topology)
 
-        env = StreamingEngineEnv(graphs=[graph],
+        env = StreamingEngineEnv(args=args,
+                                 graphs=[graph],
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
@@ -204,7 +135,7 @@ if __name__ == "__main__":
 
         import nevergrad as ng
 
-        budget = args.num_episode  # How many steps of training we will do before concluding.
+        budget = args.epochs  # How many steps of training we will do before concluding.
         workers = 16
         # param = ng.p.Array(shape=(int(nodes), 1)).set_integer_casting().set_bounds(lower=0, upper=ROW*COL*nodes)
         param = ng.p.Array(init=place).set_integer_casting().set_bounds(lower=0, upper= np.prod(device_topology))
@@ -238,7 +169,8 @@ if __name__ == "__main__":
         device_topology = args.device_topology
         action_dim = np.prod(args.device_topology)
         # RL place each node
-        env = StreamingEngineEnv(graphs=[graph],
+        env = StreamingEngineEnv(args=args,
+                                 graphs=[graph],
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
@@ -264,16 +196,17 @@ if __name__ == "__main__":
             action = -torch.ones(args.nodes, 3)
             time_step += 1 #number of epoch to train model
 
-            not_used = [ii for ii in range(gprod)]
-            for node_id in range(0, args.nodes):
-                if len(env.compute_graph.predecessors(node_id)) == 0:
-                    place = random.choice(not_used)
-                    not_used.remove(place)
-                    x, y = np.unravel_index(place, device_topology[:2])
-                    action[node_id] = torch.Tensor([x, y, 0])
+            if not args.no_sf_constr:
+                not_used = [ii for ii in range(gprod)]
+                for node_id in range(0, args.nodes):
+                    if len(env.compute_graph.predecessors(node_id)) == 0:
+                        place = random.choice(not_used)
+                        not_used.remove(place)
+                        x, y = np.unravel_index(place, device_topology[:2])
+                        action[node_id] = torch.Tensor([x, y, 0])
 
             for node_id in range(0, args.nodes):
-                if len(env.compute_graph.predecessors(node_id)) == 0:
+                if not args.no_sf_constr and len(env.compute_graph.predecessors(node_id)) == 0:
                     continue
                 node_1hot = torch.zeros(args.nodes)
                 node_1hot[node_id] = 1.0
@@ -307,6 +240,96 @@ if __name__ == "__main__":
                 torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
                 running_reward = 0
 
+    # Sinkhorn
+    elif args.mode == 3:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device_topology = args.device_topology
+        action_dim = np.prod(args.device_topology)
+        grid, grid_in, place = initial_fill(nodes, device_topology)
+
+        # initialize Environment, Network and Optimizer
+        env = StreamingEngineEnv(args=args,
+                                 graphs=[graph],
+                                 graphdef=graphdef,
+                                 device_topology=device_topology,
+                                 device_cross_connections=True,
+                                 device_feat_size=action_dim,
+                                 graph_feat_size=32,
+                                 init_place=None, # torch.tensor(grid_in),
+                                 emb_mode='topological',
+                                 placement_mode='all_node')
+        policy = PolicyNet(cg_in_feats=action_dim,
+                           cg_hidden_dim=64,
+                           cg_conv_k=1,
+                           transformer_dim=action_dim,
+                           transformer_nhead=4,
+                           transformer_ffdim=128,
+                           transformer_dropout=0.1,
+                           transformer_num_layers=4,
+                           sinkhorn_iters=100)
+        optim = Adam(policy.parameters(), lr=args.lr)
+        if args.model != '':
+            policy.load_state_dict(torch.load(args.pre_train)['model_state_dict'])
+            optim.load_state_dict(torch.load(args.pre_train)['optimizer_state_dict'])
+
+        # to keep track of average reward
+        reward_buf = deque(maxlen=100)
+        reward_buf.append(0)
+
+        # train
+        for episode in range(args.epochs):
+
+            # reset env
+            state = env.reset()
+
+            # collect 'trajectory'
+            # only one trajectory step
+            with torch.no_grad():
+                old_action, old_logp, old_entropy, old_scores = policy(*state)
+                old_reward, _, _ = env.step(old_action)
+
+            # use 'trajectory' to train network
+            for epoch in range(args.ppo_epoch):
+
+                action, logp, entropy, scores = policy(*state)
+                reward, ready_time, _ = env.step(action)
+
+                ratio = torch.exp(logp) / (torch.exp(old_logp) + 1e-8)
+                surr1 = ratio * reward
+                surr2 = torch.clamp(ratio, 1-args.eps_clip, 1+args.eps_clip) * reward
+                action_loss = -torch.fmin(surr1, surr2)
+                entropy_loss = entropy * args.loss_entropy_c
+
+                loss = (action_loss + entropy)
+                loss = loss.mean()
+
+                optim.zero_grad()
+                loss.backward()
+                clip_grad_norm_(policy.parameters(), args.max_grad_norm)
+                optim.step()
+
+                reward_buf.append(reward.mean())
+            if episode % args.log_interval == 0:
+                # TODO: Add number of nodes places to this prompt and also log it
+                print(f'Episode: {episode} | Epoch: {epoch} | Ready time: {ready_time.max().item()} | Loss: {loss.item()} | Mean Reward: {np.mean(reward_buf)}')
+                # TODO: Is mean of reward buffer the total mean up until now?
+                writer.add_scalar('mean reward/episode', np.mean(reward_buf), episode)
+                writer.add_scalar('total time/episode', ready_time.max().item(), episode)
+                writer.flush()
+
+            if episode % args.log_interval == 0 and args.debug:
+                plt.imshow(old_scores[0].exp().detach(), vmin=0, vmax=1)
+                plt.pause(1e-6)
+                #plt.show()
+                #env.render()
+
+            if episode % 1000 == 0:
+                torch.save({
+                    'model_state_dict': policy.state_dict(),
+                    'optimizer_state_dict': optim.state_dict(),
+                    'mean_reward': np.mean(reward_buf)
+                }, 'models/model'+ str(episode) +'.pth')
+    
     # PPO multiple graphs
     elif args.mode == 4:
         device_topology = args.device_topology
@@ -322,7 +345,8 @@ if __name__ == "__main__":
             graphs.append(g)
 
         # RL place each node
-        env = StreamingEngineEnv(graphs=graphs,
+        env = StreamingEngineEnv(args=args,
+                                 graphs=graphs,
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
@@ -391,7 +415,8 @@ if __name__ == "__main__":
         device_topology = args.device_topology
         action_dim = np.prod(args.device_topology)
         # RL place each node
-        env = StreamingEngineEnv(graphs=[graph],
+        env = StreamingEngineEnv(args=args,
+                                 graphs=[graph],
                                  graphdef=graphdef,
                                  device_topology=device_topology,
                                  device_cross_connections=True,
@@ -448,94 +473,4 @@ if __name__ == "__main__":
                 # print('Episode {} \t Avg improvement: {}'.format(i_episode, avg_improve))
                 torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
                 running_reward = 0
-
-
-    # sinkhorn
-    elif args.mode == 3:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        device_topology = args.device_topology
-        action_dim = np.prod(args.device_topology)
-        grid, grid_in, place = initial_fill(nodes, device_topology)
-
-        # initialize Environment, Network and Optimizer
-        env = StreamingEngineEnv(graphs=[graph],
-                                 graphdef=graphdef,
-                                 device_topology=device_topology,
-                                 device_cross_connections=True,
-                                 device_feat_size=action_dim,
-                                 graph_feat_size=32,
-                                 init_place=None, # torch.tensor(grid_in),
-                                 emb_mode='topological',
-                                 placement_mode='all_node')
-        policy = PolicyNet(cg_in_feats=action_dim,
-                           cg_hidden_dim=64,
-                           cg_conv_k=1,
-                           transformer_dim=action_dim,
-                           transformer_nhead=4,
-                           transformer_ffdim=128,
-                           transformer_dropout=0.1,
-                           transformer_num_layers=4,
-                           sinkhorn_iters=100)
-        optim = Adam(policy.parameters(), lr=args.lr)
-        if args.model != '':
-            policy.load_state_dict(torch.load(args.pre_train)['model_state_dict'])
-            optim.load_state_dict(torch.load(args.pre_train)['optimizer_state_dict'])
-
-        # to keep track of average reward
-        reward_buf = deque(maxlen=100)
-        reward_buf.append(0)
-
-        # train
-        for episode in range(args.num_episode):
-
-            # reset env
-            state = env.reset()
-
-            # collect 'trajectory'
-            # only one trajectory step
-            with torch.no_grad():
-                old_action, old_logp, old_entropy, old_scores = policy(*state)
-                old_reward, _, _ = env.step(old_action)
-
-            # use 'trajectory' to train network
-            for epoch in range(args.ppo_epoch):
-
-                action, logp, entropy, scores = policy(*state)
-                reward, ready_time, _ = env.step(action)
-
-                ratio = torch.exp(logp) / (torch.exp(old_logp) + 1e-8)
-                surr1 = ratio * reward
-                surr2 = torch.clamp(ratio, 1-args.eps_clip, 1+args.eps_clip) * reward
-                action_loss = -torch.fmin(surr1, surr2)
-                entropy_loss = entropy * args.loss_entropy_c
-
-                loss = (action_loss + entropy)
-                loss = loss.mean()
-
-                optim.zero_grad()
-                loss.backward()
-                clip_grad_norm_(policy.parameters(), args.max_grad_norm)
-                optim.step()
-
-                reward_buf.append(reward.mean())
-            if episode % args.log_interval == 0:
-                # TODO: Add number of nodes places to this prompt and also log it
-                print(f'Episode: {episode} | Epoch: {epoch} | Ready time: {ready_time.max().item()} | Loss: {loss.item()} | Mean Reward: {np.mean(reward_buf)}')
-                # TODO: Is mean of reward buffer the total mean up until now?
-                writer.add_scalar('mean reward/episode', np.mean(reward_buf), episode)
-                writer.add_scalar('total time/episode', ready_time.max().item(), episode)
-                writer.flush()
-
-            if episode % args.log_interval == 0 and args.debug:
-                plt.imshow(old_scores[0].exp().detach(), vmin=0, vmax=1)
-                plt.pause(1e-6)
-                #plt.show()
-                #env.render()
-
-            if episode % 1000 == 0:
-                torch.save({
-                    'model_state_dict': policy.state_dict(),
-                    'optimizer_state_dict': optim.state_dict(),
-                    'mean_reward': np.mean(reward_buf)
-                }, 'models/model'+ str(episode) +'.pth')
 

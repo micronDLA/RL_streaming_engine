@@ -18,7 +18,7 @@ class StreamingEngineEnv:
     device_topology: [Rows, Cols, Spokes] for a given streaming engine setup
     '''
 
-    def __init__(self, graphs,
+    def __init__(self, args, graphs,
                  graphdef,  # TODO make graph class and remove this double ref to graph
                  device_topology=(4, 4, 3),
                  device_cross_connections=False,
@@ -72,6 +72,9 @@ class StreamingEngineEnv:
                 self._gen_compute_graph(graph)
         else:
             raise NotImplementedError
+
+        self.no_tm_constr = args.no_tm_constr  # Tile memory constraint flag
+        self.no_sf_constr = args.no_sf_constr  # Syncflow constraints flag
 
     def get_graph(self, id):
         self.compute_graph = self.graphs[id]
@@ -212,47 +215,48 @@ class StreamingEngineEnv:
 
                 tile = dst_coord.numpy().astype(int)
                 dst_coord_node = self.tile_slice_to_node.get(tuple(tile), -1)
-                # if len(self.compute_graph.predecessors(dst)) == 0 and tuple(tile[:2]) in self.title_used:
-                #     ready_time[dst] = -1 #not placed
-                if dst_ready_time == 0 and  dst_coord_node in [dst, -1] : # placed fine
+                if not self.no_sf_constr and len(self.compute_graph.predecessors(dst)) == 0 and tuple(tile[:2]) in self.title_used:
+                    ready_time[dst] = -1 #not placed
+                elif dst_ready_time == 0 and  dst_coord_node in [dst, -1] : # placed fine
                     ready_time[dst] = dst_coord[2] + 4
                     self.tile_slice_to_node[tuple(tile)] = dst
-                    # self.title_used.add(tuple(tile[:2]))
+                    self.title_used.add(tuple(tile[:2]))
                 elif dst_ready_time == -1: # not placed
                     ready_time[dst] = -2
                 elif dst_ready_time % self.device_topology[2] == dst_coord[2] and dst_coord_node in [dst, -1]: # If ready_time % spoke_count is correct
                     ready_time[dst] = dst_ready_time + 4
                     self.tile_slice_to_node[tuple(tile)] = dst
-                    # self.title_used.add(tuple(tile[:2]))
+                    self.title_used.add(tuple(tile[:2]))
                 else: # fail place
                     ready_time[dst] = -1
 
-        # Check if tile memory constraints are satisfied
-        # Iterate over TMs and check if nodes associated with it are on same tiles  
-        for tm_idx, nodes in self.nodes_per_tm.items():
-            tile_idx = -1  # Tile idx on which all nodes with same tm_idx req should be scheduled
-            nodes_on_same_tile = True  # Are all nodes with same tm_idx req on same tile
-            
-            for node in nodes:
-                if node_coord[node].sum() == -3:
-                    continue
-                if tile_idx == -1:
-                    tile_idx = node_coord[node][0]
-                if tile_idx != node_coord[node][0]:
-                    # Two nodes which should be on the same tile
-                    # because of tile memory constraints are not
-                    nodes_on_same_tile = False
-                    break
-            
-            if not nodes_on_same_tile:
-                if (ready_time >= 0).all():
-                    # This print statement will only show the first TM idx for which 
-                    # all nodes are not on same tile
-                    print(f'[INFO] All nodes placed by network but nodes {nodes} should be on same tile for TM idx {tm_idx} but are not')
+        if not self.no_tm_constr:
+            # Check if tile memory constraints are satisfied
+            # Iterate over TMs and check if nodes associated with it are on same tiles  
+            for tm_idx, nodes in self.nodes_per_tm.items():
+                tile_idx = -1  # Tile idx on which all nodes with same tm_idx req should be scheduled
+                nodes_on_same_tile = True  # Are all nodes with same tm_idx req on same tile
+                
                 for node in nodes:
                     if node_coord[node].sum() == -3:
                         continue
-                    ready_time[node] = -1  # Set node placement as fail
+                    if tile_idx == -1:
+                        tile_idx = node_coord[node][0]
+                    if tile_idx != node_coord[node][0]:
+                        # Two nodes which should be on the same tile
+                        # because of tile memory constraints are not
+                        nodes_on_same_tile = False
+                        break
+                
+                if not nodes_on_same_tile:
+                    if (ready_time >= 0).all():
+                        # This print statement will only show the first TM idx for which 
+                        # all nodes are not on same tile
+                        print(f'[INFO] All nodes placed by network but nodes {nodes} should be on same tile for TM idx {tm_idx} but are not')
+                    for node in nodes:
+                        if node_coord[node].sum() == -3:
+                            continue
+                        ready_time[node] = -1  # Set node placement as fail
 
         # Assign reward based on ready time
         reward[ready_time == -2] = 0 # node not placed
