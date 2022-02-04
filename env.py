@@ -37,8 +37,8 @@ class StreamingEngineEnv:
         # Shape: (no_of_tiles * no_of_spokes, 3)
         # tile_coords represents all possible SE slices [tile_x, tile_y, spoke_no]
 
-        assert device_feat_size % len(device_topology) == 0, '\
-        device_feat_size must be a multiple of device topology dimension'
+        # assert device_feat_size % len(device_topology) == 0, '\
+        # device_feat_size must be a multiple of device topology dimension'
 
         assert graph_feat_size % 2 == 0, 'graph_feat_size must be a \
         multiple of 2'
@@ -58,6 +58,7 @@ class StreamingEngineEnv:
         self.initial_place = init_place
         self.tile_coords = tile_coords
         self.device_topology = device_topology
+        self.PIPELINE_DEPTH = 4
         self.device_cross_connections = device_cross_connections
         self.device_encoding = device_encoding
         self.compute_graph = None
@@ -162,7 +163,7 @@ class StreamingEngineEnv:
 
 
 
-    def _calculate_reward(self, node_coord):
+    def _calculate_reward(self, node_coords):
         '''
         calc score on grid assignment (dawood) returns reward matrix
         node_coord: [node][coord c,y,x]
@@ -181,7 +182,7 @@ class StreamingEngineEnv:
             # For each node in topological order
             for dst in nodes:
 
-                dst_coord = node_coord[dst]
+                dst_coord = node_coords[dst]
 
                 # if not placed
                 if dst_coord.sum() == -3:
@@ -191,7 +192,7 @@ class StreamingEngineEnv:
                 # if placed, check for time taken
                 dst_ready_time = 0
                 for src in self.compute_graph.predecessors(dst):
-                    src_coord = node_coord[src]  # Coordinate of source node in SE
+                    src_coord = node_coords[src]  # Coordinate of source node in SE
                     src_done_time = ready_time[src].item()  # Done time of source node
 
                     if src_done_time < 0: # not ready
@@ -203,7 +204,7 @@ class StreamingEngineEnv:
                         # _dist = int(math.ceil(abs_dist / 2.)) * 2 - 2
                         # src_done_time += _dist / 2 + _dist + 1
                         # src_done_time += int(abs_dist/2) + abs_dist % 2 - 1
-                        src_done_time += abs_dist - 1  
+                        src_done_time += abs_dist 
 
                     else: # grid representation
                         # src_done_time += abs_dist + (abs_dist - 1) * 2
@@ -218,13 +219,13 @@ class StreamingEngineEnv:
                 if not self.no_sf_constr and len(self.compute_graph.predecessors(dst)) == 0 and tuple(tile[:2]) in self.title_used:
                     ready_time[dst] = -1 #not placed
                 elif dst_ready_time == 0 and  dst_coord_node in [dst, -1] : # placed fine
-                    ready_time[dst] = dst_coord[2] + 4
+                    ready_time[dst] = dst_coord[2] + self.PIPELINE_DEPTH
                     self.tile_slice_to_node[tuple(tile)] = dst
                     self.title_used.add(tuple(tile[:2]))
                 elif dst_ready_time == -1: # not placed
                     ready_time[dst] = -2
                 elif dst_ready_time % self.device_topology[2] == dst_coord[2] and dst_coord_node in [dst, -1]: # If ready_time % spoke_count is correct
-                    ready_time[dst] = dst_ready_time + 4
+                    ready_time[dst] = dst_ready_time + self.PIPELINE_DEPTH
                     self.tile_slice_to_node[tuple(tile)] = dst
                     self.title_used.add(tuple(tile[:2]))
                 else: # fail place
@@ -238,11 +239,11 @@ class StreamingEngineEnv:
                 nodes_on_same_tile = True  # Are all nodes with same tm_idx req on same tile
                 
                 for node in nodes:
-                    if node_coord[node].sum() == -3:
+                    if node_coords[node].sum() == -3:
                         continue
                     if tile_idx == -1:
-                        tile_idx = node_coord[node][0]
-                    if tile_idx != node_coord[node][0]:
+                        tile_idx = node_coords[node][0]
+                    if tile_idx != node_coords[node][0]:
                         # Two nodes which should be on the same tile
                         # because of tile memory constraints are not
                         nodes_on_same_tile = False
@@ -254,7 +255,7 @@ class StreamingEngineEnv:
                         # all nodes are not on same tile
                         print(f'[INFO] All nodes placed by network but nodes {nodes} should be on same tile for TM idx {tm_idx} but are not')
                     for node in nodes:
-                        if node_coord[node].sum() == -3:
+                        if node_coords[node].sum() == -3:
                             continue
                         ready_time[node] = -1  # Set node placement as fail
 
@@ -263,18 +264,18 @@ class StreamingEngineEnv:
         reward[ready_time == -1] = -1 # node place fail
         reward[ready_time >= 0]  = (max_dist*num_nodes - ready_time[ready_time >= 0])/num_nodes
 
-        self.compute_graph.ndata['node_coord'] = node_coord
+        self.compute_graph.ndata['node_coord'] = node_coords
 
         if (ready_time >= 0).all() and self.best_time > ready_time.max().item():
             # Print possible assignment when all nodes are mapped
             self.best_time = ready_time.max().item()
             print('Possible assignment -> best reward {} '.format(self.best_time))
             assignment_list = [f'Instr ID# {node_idx}: {int(t)} | {a}' for node_idx, (t, a) in \
-                               enumerate(zip(ready_time, node_coord.int().numpy()))]
+                               enumerate(zip(ready_time, node_coords.int().numpy()))]
             print('Instr ID#  : Ready time | Tile slice')
             pp.pprint(assignment_list)
             # output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_{self.no_of_valid_mappings}')
-            output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_best.json')
+            output_json(node_coords.numpy(), out_file_name=f'mappings/mapping_best.json')
             self.no_of_valid_mappings += 1
             isvalid = True
 
