@@ -1,5 +1,6 @@
 import dgl
 import math
+import os
 from numpy.lib.shape_base import tile
 import torch
 import pprint
@@ -26,7 +27,7 @@ class StreamingEngineEnv:
                  graph_feat_size=32,
                  init_place=None,
                  emb_mode='topological',
-                 placement_mode='one_node'):
+                 placement_mode=''):
 
         # Represent the streaming engine as a vector of positional encodings
         # Generate meshgrid so we can consider all possible assignments for (tile_x, tile_y, spoke)
@@ -76,6 +77,7 @@ class StreamingEngineEnv:
 
         self.no_tm_constr = args.no_tm_constr  # Tile memory constraint flag
         self.no_sf_constr = args.no_sf_constr  # Syncflow constraints flag
+        self.args = args
 
     def get_graph(self, id):
         self.compute_graph = self.graphs[id]
@@ -148,7 +150,7 @@ class StreamingEngineEnv:
         '''
         action = list of coordinate idx
         '''
-        if self.placement_mode == 'all_node':
+        if self.placement_mode == 'coord_index': #sinkhorn assignment is array(num_node, 1)
             # For sinkhorn, when assignment contains all nodes
             node_coord = -torch.ones(self.compute_graph.num_nodes(), 3)
             for op_idx, coord_idx in enumerate(assignment):
@@ -157,7 +159,7 @@ class StreamingEngineEnv:
 
             return self._calculate_reward(node_coord)
 
-        elif self.placement_mode == 'one_node':
+        else:#assignment is array(num_node, 3)
             # When placing one node at a time
             return self._calculate_reward(assignment)
 
@@ -216,9 +218,7 @@ class StreamingEngineEnv:
 
                 tile = dst_coord.numpy().astype(int)
                 dst_coord_node = self.tile_slice_to_node.get(tuple(tile), -1)
-                if not self.no_sf_constr and len(self.compute_graph.predecessors(dst)) == 0 and tuple(tile[:2]) in self.title_used:
-                    ready_time[dst] = -1 #not placed
-                elif dst_ready_time == 0 and  dst_coord_node in [dst, -1] : # placed fine
+                if dst_ready_time == 0 and  dst_coord_node in [dst, -1] : # placed fine
                     ready_time[dst] = dst_coord[2] + self.PIPELINE_DEPTH
                     self.tile_slice_to_node[tuple(tile)] = dst
                     self.title_used.add(tuple(tile[:2]))
@@ -275,7 +275,8 @@ class StreamingEngineEnv:
             print('Instr ID#  : Ready time | Tile slice')
             pp.pprint(assignment_list)
             # output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_{self.no_of_valid_mappings}')
-            output_json(node_coords.numpy(), out_file_name=f'mappings/mapping_best.json')
+            sulfix = os.path.splitext(os.path.basename(self.args.input))[0]
+            output_json(node_coords.numpy(), out_file_name=f'mappings/mapping_{sulfix}.json')
             self.no_of_valid_mappings += 1
             isvalid = True
 

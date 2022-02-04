@@ -176,7 +176,6 @@ if __name__ == "__main__":
                                  device_cross_connections=True,
                                  device_feat_size=action_dim,
                                  graph_feat_size=32,
-                                 placement_mode='one_node',
                                  )
         ppo = PPO(args, state_dim=args.nodes*2, action_dim=action_dim, gnn_in=env.compute_graph.ndata['feat'].shape[1])
 
@@ -203,17 +202,17 @@ if __name__ == "__main__":
                         place = random.choice(not_used)
                         not_used.remove(place)
                         x, y = np.unravel_index(place, device_topology[:2])
-                        action[node_id] = torch.Tensor([x, y, 0])
+                        action[node_id] = torch.Tensor([x, y, random.randint(0, 2)])
 
             for node_id in range(0, args.nodes):
-                if not args.no_sf_constr and len(env.compute_graph.predecessors(node_id)) == 0:
+                if (action[node_id] > -1).all() : #skip pre placed nodes
                     continue
                 node_1hot = torch.zeros(args.nodes)
                 node_1hot[node_id] = 1.0
                 rl_state = torch.cat((torch.FloatTensor(state).view(-1), node_1hot))  # grid, node to place
                 assigment, tobuff = ppo.select_action(rl_state, graph, node_id) # node assigment index in streaming eng slice
                 action = ppo.get_coord(assigment, action, node_id, device_topology) # put node assigment to vector of node assigments, 2D tensor
-                reward, state, _ = env.step(action)
+                reward, state, isvalid = env.step(action)
 
                 # Saving reward and is_terminals:
                 done = node_id == (args.nodes - 1)
@@ -257,7 +256,7 @@ if __name__ == "__main__":
                                  graph_feat_size=32,
                                  init_place=None, # torch.tensor(grid_in),
                                  emb_mode='topological',
-                                 placement_mode='all_node')
+                                 placement_mode='coord_index')
         policy = PolicyNet(cg_in_feats=action_dim,
                            cg_hidden_dim=64,
                            cg_conv_k=1,
@@ -351,8 +350,7 @@ if __name__ == "__main__":
                                  device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=action_dim,
-                                 graph_feat_size=32,
-                                 placement_mode='one_node')
+                                 graph_feat_size=32)
         ppo = PPO(args, state_dim=args.nodes*2, action_dim=action_dim,)
                  # mode='super', ntasks = len(graphs))
 
@@ -421,8 +419,7 @@ if __name__ == "__main__":
                                  device_topology=device_topology,
                                  device_cross_connections=True,
                                  device_feat_size=action_dim,
-                                 graph_feat_size=32,
-                                 placement_mode='one_node')
+                                 graph_feat_size=32)
         ppo = PPO(args, state_dim=args.nodes, action_dim=action_dim, mode='transformer')
 
         # logging variables
