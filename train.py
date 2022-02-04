@@ -211,7 +211,7 @@ if __name__ == "__main__":
                 node_1hot = torch.zeros(args.nodes)
                 node_1hot[node_id] = 1.0
                 rl_state = torch.cat((torch.FloatTensor(state).view(-1), node_1hot))  # grid, node to place
-                assigment, tobuff = ppo.select_action(rl_state, graph) # node assigment index in streaming eng slice
+                assigment, tobuff = ppo.select_action(rl_state, graph, node_id) # node assigment index in streaming eng slice
                 action = ppo.get_coord(assigment, action, node_id, device_topology) # put node assigment to vector of node assigments, 2D tensor
                 reward, state, _ = env.step(action)
 

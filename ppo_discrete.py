@@ -185,17 +185,18 @@ class ActorCritic(nn.Module):
         state_values = self.critic(act_in)
         return action_logprobs, state_values, dist_entropy
 
-    def act(self, state, graph_info, taskid=None):
+    def act(self, state, graph_info, node_id, taskid=None):
         graph = dgl.add_self_loop(graph_info)
         graph_feat = graph.ndata['feat']
         for layer in self.graph_model:
             graph_feat = layer(graph, graph_feat)
-        graph_feat = self.graph_avg_pool(graph, graph_feat)
-        graph_feat = graph_feat.squeeze()
+        # graph_feat = self.graph_avg_pool(graph, graph_feat)
+        node_feat = graph_feat[node_id, :]
+        node_feat = node_feat.squeeze()
         # emb = self.graph_model(graph_info).squeeze()
         # print('[INFO] state shape', state.shape)
         # print('[INFO] graph_feat shape', graph_feat.shape)
-        act_in = torch.cat((state, graph_feat))
+        act_in = torch.cat((state, node_feat))
         if self.mode == 'super':
             act_in = act_in.unsqueeze(0)
             action_probs = self.actor(act_in, taskid)
@@ -281,14 +282,14 @@ class PPO:
         action[node] = torch.tensor(np.unravel_index(assigment, grid_shape))
         return action
 
-    def select_action(self, state, graph_info, taskid=None):
+    def select_action(self, state, graph_info, node_id, taskid=None):
         with torch.no_grad():
             graph_info = graph_info.to(self.device)
             if self.mode=='transformer':
                 action, action_logprob = self.policy_old.act_seq(state, graph_info)
             else:
                 state = torch.FloatTensor(state).to(self.device)
-                action, action_logprob = self.policy_old.act(state, graph_info, taskid)
+                action, action_logprob = self.policy_old.act(state, graph_info, node_id, taskid)
 
         return action.item(), (state, action, graph_info, action_logprob)
 
