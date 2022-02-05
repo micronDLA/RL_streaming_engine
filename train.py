@@ -61,6 +61,7 @@ if __name__ == "__main__":
     args.device_topology = tuple(args.device_topology)
     print('Arguments:', args)
     writer = SummaryWriter()
+    writer.add_text('experiment config', str(args))
 
     if args.input:
         graphdef = get_graph_json(args.input)
