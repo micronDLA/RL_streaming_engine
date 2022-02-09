@@ -58,7 +58,7 @@ class StreamingEngineEnv:
         self.initial_place = init_place
         self.tile_coords = tile_coords
         self.device_topology = device_topology
-        self.PIPELINE_DEPTH = 4
+        self.PIPELINE_DEPTH = 3
         self.device_cross_connections = device_cross_connections
         self.device_encoding = device_encoding
         self.compute_graph = None
