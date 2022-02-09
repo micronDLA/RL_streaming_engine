@@ -76,6 +76,7 @@ class StreamingEngineEnv:
 
         self.no_tm_constr = args.no_tm_constr  # Tile memory constraint flag
         self.no_sf_constr = args.no_sf_constr  # Syncflow constraints flag
+        self.pass_timing = args.pass_timing
 
     def get_graph(self, id):
         self.compute_graph = self.graphs[id]
@@ -204,7 +205,13 @@ class StreamingEngineEnv:
                         # _dist = int(math.ceil(abs_dist / 2.)) * 2 - 2
                         # src_done_time += _dist / 2 + _dist + 1
                         # src_done_time += int(abs_dist/2) + abs_dist % 2 - 1
-                        src_done_time += abs_dist 
+                        if self.pass_timing:
+                            if abs_dist > 2:
+                                src_done_time += 2 + (abs_dist - 2)*2
+                            else:
+                                src_done_time += abs_dist
+                        else:
+                            src_done_time += abs_dist 
 
                     else: # grid representation
                         # src_done_time += abs_dist + (abs_dist - 1) * 2
