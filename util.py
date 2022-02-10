@@ -27,11 +27,11 @@ def create_graph(graphdef, numnodes = 10):
             graph.add_nodes(edges[2])
         tm_idx_total = len(graphdef['tile_memory_map'].keys())
         # Add tile memory constraints as features to graph
-        tm_req_feat = torch.zeros(graph.num_nodes(), tm_idx_total)
+        tm_req_feat = torch.zeros(graph.num_nodes(), tm_idx_total) # node, tile mem var index binary vector
         for instr_idx, tm_idxs in tile_memory_req.items():
             for tm_idx in tm_idxs:
                 tm_req_feat[instr_idx][tm_idx] = 1
-        
+
         graph.ndata['tm_req'] = tm_req_feat
     return graph
     
@@ -66,9 +66,9 @@ def get_graph_json(path):
         data = json.load(file)
         edge_src = []
         edge_dst = []
-        tmem_map = {0: None}
-        nidx = 1
-        for mem in data['TileMemories'].keys():  # graphs
+        tmem_map = {} # tile_mem variable str : int index
+        nidx = 0
+        for mem in data['TileMemories'].keys():  # give index to each tile mem variable
             tmem_map[mem] = nidx
             nidx += 1
         nidx = 0
@@ -82,18 +82,17 @@ def get_graph_json(path):
 
         extra_node = (nidx-1) - max(max(edge_src), max(edge_dst))
         nidx = 0
-        tmem_req = {}
+        tmem_req = {} # node id : list of tile mem var indexes
         for graph in data['Program']:  # graphs
             for node in graph['SyncFlow']:  # nodes
-                l = []
+                l = [] #tile mem var indexes
                 for var in node['SEInst']['SEInstUse']:
                     if var in tmem_map:
                         l.append(tmem_map[var])
-                if not l:
-                    l.append(0)  # add none to empty
+
                 tmem_req[nidx] = l
                 nidx += 1
-    return {'graphdef':(edge_src, edge_dst, extra_node), 'tile_memory_req':tmem_req, 'tile_memory_map': tmem_map}
+    return {'graphdef': (edge_src, edge_dst, extra_node), 'tile_memory_req': tmem_req, 'tile_memory_map': tmem_map}
 
 def output_instr_json(grid_in, grid_shape, filename='output.json'):
     data = {}
