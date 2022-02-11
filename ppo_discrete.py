@@ -146,8 +146,8 @@ class ActorCritic(nn.Module):
             self.actor = ACFF_SP(state_dim + graph_size, emb_size, action_dim, ntasks=ntasks, mode='soft')
             self.critic = ACFF_SP(state_dim + graph_size, emb_size, 1, ntasks=ntasks, mode='')
         else:
-            self.actor = ACFF(state_dim+graph_size, emb_size, action_dim, mode='soft')
-            self.critic = ACFF(state_dim+graph_size, emb_size, 1, mode='')
+            self.actor = ACFF(graph_size+2, emb_size, action_dim, mode='soft')  # earlier: state_dim+graph_size
+            self.critic = ACFF(graph_size+2, emb_size, 1, mode='')
         self.mode = mode
 
     def reset_lstm(self):
@@ -191,12 +191,15 @@ class ActorCritic(nn.Module):
         for layer in self.graph_model:
             graph_feat = layer(graph, graph_feat)
         # graph_feat = self.graph_avg_pool(graph, graph_feat)
-        node_feat = graph_feat[node_id, :]
-        node_feat = node_feat.squeeze()
+        # node_feat = graph_feat[node_id, :]
+        
+
         # emb = self.graph_model(graph_info).squeeze()
         # print('[INFO] state shape', state.shape)
         # print('[INFO] graph_feat shape', graph_feat.shape)
-        act_in = torch.cat((state, node_feat))
+
+        act_in = torch.cat((graph_feat, state),-1)
+        act_in = self.graph_avg_pool(graph, act_in)
         if self.mode == 'super':
             act_in = act_in.unsqueeze(0)
             action_probs = self.actor(act_in, taskid)
@@ -213,9 +216,12 @@ class ActorCritic(nn.Module):
         graph_feat = graph.ndata['feat']
         for layer in self.graph_model:
             graph_feat = layer(graph, graph_feat)
-        graph_feat = self.graph_avg_pool(graph, graph_feat)
+        # graph_feat = self.graph_avg_pool(graph, graph_feat)
         # emb = self.graph_model(graph_info)
-        act_in = torch.cat((state, graph_feat.broadcast_to(state.shape[0], -1)), dim=1)
+        act_in = torch.cat((graph_feat.broadcast_to(state.shape[0], -1, -1), state), dim=-1)
+        act_in = act_in.reshape(-1, act_in.shape[2])
+        act_in = self.graph_avg_pool(dgl.batch(graph_info), act_in)
+
         if self.mode == 'super':
             action_probs = self.actor(act_in, taskid)
         else:
