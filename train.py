@@ -4,7 +4,9 @@ import random
 import argparse
 from collections import deque
 
+import os
 import dgl
+from coolname import generate_slug
 import numpy as np
 import networkx as nx
 from tqdm import tqdm
@@ -21,6 +23,7 @@ from util import calc_score, initial_fill, get_graph_json, create_graph
 
 #torch.autograd.set_detect_anomaly(True)
 # random.seed(10)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Disable TF messages
 
 def get_args():
     parser = argparse.ArgumentParser(description='Streaming Engine RL Mapper')
@@ -60,9 +63,13 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()  # Holds all the input arguments
     args.device_topology = tuple(args.device_topology)
-    print('Arguments:', args)
-    writer = SummaryWriter()
+    print('[ARGS]')
+    print('\n'.join(f'{k}={v}' for k, v in vars(args).items()))
+
+    writer = SummaryWriter(comment=f'_{generate_slug(2)}')
+    print(f'[INFO] Saving log data to {writer.log_dir}')
     writer.add_text('experiment config', str(args))
+    writer.flush()
 
     if args.input:
         graphdef = get_graph_json(args.input)
@@ -231,12 +238,11 @@ if __name__ == "__main__":
 
             # logging
             if i_episode % args.log_interval == 0:
-                print(f'Episode: {i_episode} | Ready time: {best_reward} | Mean Reward: {np.mean(reward_buf)}')
                 writer.add_scalar('mean reward/episode', np.mean(reward_buf), i_episode)
                 writer.add_scalar('total time/episode', best_reward, i_episode)
                 writer.flush()
                 end = time.time()
-                print('Training time elpased: {:.2f} s'.format(end - start))
+                print(f'\rEpisode: {i_episode} | Ready time: {best_reward} | Mean Reward: {np.mean(reward_buf):.2f} | Time elpased: {end - start:.2f}s', end='')
                 # writer.add_scalar('avg improvement/episode', avg_improve, i_episode)
                 # print('Episode {} \t Avg improvement: {}'.format(i_episode, avg_improve))
                 torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
