@@ -14,6 +14,7 @@ from torch.distributions import Categorical # discrete
 import numpy as np
 from net import NormalHashLinear, TransformerModel
 from dgl import nn as gnn
+from util import ravel_index
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -123,9 +124,12 @@ class ActorCritic(nn.Module):
                  action_dim,
                  graph_size,
                  gnn_in,
-                 mode = 'linear', ntasks = 1):
+                 mode = 'linear',
+                 ntasks = 1,
+                 device_topology=(16,1,3)):
         super(ActorCritic, self).__init__()
         self.device = device
+        self.device_topology = device_topology
         # self.graph_model = GraphEmb_Conv(graph_size) 
         self.graph_model = nn.ModuleList([
             gnn.SGConv(gnn_in, 64, 1, False, nn.ReLU),
@@ -185,7 +189,7 @@ class ActorCritic(nn.Module):
         state_values = self.critic(act_in)
         return action_logprobs, state_values, dist_entropy
 
-    def act(self, state, graph_info, node_id, taskid=None):
+    def act(self, state, graph_info, node_id, taskid=None, grp_nodes=[], prev_act = None):
         graph = dgl.add_self_loop(graph_info)
         graph_feat = graph.ndata['feat']
         for layer in self.graph_model:
@@ -203,7 +207,18 @@ class ActorCritic(nn.Module):
         else:
             action_probs = self.actor(act_in)
         dist = Categorical(action_probs)
-        action = dist.sample()
+        action = dist.sample() # flatten index of a tile coord
+        if prev_act is not None:
+            for nd in grp_nodes[node_id]:
+                if (prev_act[nd] > -1).all(): # if a grouped node is already placed
+                    act_t = list(np.unravel_index(action.item(), self.device_topology))
+                    act_t[:2] = prev_act[nd][:2] #copy tile loc
+                    if act_t[2] == prev_act[nd][2]:
+                        act_t[2] += 1
+                        if act_t[2] >= self.device_topology[2]:
+                            act_t[2] = 0
+                    action.data = torch.tensor(ravel_index(act_t, self.device_topology), dtype=torch.int64)
+
         action_logprob = dist.log_prob(action)
         return action.detach(), action_logprob.detach()
 
@@ -235,11 +250,13 @@ class PPO:
                  action_dim,
                  gnn_in = 48,
                  mode='',
-                 ntasks = 1):
+                 ntasks = 1,
+                 device_topology=(16,1,3)):
         #args.emb_size, betas, lr, gamma, K_epoch, eps_clip, loss_value_c, loss_entropy_c
         #ntasks: number of different graphs
         self.args = args
         self.device = device
+        self.device_topology = device_topology
         self.ntasks = ntasks
         self.state_dim = state_dim #input ready time (nodes, 1)
         self.action_dim = action_dim #output (nodes, 48)
@@ -254,7 +271,8 @@ class PPO:
                                   graph_size=self.args.graph_size,
                                   gnn_in=gnn_in,
                                   mode=mode,
-                                  ntasks=ntasks).to(self.device)
+                                  ntasks=ntasks,
+                                  device_topology=self.device_topology).to(self.device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.args.lr, betas=self.args.betas)
         
         self.policy_old = ActorCritic(device=self.device,
@@ -264,7 +282,8 @@ class PPO:
                                       graph_size=self.args.graph_size,
                                       gnn_in=gnn_in,
                                       mode=mode,
-                                      ntasks=ntasks).to(self.device)
+                                      ntasks=ntasks,
+                                      device_topology=self.device_topology).to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         if args.model != '':
             self.load(args.model)
@@ -277,19 +296,19 @@ class PPO:
             self.policy.reset_lstm()
             self.policy_old.reset_lstm()
 
-    def get_coord(self, assigment, action, node, grid_shape):
+    def get_coord(self, assigment, action, node):
         # put node assigment to vector of node assigments
-        action[node] = torch.tensor(np.unravel_index(assigment, grid_shape))
+        action[node] = torch.tensor(np.unravel_index(assigment, self.device_topology))
         return action
 
-    def select_action(self, state, graph_info, node_id, taskid=None):
+    def select_action(self, state, graph_info, node_id, taskid=None, grp_nodes=[], prev_act=None):
         with torch.no_grad():
             graph_info = graph_info.to(self.device)
             if self.mode=='transformer':
                 action, action_logprob = self.policy_old.act_seq(state, graph_info)
             else:
                 state = torch.FloatTensor(state).to(self.device)
-                action, action_logprob = self.policy_old.act(state, graph_info, node_id, taskid)
+                action, action_logprob = self.policy_old.act(state, graph_info, node_id, taskid, grp_nodes=grp_nodes, prev_act=prev_act)
 
         return action.item(), (state, action, graph_info, action_logprob)
 

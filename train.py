@@ -28,10 +28,10 @@ def get_args():
     arg('--mode', type=int, default=2, help='0 - random search, 1 - CMA-ES search, 2 - RL PPO, 3 - sinkhorn, 4 - multigraph, 5 - transformer')
 
     arg('--device_topology', nargs='+', type=int, default=(4, 1, 3), help='Device topology of Streaming Engine')
-    arg('--epochs', type=int, default=5000, help='number of epochs')
+    arg('--epochs', type=int, default=50000, help='number of epochs')
     arg('--nodes', type=int, default=20,  help='number of nodes')
     arg('--debug', dest='debug', action='store_true', default=False, help='enable debug mode')
-    arg('--input', type=str, default='input_graphs/vectorAdd_ir.json', help='load input json from file')
+    arg('--input', type=str, default='input_graphs/vector_add_bashartest.json', help='load input json from file')
 
     # Constraints
     arg('--no-tm-constr', action='store_true', help='disable tile memory constraint')
@@ -177,7 +177,12 @@ if __name__ == "__main__":
                                  device_feat_size=action_dim,
                                  graph_feat_size=32,
                                  )
-        ppo = PPO(args, state_dim=args.nodes*2, action_dim=action_dim, gnn_in=env.compute_graph.ndata['feat'].shape[1])
+
+        ppo = PPO(args,
+                  state_dim=args.nodes*2,
+                  action_dim=action_dim,
+                  gnn_in=env.compute_graph.ndata['feat'].shape[1],
+                  device_topology=device_topology)
 
         # logging variables
         reward = best_reward = 0
@@ -195,6 +200,8 @@ if __name__ == "__main__":
             action = -torch.ones(args.nodes, 3)
             time_step += 1 #number of epoch to train model
 
+
+
             if not args.no_sf_constr:
                 not_used = [ii for ii in range(gprod)]
                 for node_id in range(0, args.nodes):
@@ -204,14 +211,29 @@ if __name__ == "__main__":
                         x, y = np.unravel_index(place, device_topology[:2])
                         action[node_id] = torch.Tensor([x, y, random.randint(0, 2)])
 
+
+            #find nodes that must go together because they use same tile mem var
+            if not args.no_tm_constr:
+                grp_nodes = {} # node n : list of nodes that goes with node n
+                for n in range(args.nodes):
+                    grp = [] # nodes that goes with n
+                    tmem_n = graphdef['tile_memory_req'][n] # tile mem var used by n
+                    for nd, tmem in graphdef['tile_memory_req'].items(): #scan other nodes
+                        if nd == n:
+                            continue
+                        if not set(tmem).isdisjoint(tmem_n):
+                            grp.append(nd)
+                    grp_nodes[n] = grp
+
+
             for node_id in range(0, args.nodes):
                 if (action[node_id] > -1).all() : #skip pre placed nodes
                     continue
                 node_1hot = torch.zeros(args.nodes)
                 node_1hot[node_id] = 1.0
                 rl_state = torch.cat((torch.FloatTensor(state).view(-1), node_1hot))  # grid, node to place
-                assigment, tobuff = ppo.select_action(rl_state, graph, node_id) # node assigment index in streaming eng slice
-                action = ppo.get_coord(assigment, action, node_id, device_topology) # put node assigment to vector of node assigments, 2D tensor
+                assigment, tobuff = ppo.select_action(rl_state, graph, node_id, grp_nodes=grp_nodes, prev_act=action) # node assigment index in streaming eng slice
+                action = ppo.get_coord(assigment, action, node_id) # put node assigment to vector of node assigments, 2D tensor
                 reward, state, isvalid = env.step(action)
 
                 # Saving reward and is_terminals:
@@ -351,7 +373,10 @@ if __name__ == "__main__":
                                  device_cross_connections=True,
                                  device_feat_size=action_dim,
                                  graph_feat_size=32)
-        ppo = PPO(args, state_dim=args.nodes*2, action_dim=action_dim,)
+        ppo = PPO(args,
+                  state_dim=args.nodes*2,
+                  action_dim=action_dim,
+                  device_topology=device_topology)
                  # mode='super', ntasks = len(graphs))
 
         # logging variables
@@ -380,8 +405,8 @@ if __name__ == "__main__":
                     node_1hot = torch.zeros(args.nodes)
                     node_1hot[node_id] = 1.0
                     rl_state = torch.cat((torch.FloatTensor(state).view(-1), node_1hot))  # grid, node to place
-                    assigment, tobuff = ppo.select_action(rl_state, gr_edges)#, taskid=taskid) # node assigment index
-                    action = ppo.get_coord(assigment, action, node_id, device_topology) # put node assigment to vector of node assigments
+                    assigment, tobuff = ppo.select_action(rl_state, gr_edges, node_id)#, taskid=taskid) # node assigment index
+                    action = ppo.get_coord(assigment, action, node_id) # put node assigment to vector of node assigments
                     reward, state, _ = env._calculate_reward(action)
 
                     if not torch.any(state < 0):
@@ -420,7 +445,11 @@ if __name__ == "__main__":
                                  device_cross_connections=True,
                                  device_feat_size=action_dim,
                                  graph_feat_size=32)
-        ppo = PPO(args, state_dim=args.nodes, action_dim=action_dim, mode='transformer')
+        ppo = PPO(args,
+                  state_dim=args.nodes,
+                  action_dim=action_dim,
+                  mode='transformer',
+                  device_topology=device_topology)
 
         # logging variables
         reward = best_reward = 0
@@ -439,8 +468,8 @@ if __name__ == "__main__":
             state_in = torch.zeros(args.nodes, 1, action_dim)
             for node in range(0, args.nodes):
                 rl_state = (state_in, torch.tensor(node)) # grid, node to place
-                assigment = ppo.select_action(rl_state, gr_edges) # node assigment index
-                action = ppo.get_coord(assigment, action, node, device_topology) # put node assigment to vector of node assigments
+                assigment = ppo.select_action(rl_state, gr_edges, node) # node assigment index
+                action = ppo.get_coord(assigment, action, node) # put node assigment to vector of node assigments
                 reward, state, _ = env._calculate_reward(action)
                 state_in[node, :, assigment] = state[node]
                 # Saving reward and is_terminals:
