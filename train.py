@@ -34,6 +34,7 @@ def get_args():
     arg('--input', type=str, default='input_graphs/vector_add_bashartest.json', help='load input json from file')
 
     # Constraints
+    arg('--pass-timing', action='store_true', help='enable pass through timing')
     arg('--no-tm-constr', action='store_true', help='disable tile memory constraint')
     arg('--no-sf-constr', action='store_true', help='disable sync flow constraint')
 
@@ -61,6 +62,7 @@ if __name__ == "__main__":
     args.device_topology = tuple(args.device_topology)
     print('Arguments:', args)
     writer = SummaryWriter()
+    writer.add_text('experiment config', str(args))
 
     if args.input:
         graphdef = get_graph_json(args.input)

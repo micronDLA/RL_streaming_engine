@@ -34,7 +34,7 @@ class StreamingEngineEnv:
         tile_coords = torch.meshgrid(*[torch.arange(i) for i in device_topology])
         tile_coords = [coord.unsqueeze(-1) for coord in tile_coords]
         tile_coords = torch.cat(tile_coords, -1)
-        tile_coords = tile_coords.view(-1, tile_coords.shape[-1])  
+        tile_coords = tile_coords.view(-1, tile_coords.shape[-1])
         # Shape: (no_of_tiles * no_of_spokes, 3)
         # tile_coords represents all possible SE slices [tile_x, tile_y, spoke_no]
 
@@ -59,7 +59,7 @@ class StreamingEngineEnv:
         self.initial_place = init_place
         self.tile_coords = tile_coords
         self.device_topology = device_topology
-        self.PIPELINE_DEPTH = 4
+        self.PIPELINE_DEPTH = 3
         self.device_cross_connections = device_cross_connections
         self.device_encoding = device_encoding
         self.compute_graph = None
@@ -78,6 +78,7 @@ class StreamingEngineEnv:
         self.no_tm_constr = args.no_tm_constr  # Tile memory constraint flag
         self.no_sf_constr = args.no_sf_constr  # Syncflow constraints flag
         self.args = args
+        self.pass_timing = args.pass_timing
 
     def get_graph(self, id):
         self.compute_graph = self.graphs[id]
@@ -175,7 +176,7 @@ class StreamingEngineEnv:
         reward = torch.zeros(num_nodes)  # Shape: (no_of_graph_nodes,)
         ready_time = torch.zeros(num_nodes)  # Shape: (no_of_graph_nodes,)
         isvalid = False
-        
+
         max_dist = sum(self.device_topology)
 
         timing_error = False
@@ -206,12 +207,18 @@ class StreamingEngineEnv:
                         # _dist = int(math.ceil(abs_dist / 2.)) * 2 - 2
                         # src_done_time += _dist / 2 + _dist + 1
                         # src_done_time += int(abs_dist/2) + abs_dist % 2 - 1
-                        src_done_time += abs_dist 
+                        if self.pass_timing:
+                            if abs_dist > 2:
+                                src_done_time += 2 + (abs_dist - 2)*2
+                            else:
+                                src_done_time += abs_dist
+                        else:
+                            src_done_time += abs_dist
 
                     else: # grid representation
                         # src_done_time += abs_dist + (abs_dist - 1) * 2
                         # At src_done_time, node is ready to be consumed 1 hop away
-                        src_done_time += abs_dist - 1  
+                        src_done_time += abs_dist - 1
 
                     if src_done_time > dst_ready_time: # get largest from all predecessors
                         dst_ready_time = src_done_time  #TODO: Isn't variable dst_ready_time more like dst start time
@@ -233,11 +240,11 @@ class StreamingEngineEnv:
 
         if not self.no_tm_constr:
             # Check if tile memory constraints are satisfied
-            # Iterate over TMs and check if nodes associated with it are on same tiles  
+            # Iterate over TMs and check if nodes associated with it are on same tiles
             for tm_idx, nodes in self.nodes_per_tm.items():
                 tile_idx = -1  # Tile idx on which all nodes with same tm_idx req should be scheduled
                 nodes_on_same_tile = True  # Are all nodes with same tm_idx req on same tile
-                
+
                 for node in nodes:
                     if node_coords[node].sum() == -3:
                         continue
@@ -248,10 +255,10 @@ class StreamingEngineEnv:
                         # because of tile memory constraints are not
                         nodes_on_same_tile = False
                         break
-                
+
                 if not nodes_on_same_tile:
                     if (ready_time >= 0).all():
-                        # This print statement will only show the first TM idx for which 
+                        # This print statement will only show the first TM idx for which
                         # all nodes are not on same tile
                         print(f'[INFO] All nodes placed by network but nodes {nodes} should be on same tile for TM idx {tm_idx} but are not')
                     for node in nodes:
