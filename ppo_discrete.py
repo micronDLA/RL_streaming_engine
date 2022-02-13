@@ -39,7 +39,7 @@ class RolloutBuffer:
 class GraphEmb_Conv(nn.Module):
     def __init__(self, graph_emb, dropout=0.2):
         super(GraphEmb_Conv, self).__init__()
-        self.cg_conv = nn.Conv1d(2, graph_emb, 1) #2: g.edges src node, dst node
+        self.cg_conv = nn.Conv1d(2, graph_emb, kernel_size=(1,1)) #2: g.edges src node, dst node
         self.relu = nn.ReLU(inplace=True)
         self.avg_pool = nn.AdaptiveAvgPool1d(1)
         self.dropout = nn.Dropout(p=dropout)
@@ -50,6 +50,73 @@ class GraphEmb_Conv(nn.Module):
         x = self.avg_pool(x).flatten(1)
         x = self.dropout(self.norm(x))
         return x
+
+
+class PAM_Module(nn.Module):
+    """ Position attention module"""
+    #Ref from SAGAN
+    def __init__(self, in_dim):
+        super(PAM_Module, self).__init__()
+        self.chanel_in = in_dim
+
+        self.query_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim//8, kernel_size=(1,1))
+        self.key_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim//8, kernel_size=(1,1))
+        self.value_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim, kernel_size=(1,1))
+        self.gamma = nn.Parameter(torch.zeros(1))
+
+        self.softmax = nn.Softmax(dim=-1)
+    def forward(self, x):
+        """
+            inputs :
+                x : input feature maps( B X C X H X W)
+            returns :
+                out : attention value + input feature
+                attention: B X (HxW) X (HxW)
+        """
+        m_batchsize, C, height, width = x.size()
+        proj_query = self.query_conv(x).view(m_batchsize, -1, width*height).permute(0, 2, 1)
+        proj_key = self.key_conv(x).view(m_batchsize, -1, width*height)
+        energy = torch.bmm(proj_query, proj_key)
+        attention = self.softmax(energy)
+        proj_value = self.value_conv(x).view(m_batchsize, -1, width*height)
+
+        out = torch.bmm(proj_value, attention.permute(0, 2, 1))
+        out = out.view(m_batchsize, C, height, width)
+
+        out = self.gamma*out + x
+        return out
+
+
+class CAM_Module(nn.Module):
+    """ Channel attention module"""
+    def __init__(self, in_dim):
+        super(CAM_Module, self).__init__()
+        self.chanel_in = in_dim
+
+
+        self.gamma = nn.Parameter(torch.zeros(1))
+        self.softmax  = nn.Softmax(dim=-1)
+    def forward(self,x):
+        """
+            inputs :
+                x : input feature maps( B X C X H X W)
+            returns :
+                out : attention value + input feature
+                attention: B X C X C
+        """
+        m_batchsize, C, height, width = x.size()
+        proj_query = x.view(m_batchsize, C, -1)
+        proj_key = x.view(m_batchsize, C, -1).permute(0, 2, 1)
+        energy = torch.bmm(proj_query, proj_key)
+        energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy)-energy
+        attention = self.softmax(energy_new)
+        proj_value = x.view(m_batchsize, C, -1)
+
+        out = torch.bmm(attention, proj_value)
+        out = out.view(m_batchsize, C, height, width)
+
+        out = self.gamma*out + x
+        return out
 
 class ACFF_SP(nn.Module): # feedforward ppo superposed model
     def __init__(self, in_dim, emb_size, out_dim, ntasks, mode='soft'):
@@ -189,7 +256,7 @@ class ActorCritic(nn.Module):
         state_values = self.critic(act_in)
         return action_logprobs, state_values, dist_entropy
 
-    def act(self, state, graph_info, node_id, taskid=None, grp_nodes=[], prev_act = None):
+    def act(self, state, graph_info, node_id, taskid=None, grp_nodes=None, prev_act = None):
         graph = dgl.add_self_loop(graph_info)
         graph_feat = graph.ndata['feat']
         for layer in self.graph_model:
@@ -208,7 +275,8 @@ class ActorCritic(nn.Module):
             action_probs = self.actor(act_in)
         dist = Categorical(action_probs)
         action = dist.sample() # flatten index of a tile coord
-        if prev_act is not None:
+
+        if grp_nodes is not None:
             for nd in grp_nodes[node_id]:
                 if (prev_act[nd] > -1).all(): # if a grouped node is already placed
                     act_t = list(np.unravel_index(action.item(), self.device_topology))
@@ -301,7 +369,7 @@ class PPO:
         action[node] = torch.tensor(np.unravel_index(assigment, self.device_topology))
         return action
 
-    def select_action(self, state, graph_info, node_id, taskid=None, grp_nodes=[], prev_act=None):
+    def select_action(self, state, graph_info, node_id, taskid=None, grp_nodes=None, prev_act=None):
         with torch.no_grad():
             graph_info = graph_info.to(self.device)
             if self.mode=='transformer':

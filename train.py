@@ -202,8 +202,6 @@ if __name__ == "__main__":
             action = -torch.ones(args.nodes, 3)
             time_step += 1 #number of epoch to train model
 
-
-
             if not args.no_sf_constr:
                 not_used = [ii for ii in range(gprod)]
                 for node_id in range(0, args.nodes):
@@ -213,8 +211,8 @@ if __name__ == "__main__":
                         x, y = np.unravel_index(place, device_topology[:2])
                         action[node_id] = torch.Tensor([x, y, random.randint(0, 2)])
 
-
             #find nodes that must go together because they use same tile mem var
+            grp_nodes = None
             if not args.no_tm_constr:
                 grp_nodes = {} # node n : list of nodes that goes with node n
                 for n in range(args.nodes):
@@ -226,7 +224,6 @@ if __name__ == "__main__":
                         if not set(tmem).isdisjoint(tmem_n):
                             grp.append(nd)
                     grp_nodes[n] = grp
-
 
             for node_id in range(0, args.nodes):
                 if (action[node_id] > -1).all() : #skip pre placed nodes
