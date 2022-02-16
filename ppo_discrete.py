@@ -6,6 +6,7 @@
 # discrete version!
 
 import dgl
+import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -282,9 +283,12 @@ class ActorCritic(nn.Module):
                     act_t = list(np.unravel_index(action.item(), self.device_topology))
                     act_t[:2] = prev_act[nd][:2] #copy tile loc
                     if act_t[2] == prev_act[nd][2]:
-                        act_t[2] += 1
-                        if act_t[2] >= self.device_topology[2]:
-                            act_t[2] = 0
+                        free_spoke = list(range(0, self.device_topology[2]-1))
+                        for p_act in prev_act:
+                            if p_act[:2] == act_t[:2]:
+                                free_spoke.remove(p_act[2])
+                        act_t[2] = random.choice(free_spoke)
+
                     action.data = torch.tensor(ravel_index(act_t, self.device_topology), dtype=torch.int64)
 
         action_logprob = dist.log_prob(action)
