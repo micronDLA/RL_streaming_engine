@@ -27,7 +27,7 @@ class RolloutBuffer:
         self.logprobs = []
         self.rewards = []
         self.is_terminals = []
-    
+
     def clear(self):
         del self.actions[:]
         del self.states[:]
@@ -198,7 +198,7 @@ class ActorCritic(nn.Module):
         super(ActorCritic, self).__init__()
         self.device = device
         self.device_topology = device_topology
-        # self.graph_model = GraphEmb_Conv(graph_size) 
+        # self.graph_model = GraphEmb_Conv(graph_size)
         self.graph_model = nn.ModuleList([
             gnn.SGConv(gnn_in, 64, 1, False, nn.ReLU),
             gnn.SGConv(64, 128, 1, False, nn.ReLU)
@@ -283,7 +283,7 @@ class ActorCritic(nn.Module):
                     act_t = list(np.unravel_index(action.item(), self.device_topology))
                     act_t[:2] = prev_act[nd][:2] #copy tile loc
                     if act_t[2] == prev_act[nd][2]:
-                        free_spoke = list(range(0, self.device_topology[2]-1))
+                        free_spoke = list(range(0, self.device_topology[2]))
                         for p_act in prev_act:
                             if p_act[:2] == act_t[:2]:
                                 free_spoke.remove(p_act[2])
@@ -346,7 +346,7 @@ class PPO:
                                   ntasks=ntasks,
                                   device_topology=self.device_topology).to(self.device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.args.lr, betas=self.args.betas)
-        
+
         self.policy_old = ActorCritic(device=self.device,
                                       state_dim=self.state_dim,
                                       emb_size=self.args.emb_size,
@@ -403,12 +403,12 @@ class PPO:
                 discounted_reward = 0
             discounted_reward = reward + (self.args.gamma * discounted_reward)
             rewards.insert(0, discounted_reward)
-        
+
         # Normalizing the rewards:
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
         # rewards = rewards.float().squeeze()
-        
+
         # convert list to tensor
         old_masks = 0
         if self.mode == 'transformer':
@@ -435,12 +435,12 @@ class PPO:
 
             # match state_values tensor dimensions with rewards tensor
             state_values = torch.squeeze(state_values)
-            
+
             # Finding the ratio (pi_theta / pi_theta__old)
             ratios = torch.exp(logprobs - old_logprobs.detach())
 
             # Finding Surrogate Loss
-            advantages = rewards - state_values.detach()   
+            advantages = rewards - state_values.detach()
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1-self.args.eps_clip, 1+self.args.eps_clip) * advantages
             loss = -torch.min(surr1, surr2) + \
@@ -451,14 +451,14 @@ class PPO:
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()
-            
+
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())
 
         # clear buffer
         self.buffer.clear()
-    
-    
+
+
     def save(self, checkpoint_path):
         torch.save(self.policy_old.state_dict(), checkpoint_path)
 
