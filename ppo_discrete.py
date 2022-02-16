@@ -6,6 +6,7 @@
 # discrete version!
 
 import dgl
+import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,6 +15,7 @@ from torch.distributions import Categorical # discrete
 import numpy as np
 from net import NormalHashLinear, TransformerModel
 from dgl import nn as gnn
+from util import ravel_index
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -25,7 +27,7 @@ class RolloutBuffer:
         self.logprobs = []
         self.rewards = []
         self.is_terminals = []
-    
+
     def clear(self):
         del self.actions[:]
         del self.states[:]
@@ -38,7 +40,7 @@ class RolloutBuffer:
 class GraphEmb_Conv(nn.Module):
     def __init__(self, graph_emb, dropout=0.2):
         super(GraphEmb_Conv, self).__init__()
-        self.cg_conv = nn.Conv1d(2, graph_emb, 1) #2: g.edges src node, dst node
+        self.cg_conv = nn.Conv1d(2, graph_emb, kernel_size=(1,1)) #2: g.edges src node, dst node
         self.relu = nn.ReLU(inplace=True)
         self.avg_pool = nn.AdaptiveAvgPool1d(1)
         self.dropout = nn.Dropout(p=dropout)
@@ -49,6 +51,73 @@ class GraphEmb_Conv(nn.Module):
         x = self.avg_pool(x).flatten(1)
         x = self.dropout(self.norm(x))
         return x
+
+
+class PAM_Module(nn.Module):
+    """ Position attention module"""
+    #Ref from SAGAN
+    def __init__(self, in_dim):
+        super(PAM_Module, self).__init__()
+        self.chanel_in = in_dim
+
+        self.query_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim//8, kernel_size=(1,1))
+        self.key_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim//8, kernel_size=(1,1))
+        self.value_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim, kernel_size=(1,1))
+        self.gamma = nn.Parameter(torch.zeros(1))
+
+        self.softmax = nn.Softmax(dim=-1)
+    def forward(self, x):
+        """
+            inputs :
+                x : input feature maps( B X C X H X W)
+            returns :
+                out : attention value + input feature
+                attention: B X (HxW) X (HxW)
+        """
+        m_batchsize, C, height, width = x.size()
+        proj_query = self.query_conv(x).view(m_batchsize, -1, width*height).permute(0, 2, 1)
+        proj_key = self.key_conv(x).view(m_batchsize, -1, width*height)
+        energy = torch.bmm(proj_query, proj_key)
+        attention = self.softmax(energy)
+        proj_value = self.value_conv(x).view(m_batchsize, -1, width*height)
+
+        out = torch.bmm(proj_value, attention.permute(0, 2, 1))
+        out = out.view(m_batchsize, C, height, width)
+
+        out = self.gamma*out + x
+        return out
+
+
+class CAM_Module(nn.Module):
+    """ Channel attention module"""
+    def __init__(self, in_dim):
+        super(CAM_Module, self).__init__()
+        self.chanel_in = in_dim
+
+
+        self.gamma = nn.Parameter(torch.zeros(1))
+        self.softmax  = nn.Softmax(dim=-1)
+    def forward(self,x):
+        """
+            inputs :
+                x : input feature maps( B X C X H X W)
+            returns :
+                out : attention value + input feature
+                attention: B X C X C
+        """
+        m_batchsize, C, height, width = x.size()
+        proj_query = x.view(m_batchsize, C, -1)
+        proj_key = x.view(m_batchsize, C, -1).permute(0, 2, 1)
+        energy = torch.bmm(proj_query, proj_key)
+        energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy)-energy
+        attention = self.softmax(energy_new)
+        proj_value = x.view(m_batchsize, C, -1)
+
+        out = torch.bmm(attention, proj_value)
+        out = out.view(m_batchsize, C, height, width)
+
+        out = self.gamma*out + x
+        return out
 
 class ACFF_SP(nn.Module): # feedforward ppo superposed model
     def __init__(self, in_dim, emb_size, out_dim, ntasks, mode='soft'):
@@ -123,10 +192,13 @@ class ActorCritic(nn.Module):
                  action_dim,
                  graph_size,
                  gnn_in,
-                 mode = 'linear', ntasks = 1):
+                 mode = 'linear',
+                 ntasks = 1,
+                 device_topology=(16,1,3)):
         super(ActorCritic, self).__init__()
         self.device = device
-        # self.graph_model = GraphEmb_Conv(graph_size) 
+        self.device_topology = device_topology
+        # self.graph_model = GraphEmb_Conv(graph_size)
         self.graph_model = nn.ModuleList([
             gnn.SGConv(gnn_in, 64, 1, False, nn.ReLU),
             gnn.SGConv(64, 128, 1, False, nn.ReLU)
@@ -185,7 +257,7 @@ class ActorCritic(nn.Module):
         state_values = self.critic(act_in)
         return action_logprobs, state_values, dist_entropy
 
-    def act(self, state, graph_info, node_id, taskid=None):
+    def act(self, state, graph_info, node_id, taskid=None, grp_nodes=None, prev_act = None):
         graph = dgl.add_self_loop(graph_info)
         graph_feat = graph.ndata['feat']
         for layer in self.graph_model:
@@ -203,7 +275,22 @@ class ActorCritic(nn.Module):
         else:
             action_probs = self.actor(act_in)
         dist = Categorical(action_probs)
-        action = dist.sample()
+        action = dist.sample() # flatten index of a tile coord
+
+        if grp_nodes is not None:
+            for nd in grp_nodes[node_id]:
+                if (prev_act[nd] > -1).all(): # if a grouped node is already placed
+                    act_t = list(np.unravel_index(action.item(), self.device_topology))
+                    act_t[:2] = prev_act[nd][:2] #copy tile loc
+                    if act_t[2] == prev_act[nd][2]:
+                        free_spoke = list(range(0, self.device_topology[2]))
+                        for p_act in prev_act:
+                            if p_act[:2] == act_t[:2]:
+                                free_spoke.remove(p_act[2])
+                        act_t[2] = random.choice(free_spoke)
+
+                    action.data = torch.tensor(ravel_index(act_t, self.device_topology), dtype=torch.int64)
+
         action_logprob = dist.log_prob(action)
         return action.detach(), action_logprob.detach()
 
@@ -235,11 +322,13 @@ class PPO:
                  action_dim,
                  gnn_in = 48,
                  mode='',
-                 ntasks = 1):
+                 ntasks = 1,
+                 device_topology=(16,1,3)):
         #args.emb_size, betas, lr, gamma, K_epoch, eps_clip, loss_value_c, loss_entropy_c
         #ntasks: number of different graphs
         self.args = args
         self.device = device
+        self.device_topology = device_topology
         self.ntasks = ntasks
         self.state_dim = state_dim #input ready time (nodes, 1)
         self.action_dim = action_dim #output (nodes, 48)
@@ -254,9 +343,10 @@ class PPO:
                                   graph_size=self.args.graph_size,
                                   gnn_in=gnn_in,
                                   mode=mode,
-                                  ntasks=ntasks).to(self.device)
+                                  ntasks=ntasks,
+                                  device_topology=self.device_topology).to(self.device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.args.lr, betas=self.args.betas)
-        
+
         self.policy_old = ActorCritic(device=self.device,
                                       state_dim=self.state_dim,
                                       emb_size=self.args.emb_size,
@@ -264,7 +354,8 @@ class PPO:
                                       graph_size=self.args.graph_size,
                                       gnn_in=gnn_in,
                                       mode=mode,
-                                      ntasks=ntasks).to(self.device)
+                                      ntasks=ntasks,
+                                      device_topology=self.device_topology).to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         if args.model != '':
             self.load(args.model)
@@ -277,19 +368,19 @@ class PPO:
             self.policy.reset_lstm()
             self.policy_old.reset_lstm()
 
-    def get_coord(self, assigment, action, node, grid_shape):
+    def get_coord(self, assigment, action, node):
         # put node assigment to vector of node assigments
-        action[node] = torch.tensor(np.unravel_index(assigment, grid_shape))
+        action[node] = torch.tensor(np.unravel_index(assigment, self.device_topology))
         return action
 
-    def select_action(self, state, graph_info, node_id, taskid=None):
+    def select_action(self, state, graph_info, node_id, taskid=None, grp_nodes=None, prev_act=None):
         with torch.no_grad():
             graph_info = graph_info.to(self.device)
             if self.mode=='transformer':
                 action, action_logprob = self.policy_old.act_seq(state, graph_info)
             else:
                 state = torch.FloatTensor(state).to(self.device)
-                action, action_logprob = self.policy_old.act(state, graph_info, node_id, taskid)
+                action, action_logprob = self.policy_old.act(state, graph_info, node_id, taskid, grp_nodes=grp_nodes, prev_act=prev_act)
 
         return action.item(), (state, action, graph_info, action_logprob)
 
@@ -312,12 +403,12 @@ class PPO:
                 discounted_reward = 0
             discounted_reward = reward + (self.args.gamma * discounted_reward)
             rewards.insert(0, discounted_reward)
-        
+
         # Normalizing the rewards:
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
         # rewards = rewards.float().squeeze()
-        
+
         # convert list to tensor
         old_masks = 0
         if self.mode == 'transformer':
@@ -344,12 +435,12 @@ class PPO:
 
             # match state_values tensor dimensions with rewards tensor
             state_values = torch.squeeze(state_values)
-            
+
             # Finding the ratio (pi_theta / pi_theta__old)
             ratios = torch.exp(logprobs - old_logprobs.detach())
 
             # Finding Surrogate Loss
-            advantages = rewards - state_values.detach()   
+            advantages = rewards - state_values.detach()
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1-self.args.eps_clip, 1+self.args.eps_clip) * advantages
             loss = -torch.min(surr1, surr2) + \
@@ -360,14 +451,14 @@ class PPO:
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()
-            
+
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())
 
         # clear buffer
         self.buffer.clear()
-    
-    
+
+
     def save(self, checkpoint_path):
         torch.save(self.policy_old.state_dict(), checkpoint_path)
 

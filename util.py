@@ -27,11 +27,11 @@ def create_graph(graphdef, numnodes = 10):
             graph.add_nodes(edges[2])
         tm_idx_total = len(graphdef['tile_memory_map'].keys())
         # Add tile memory constraints as features to graph
-        tm_req_feat = torch.zeros(graph.num_nodes(), tm_idx_total)
+        tm_req_feat = torch.zeros(graph.num_nodes(), tm_idx_total) # node, tile mem var index binary vector
         for instr_idx, tm_idxs in tile_memory_req.items():
             for tm_idx in tm_idxs:
                 tm_req_feat[instr_idx][tm_idx] = 1
-        
+
         graph.ndata['tm_req'] = tm_req_feat
     return graph
     
@@ -66,9 +66,9 @@ def get_graph_json(path):
         data = json.load(file)
         edge_src = []
         edge_dst = []
-        tmem_map = {0: None}
-        nidx = 1
-        for mem in data['TileMemories'].keys():  # graphs
+        tmem_map = {} # tile_mem variable str : int index
+        nidx = 0
+        for mem in data['TileMemories'].keys():  # give index to each tile mem variable
             tmem_map[mem] = nidx
             nidx += 1
         nidx = 0
@@ -82,18 +82,17 @@ def get_graph_json(path):
 
         extra_node = (nidx-1) - max(max(edge_src), max(edge_dst))
         nidx = 0
-        tmem_req = {}
+        tmem_req = {} # node id : list of tile mem var indexes
         for graph in data['Program']:  # graphs
             for node in graph['SyncFlow']:  # nodes
-                l = []
+                l = [] #tile mem var indexes
                 for var in node['SEInst']['SEInstUse']:
                     if var in tmem_map:
                         l.append(tmem_map[var])
-                if not l:
-                    l.append(0)  # add none to empty
+
                 tmem_req[nidx] = l
                 nidx += 1
-    return {'graphdef':(edge_src, edge_dst, extra_node), 'tile_memory_req':tmem_req, 'tile_memory_map': tmem_map}
+    return {'graphdef': (edge_src, edge_dst, extra_node), 'tile_memory_req': tmem_req, 'tile_memory_map': tmem_map}
 
 def output_instr_json(grid_in, grid_shape, filename='output.json'):
     data = {}
@@ -134,6 +133,14 @@ def output_json(instr_coords, no_of_tiles=16, spoke_count=3 ,out_file_name='mapp
     data['mappings'] = mappings
     with open(out_file_name, 'w') as outfile:
         json.dump(data, outfile, indent=4)
+
+def ravel_index(pos, shape):
+    res = 0
+    acc = 1
+    for pi, si in zip(reversed(pos), reversed(shape)):
+        res += pi * acc
+        acc *= si
+    return res
 
 def initial_fill(num_nodes, grid_shape, manual = None):
     '''
@@ -230,11 +237,15 @@ def BFS(src, dest):
     # Return -1 if destination cannot be reached
     return -1
 
+def get_tile(a): # get grid coord y, x
+    # a[x,y,z]
+    return a[0:2]
+
 def fix_grid_bins(grid_in):
     # sort nodes in the z dimention of grid_in (node order)
     dic = {}
     for i, nd in enumerate(grid_in):
-        t = tuple(get_coord(nd)) #get grid coord
+        t = tuple(get_tile(nd)) #get grid coord
         if t in dic.keys():
             grid_in[i][0] = dic[t]
             dic[t] += 1
@@ -242,9 +253,7 @@ def fix_grid_bins(grid_in):
             grid_in[i][0] = 0
             dic[t] = 1
 
-def get_coord(a): # get grid coord y, x
-    # a[x,y,z]
-    return a[0:2]
+
 
 def delete_multiple_element(list_object, indices):
     indices = sorted(indices, reverse=True)
@@ -278,7 +287,7 @@ def calc_score(grid, graph):
         rm_elem = []
         for i, node in enumerate(placed_node):
             # node placed location
-            dst_coord = get_coord(grid[node])
+            dst_coord = get_tile(grid[node])
             if node_level[tuple(dst_coord)] < grid[node][2]:
                 continue  # there is another node to be placed here before
 
@@ -286,7 +295,7 @@ def calc_score(grid, graph):
             lst_src = []
             if len(src_nodes) > 0:  # there is a predecessor
                 for src in src_nodes:
-                    src_coord = get_coord(grid[src])
+                    src_coord = get_tile(grid[src])
                     dist, lst = BFS(src_coord, dst_coord)  # get list of coord to pass data
                     lst_src.append((src, lst))
 
