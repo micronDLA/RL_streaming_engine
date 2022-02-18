@@ -53,3 +53,9 @@ Install require Python packages
 ```
 pip install -r requirements.txt
 ```
+
+## Experiments
+See experiements results using:
+```
+tensorboard --logdir runs/ --bind_all
+```

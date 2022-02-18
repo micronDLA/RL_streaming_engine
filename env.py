@@ -1,5 +1,6 @@
 import dgl
 import math
+import os
 from numpy.lib.shape_base import tile
 import torch
 import pprint
@@ -26,14 +27,14 @@ class StreamingEngineEnv:
                  graph_feat_size=32,
                  init_place=None,
                  emb_mode='topological',
-                 placement_mode='one_node'):
+                 placement_mode=''):
 
         # Represent the streaming engine as a vector of positional encodings
         # Generate meshgrid so we can consider all possible assignments for (tile_x, tile_y, spoke)
         tile_coords = torch.meshgrid(*[torch.arange(i) for i in device_topology])
         tile_coords = [coord.unsqueeze(-1) for coord in tile_coords]
         tile_coords = torch.cat(tile_coords, -1)
-        tile_coords = tile_coords.view(-1, tile_coords.shape[-1])  
+        tile_coords = tile_coords.view(-1, tile_coords.shape[-1])
         # Shape: (no_of_tiles * no_of_spokes, 3)
         # tile_coords represents all possible SE slices [tile_x, tile_y, spoke_no]
 
@@ -76,6 +77,7 @@ class StreamingEngineEnv:
 
         self.no_tm_constr = args.no_tm_constr  # Tile memory constraint flag
         self.no_sf_constr = args.no_sf_constr  # Syncflow constraints flag
+        self.args = args
         self.pass_timing = args.pass_timing
 
     def get_graph(self, id):
@@ -149,7 +151,7 @@ class StreamingEngineEnv:
         '''
         action = list of coordinate idx
         '''
-        if self.placement_mode == 'all_node':
+        if self.placement_mode == 'coord_index': #sinkhorn assignment is array(num_node, 1)
             # For sinkhorn, when assignment contains all nodes
             node_coord = -torch.ones(self.compute_graph.num_nodes(), 3)
             for op_idx, coord_idx in enumerate(assignment):
@@ -158,7 +160,7 @@ class StreamingEngineEnv:
 
             return self._calculate_reward(node_coord)
 
-        elif self.placement_mode == 'one_node':
+        else:#assignment is array(num_node, 3)
             # When placing one node at a time
             return self._calculate_reward(assignment)
 
@@ -174,7 +176,7 @@ class StreamingEngineEnv:
         reward = torch.zeros(num_nodes)  # Shape: (no_of_graph_nodes,)
         ready_time = torch.zeros(num_nodes)  # Shape: (no_of_graph_nodes,)
         isvalid = False
-        
+
         max_dist = sum(self.device_topology)
 
         timing_error = False
@@ -211,21 +213,19 @@ class StreamingEngineEnv:
                             else:
                                 src_done_time += abs_dist
                         else:
-                            src_done_time += abs_dist 
+                            src_done_time += abs_dist
 
                     else: # grid representation
                         # src_done_time += abs_dist + (abs_dist - 1) * 2
                         # At src_done_time, node is ready to be consumed 1 hop away
-                        src_done_time += abs_dist - 1  
+                        src_done_time += abs_dist - 1
 
                     if src_done_time > dst_ready_time: # get largest from all predecessors
                         dst_ready_time = src_done_time  #TODO: Isn't variable dst_ready_time more like dst start time
 
                 tile = dst_coord.numpy().astype(int)
                 dst_coord_node = self.tile_slice_to_node.get(tuple(tile), -1)
-                if not self.no_sf_constr and len(self.compute_graph.predecessors(dst)) == 0 and tuple(tile[:2]) in self.title_used:
-                    ready_time[dst] = -1 #not placed
-                elif dst_ready_time == 0 and  dst_coord_node in [dst, -1] : # placed fine
+                if dst_ready_time == 0 and  dst_coord_node in [dst, -1] : # placed fine
                     ready_time[dst] = dst_coord[2] + self.PIPELINE_DEPTH
                     self.tile_slice_to_node[tuple(tile)] = dst
                     self.title_used.add(tuple(tile[:2]))
@@ -240,11 +240,11 @@ class StreamingEngineEnv:
 
         if not self.no_tm_constr:
             # Check if tile memory constraints are satisfied
-            # Iterate over TMs and check if nodes associated with it are on same tiles  
+            # Iterate over TMs and check if nodes associated with it are on same tiles
             for tm_idx, nodes in self.nodes_per_tm.items():
                 tile_idx = -1  # Tile idx on which all nodes with same tm_idx req should be scheduled
                 nodes_on_same_tile = True  # Are all nodes with same tm_idx req on same tile
-                
+
                 for node in nodes:
                     if node_coords[node].sum() == -3:
                         continue
@@ -255,10 +255,10 @@ class StreamingEngineEnv:
                         # because of tile memory constraints are not
                         nodes_on_same_tile = False
                         break
-                
+
                 if not nodes_on_same_tile:
                     if (ready_time >= 0).all():
-                        # This print statement will only show the first TM idx for which 
+                        # This print statement will only show the first TM idx for which
                         # all nodes are not on same tile
                         print(f'[INFO] All nodes placed by network but nodes {nodes} should be on same tile for TM idx {tm_idx} but are not')
                     for node in nodes:
@@ -282,7 +282,8 @@ class StreamingEngineEnv:
             print('Instr ID#  : Ready time | Tile slice')
             pp.pprint(assignment_list)
             # output_json(node_coord.numpy(), out_file_name=f'mappings/mapping_{self.no_of_valid_mappings}')
-            output_json(node_coords.numpy(), out_file_name=f'mappings/mapping_best.json')
+            sulfix = os.path.splitext(os.path.basename(self.args.input))[0]
+            output_json(node_coords.numpy(), out_file_name=f'mappings/mapping_{sulfix}.json')
             self.no_of_valid_mappings += 1
             isvalid = True
 
