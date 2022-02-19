@@ -74,34 +74,22 @@ class PAM_ModuleM(nn.Module):
         out = out.permute(0, 2, 1)
         return out
 
-class CAM_Module(nn.Module):
-    """ Channel attention module"""
+
+
+class CAM_ModuleM(nn.Module):
     def __init__(self, in_dim):
-        super(CAM_Module, self).__init__()
+        super(CAM_ModuleM, self).__init__()
         self.chanel_in = in_dim
-
-
         self.gamma = nn.Parameter(torch.zeros(1))
         self.softmax  = nn.Softmax(dim=-1)
     def forward(self,x):
-        """
-            inputs :
-                x : input feature maps( B X C X H X W)
-            returns :
-                out : attention value + input feature
-                attention: B X C X C
-        """
-        m_batchsize, C, height, width = x.size()
-        proj_query = x.view(m_batchsize, C, -1)
-        proj_key = x.view(m_batchsize, C, -1).permute(0, 2, 1)
+        proj_query = x.permute(0, 2, 1)
+        proj_key = x
         energy = torch.bmm(proj_query, proj_key)
-        energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy)-energy
+        energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy) - energy
         attention = self.softmax(energy_new)
-        proj_value = x.view(m_batchsize, C, -1)
-
-        out = torch.bmm(attention, proj_value)
-        out = out.view(m_batchsize, C, height, width)
-
+        proj_value = x
+        out = torch.bmm(proj_value, attention)
         out = self.gamma*out + x
         return out
 
@@ -191,6 +179,8 @@ class ActorCritic(nn.Module):
         ])
         act_feat_sz = graph_size + 2  # graph feature + state: [readytime, node sel]
         self.pam_attention = PAM_ModuleM(act_feat_sz)
+        self.cam_attention = CAM_ModuleM(act_feat_sz)
+
         self.graph_avg_pool = gnn.AvgPooling()
         if mode == 'rnn':
             self.actor = ACRNN(state_dim+graph_size, emb_size, action_dim, mode='soft')
@@ -258,6 +248,7 @@ class ActorCritic(nn.Module):
         # print('[INFO] graph_feat shape', graph_feat.shape)
         act_in = torch.cat((graph_feat, state), -1)
         act_in = self.pam_attention(act_in.unsqueeze(0)).squeeze(0) # attention module
+        # act_in = self.cam_attention(act_in.unsqueeze(0)).squeeze(0)
         act_in = self.graph_avg_pool(graph, act_in)
         if self.mode == 'super':
             act_in = act_in.unsqueeze(0)
@@ -291,6 +282,7 @@ class ActorCritic(nn.Module):
         # emb = self.graph_model(graph_info)
         act_in = torch.cat((graph_feat.broadcast_to(state.shape[0], -1, -1), state), dim=-1)
         act_in = self.pam_attention(act_in) # attention module
+        # act_in = self.cam_attention(act_in)
         act_in = act_in.reshape(-1, act_in.shape[2])
         act_in = self.graph_avg_pool(dgl.batch(graph_info), act_in)
         if self.mode == 'super':
