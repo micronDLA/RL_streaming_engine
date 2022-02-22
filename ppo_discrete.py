@@ -53,69 +53,43 @@ class GraphEmb_Conv(nn.Module):
         return x
 
 
-class PAM_Module(nn.Module):
-    """ Position attention module"""
-    #Ref from SAGAN
+class PAM_ModuleM(nn.Module):
     def __init__(self, in_dim):
-        super(PAM_Module, self).__init__()
+        super(PAM_ModuleM, self).__init__()
         self.chanel_in = in_dim
-
-        self.query_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim//8, kernel_size=(1,1))
-        self.key_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim//8, kernel_size=(1,1))
-        self.value_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim, kernel_size=(1,1))
+        self.query_conv = nn.Conv1d(in_channels=in_dim, out_channels=in_dim // 5, kernel_size=1)
+        self.key_conv = nn.Conv1d(in_channels=in_dim, out_channels=in_dim // 5, kernel_size=1)
+        self.value_conv = nn.Conv1d(in_channels=in_dim, out_channels=in_dim, kernel_size=1)
         self.gamma = nn.Parameter(torch.zeros(1))
-
         self.softmax = nn.Softmax(dim=-1)
     def forward(self, x):
-        """
-            inputs :
-                x : input feature maps( B X C X H X W)
-            returns :
-                out : attention value + input feature
-                attention: B X (HxW) X (HxW)
-        """
-        m_batchsize, C, height, width = x.size()
-        proj_query = self.query_conv(x).view(m_batchsize, -1, width*height).permute(0, 2, 1)
-        proj_key = self.key_conv(x).view(m_batchsize, -1, width*height)
+        x = x.permute(0, 2, 1)
+        proj_query = self.query_conv(x).permute(0, 2, 1)
+        proj_key = self.key_conv(x)
         energy = torch.bmm(proj_query, proj_key)
         attention = self.softmax(energy)
-        proj_value = self.value_conv(x).view(m_batchsize, -1, width*height)
-
-        out = torch.bmm(proj_value, attention.permute(0, 2, 1))
-        out = out.view(m_batchsize, C, height, width)
-
-        out = self.gamma*out + x
+        proj_value = self.value_conv(x)
+        out = torch.bmm(proj_value, attention)
+        out = self.gamma * out + x
+        out = out.permute(0, 2, 1)
         return out
 
 
-class CAM_Module(nn.Module):
-    """ Channel attention module"""
+
+class CAM_ModuleM(nn.Module):
     def __init__(self, in_dim):
-        super(CAM_Module, self).__init__()
+        super(CAM_ModuleM, self).__init__()
         self.chanel_in = in_dim
-
-
         self.gamma = nn.Parameter(torch.zeros(1))
         self.softmax  = nn.Softmax(dim=-1)
     def forward(self,x):
-        """
-            inputs :
-                x : input feature maps( B X C X H X W)
-            returns :
-                out : attention value + input feature
-                attention: B X C X C
-        """
-        m_batchsize, C, height, width = x.size()
-        proj_query = x.view(m_batchsize, C, -1)
-        proj_key = x.view(m_batchsize, C, -1).permute(0, 2, 1)
+        proj_query = x.permute(0, 2, 1)
+        proj_key = x
         energy = torch.bmm(proj_query, proj_key)
-        energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy)-energy
+        energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy) - energy
         attention = self.softmax(energy_new)
-        proj_value = x.view(m_batchsize, C, -1)
-
-        out = torch.bmm(attention, proj_value)
-        out = out.view(m_batchsize, C, height, width)
-
+        proj_value = x
+        out = torch.bmm(proj_value, attention)
         out = self.gamma*out + x
         return out
 
@@ -203,6 +177,10 @@ class ActorCritic(nn.Module):
             gnn.SGConv(gnn_in, 64, 1, False, nn.ReLU),
             gnn.SGConv(64, 128, 1, False, nn.ReLU)
         ])
+        act_feat_sz = graph_size + 2  # graph feature + state: [readytime, node sel]
+        self.pam_attention = PAM_ModuleM(act_feat_sz)
+        self.cam_attention = CAM_ModuleM(act_feat_sz)
+
         self.graph_avg_pool = gnn.AvgPooling()
         if mode == 'rnn':
             self.actor = ACRNN(state_dim+graph_size, emb_size, action_dim, mode='soft')
@@ -218,8 +196,8 @@ class ActorCritic(nn.Module):
             self.actor = ACFF_SP(state_dim + graph_size, emb_size, action_dim, ntasks=ntasks, mode='soft')
             self.critic = ACFF_SP(state_dim + graph_size, emb_size, 1, ntasks=ntasks, mode='')
         else:
-            self.actor = ACFF(state_dim+graph_size, emb_size, action_dim, mode='soft')
-            self.critic = ACFF(state_dim+graph_size, emb_size, 1, mode='')
+            self.actor = ACFF(act_feat_sz, emb_size, action_dim, mode='soft')  # earlier: state_dim+graph_size
+            self.critic = ACFF(act_feat_sz, emb_size, 1, mode='')
         self.mode = mode
 
     def reset_lstm(self):
@@ -263,12 +241,15 @@ class ActorCritic(nn.Module):
         for layer in self.graph_model:
             graph_feat = layer(graph, graph_feat)
         # graph_feat = self.graph_avg_pool(graph, graph_feat)
-        node_feat = graph_feat[node_id, :]
-        node_feat = node_feat.squeeze()
+        # node_feat = graph_feat[node_id, :]
+
         # emb = self.graph_model(graph_info).squeeze()
         # print('[INFO] state shape', state.shape)
         # print('[INFO] graph_feat shape', graph_feat.shape)
-        act_in = torch.cat((state, node_feat))
+        act_in = torch.cat((graph_feat, state), -1)
+        act_in = self.pam_attention(act_in.unsqueeze(0)).squeeze(0) # attention module
+        # act_in = self.cam_attention(act_in.unsqueeze(0)).squeeze(0)
+        act_in = self.graph_avg_pool(graph, act_in)
         if self.mode == 'super':
             act_in = act_in.unsqueeze(0)
             action_probs = self.actor(act_in, taskid)
@@ -276,7 +257,6 @@ class ActorCritic(nn.Module):
             action_probs = self.actor(act_in)
         dist = Categorical(action_probs)
         action = dist.sample() # flatten index of a tile coord
-
         if grp_nodes is not None:
             for nd in grp_nodes[node_id]:
                 if (prev_act[nd] > -1).all(): # if a grouped node is already placed
@@ -288,9 +268,7 @@ class ActorCritic(nn.Module):
                             if p_act[:2] == act_t[:2]:
                                 free_spoke.remove(p_act[2])
                         act_t[2] = random.choice(free_spoke)
-
-                    action.data = torch.tensor(ravel_index(act_t, self.device_topology), dtype=torch.int64)
-
+                    action.data = torch.tensor([int(ravel_index(act_t, self.device_topology).item())], dtype=torch.int64)
         action_logprob = dist.log_prob(action)
         return action.detach(), action_logprob.detach()
 
@@ -300,9 +278,13 @@ class ActorCritic(nn.Module):
         graph_feat = graph.ndata['feat']
         for layer in self.graph_model:
             graph_feat = layer(graph, graph_feat)
-        graph_feat = self.graph_avg_pool(graph, graph_feat)
+        # graph_feat = self.graph_avg_pool(graph, graph_feat)
         # emb = self.graph_model(graph_info)
-        act_in = torch.cat((state, graph_feat.broadcast_to(state.shape[0], -1)), dim=1)
+        act_in = torch.cat((graph_feat.broadcast_to(state.shape[0], -1, -1), state), dim=-1)
+        act_in = self.pam_attention(act_in) # attention module
+        # act_in = self.cam_attention(act_in)
+        act_in = act_in.reshape(-1, act_in.shape[2])
+        act_in = self.graph_avg_pool(dgl.batch(graph_info), act_in)
         if self.mode == 'super':
             action_probs = self.actor(act_in, taskid)
         else:

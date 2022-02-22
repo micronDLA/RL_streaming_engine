@@ -271,12 +271,12 @@ class StreamingEngineEnv:
         reward[ready_time == -1] = -1 # node place fail
         reward[ready_time >= 0]  = (max_dist*num_nodes - ready_time[ready_time >= 0])/num_nodes
 
-        self.compute_graph.ndata['node_coord'] = node_coords
+        # self.compute_graph.ndata['node_coord'] = node_coords
 
         if (ready_time >= 0).all() and self.best_time > ready_time.max().item():
             # Print possible assignment when all nodes are mapped
             self.best_time = ready_time.max().item()
-            print('Possible assignment -> best reward {} '.format(self.best_time))
+            print('\nPossible assignment -> best time: {} '.format(self.best_time))
             assignment_list = [f'Instr ID# {node_idx}: {int(t)} | {a}' for node_idx, (t, a) in \
                                enumerate(zip(ready_time, node_coords.int().numpy()))]
             print('Instr ID#  : Ready time | Tile slice')
