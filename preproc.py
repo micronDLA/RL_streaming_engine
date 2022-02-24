@@ -1,14 +1,11 @@
 import dgl
 import math
 import os
-from numpy.lib.shape_base import tile
 import torch
 import pprint
-import networkx as nx
 import random
-from matplotlib import pyplot as plt
 import numpy as np
-from util import positional_encoding, calc_score, initial_fill, output_json, ROW, COL, fix_grid_bins
+from util import positional_encoding
 
 pp =pprint.PrettyPrinter(indent=2)
 

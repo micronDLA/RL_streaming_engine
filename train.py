@@ -15,11 +15,10 @@ from torch.optim import Adam
 from torch.nn.utils import clip_grad_norm_
 from torch.utils.tensorboard import SummaryWriter
 
-from net import PolicyNet
 from env import StreamingEngineEnv
 from ppo_discrete import PPO
 from graph_def import PREDEF_GRAPHS
-from util import calc_score, initial_fill, get_graph_json, create_graph
+from util import get_graph_json, create_graph
 from preproc import PreInput
 #torch.autograd.set_detect_anomaly(True)
 # random.seed(10)

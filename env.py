@@ -8,7 +8,7 @@ import networkx as nx
 import random
 from matplotlib import pyplot as plt
 import numpy as np
-from util import positional_encoding, calc_score, initial_fill, output_json, ROW, COL, fix_grid_bins
+from util import output_json
 
 pp =pprint.PrettyPrinter(indent=2)
 class StreamingEngineEnv:
