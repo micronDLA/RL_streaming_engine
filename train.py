@@ -20,7 +20,7 @@ from env import StreamingEngineEnv
 from ppo_discrete import PPO
 from graph_def import PREDEF_GRAPHS
 from util import calc_score, initial_fill, get_graph_json, create_graph
-
+from preproc import PreInput
 #torch.autograd.set_detect_anomaly(True)
 # random.seed(10)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Disable TF messages
@@ -28,7 +28,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Disable TF messages
 def get_args():
     parser = argparse.ArgumentParser(description='Streaming Engine RL Mapper')
     arg = parser.add_argument
-    arg('--mode', type=int, default=2, help='0 - random search, 1 - CMA-ES search, 2 - RL PPO, 3 - sinkhorn, 4 - multigraph, 5 - transformer')
 
     arg('--device_topology', nargs='+', type=int, default=(4, 1, 3), help='Device topology of Streaming Engine')
     arg('--epochs', type=int, default=50000, help='number of epochs')
@@ -40,6 +39,7 @@ def get_args():
     arg('--pass-timing', action='store_true', help='enable pass through timing')
     arg('--no-tm-constr', action='store_true', help='disable tile memory constraint')
     arg('--no-sf-constr', action='store_true', help='disable sync flow constraint')
+    arg('--no-device-cross-connections', action='store_true', help='disable sync flow constraint')
 
     # PPO
     arg('--ppo-epoch', type=int, default=4)
@@ -56,6 +56,7 @@ def get_args():
     arg('--loss_value_c', type=float, default=0.5, help='coefficient for value term in loss')
     arg('--model', type=str, default='', help='load saved model from file')
     arg('--log_interval', type=int, default=100, help='interval for logging data')
+    arg('--graph_feat_size', type=int, default=32, help='graph_feat_size')
 
     args = parser.parse_args()
     return args
@@ -75,433 +76,97 @@ if __name__ == "__main__":
         graphdef = get_graph_json(args.input)
     else:
         graphdef = PREDEF_GRAPHS["FFT"]
-    graph = create_graph(graphdef)
-    args.nodes = nodes = graph.number_of_nodes()
+    graphdef = create_graph(graphdef)
+    args.nodes = nodes = graphdef['graph'].number_of_nodes()
+
+    #graphdef:
+    # graphdef['graph']: dgl graph, ndata['tm_req'], ndata['feat']
+    # graphdef['graphdef']: (edge_src, edge_dst, extra_node)
+    # graphdef['tile_memory_req']: dict{ tile_mem variable str : int index }
+    # graphdef['tile_memory_map']: dict{ node id : list of tile mem var indexes }
+    #tensor_in:
+    # tensor_in['state'] = torch.FloatTensor(state).view(-1).unsqueeze(1)
+    # tensor_in['node_sel'] = node_1hot.unsqueeze(1)
+    #device:
+    # device['topology'] = args.device_topology
+    # device['action_dim'] = np.prod(args.device_topology)
+    #constr:
+    # constr['grp_nodes'] = tile mem based grp_nodes
 
     if args.debug:
-        graph_in = graph.adjacency_matrix_scipy().toarray()
+        graph_in = graphdef['graph'].adjacency_matrix_scipy().toarray()
         print('graph adjacency matrix: ', graph_in)
-        nx_g = graph.to_networkx()
+        nx_g = graphdef['graph'].to_networkx()
         nx.draw(nx_g, nx.nx_agraph.graphviz_layout(nx_g, prog='dot'), with_labels=True)
         plt.show()
 
-    # random search
-    if args.mode == 0:
-        # randomly occupy with nodes (not occupied=0 value):
-        device_topology = args.device_topology
-        # device_topology = (args.grid_size, args.grid_size, args.spokes)
-        grid, grid_in, place = initial_fill(nodes, device_topology)
+    device = {}
+    device['topology'] = args.device_topology
+    device['action_dim'] = np.prod(args.device_topology)
+    tensor_in = {}
 
-        env = StreamingEngineEnv(args=args,
-                                 graphs=[graph],
-                                 graphdef=graphdef,
-                                 device_topology=device_topology,
-                                 device_cross_connections=True,
-                                 device_feat_size=48,
-                                 graph_feat_size=32)
+    preproc = PreInput(args)
+    graphdef = preproc.pre_graph(graphdef, device)
 
-        # testing grid placement scoring:
-        _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
+    env = StreamingEngineEnv(args=args, graphdef=graphdef, device=device)
 
-        # random search
-        before_rs = ready_time.max().item() if valid else float('inf')
-        best_grid = grid_in.copy()
+    ppo = PPO(args,
+              graphdef = graphdef,
+              device = device,
+              state_dim = args.nodes*2)
 
-        print('Running Random search optimization ...')
-        for i in tqdm(range(args.epochs)):
-            grid, grid_in, _ = initial_fill(nodes, grid.shape)
-            _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
-            after_rs = ready_time.max().item()
-            if before_rs > after_rs and valid:
-                before_rs = after_rs
-                best_grid = grid_in.copy()
-                if args.debug:
-                    print('best_grid score so far: ', after_rs)
+    # logging variables
+    reward = best_reward = 0
+    reward_buf = deque(maxlen=100)
+    reward_buf.append(0)
+    time_step = 0
+    start = time.time()
 
-        print('best score found: ', before_rs)
-        if args.debug:
-            print('optim placement: ', best_grid)
+    # RL place each node
+    # training loop:
+    print('Starting PPO training...')
+    for i_episode in range(1, args.epochs + 1):
+        env.reset()
+        state = -torch.ones(args.nodes) * 2 #ready time: -2 not placed
+        action = -torch.ones(args.nodes, 3)
+        time_step += 1 #number of epoch to train model
+        # pre place constraint
+        constr, action = preproc.pre_constr(action, graphdef, device)
 
-    # ES search
-    elif args.mode == 1:
-        # randomly occupy with nodes (not occupied=0 value):
-        device_topology = args.device_topology
-        # device_topology = (args.grid_size, args.grid_size, args.spokes)
-        grid, grid_in, place = initial_fill(nodes, device_topology)
+        for node_id in range(0, args.nodes):
+            if (action[node_id] > -1).all() : #skip pre placed nodes
+                continue
+            node_1hot = torch.zeros(args.nodes)
+            node_1hot[node_id] = 1.0
+            tensor_in['state'] = torch.FloatTensor(state).view(-1).unsqueeze(1)
+            tensor_in['node_sel'] = node_1hot.unsqueeze(1)
+            rl_state = preproc.pre_input(tensor_in)
 
-        env = StreamingEngineEnv(args=args,
-                                 graphs=[graph],
-                                 graphdef=graphdef,
-                                 device_topology=device_topology,
-                                 device_cross_connections=True,
-                                 device_feat_size=48,
-                                 graph_feat_size=32)
+            assigment, tobuff = ppo.select_action(tensor_in = rl_state, graphdef = graphdef, node_id = node_id, action=action, pre_constr=constr) # node assigment index in streaming eng slice
+            action = ppo.get_coord(assigment, action, node_id) # put node assigment to vector of node assigments, 2D tensor
+            reward, state, isvalid = env.step(action)
 
-        # testing grid placement scoring:
-        _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
-        final_es = ready_time.max().item() if valid else float('inf')
-        final_value = grid_in if valid else None
+            # Saving reward and is_terminals:
+            done = node_id == (args.nodes - 1)
+            ppo.add_buffer(tobuff, reward, done)
+            best_reward = max(best_reward, state.max().item())
+            reward_buf.append(reward.mean())
 
-        import nevergrad as ng
-
-        budget = args.epochs  # How many steps of training we will do before concluding.
-        workers = 16
-        # param = ng.p.Array(shape=(int(nodes), 1)).set_integer_casting().set_bounds(lower=0, upper=ROW*COL*nodes)
-        param = ng.p.Array(init=place).set_integer_casting().set_bounds(lower=0, upper= np.prod(device_topology))
-        # ES optim
-        names = "CMA"
-        optim = ng.optimizers.registry[names](parametrization=param, budget=budget, num_workers=workers)
-        # optim = ng.optimizers.RandomSearch(parametrization=param, budget=budget, num_workers=workers)
-        # optim = ng.optimizers.NGOpt(parametrization=param, budget=budget, num_workers=workers)
-
-        print('Running ES optimization ...')
-        for _ in tqdm(range(budget)):
-            x = optim.ask()
-            grid, grid_in, _ = initial_fill(nodes, device_topology, manual=x.value)
-            _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
-            loss = ready_time.max().item() if valid else float('inf')
-            optim.tell(x, loss)
-            if final_es > loss:
-                final_value = grid_in
-                final_es = loss
-
-        rec = optim.recommend()
-        grid, grid_in, _ = initial_fill(nodes, device_topology, manual=rec.value)
-        _, ready_time, valid = env._calculate_reward(torch.tensor(grid_in))
-
-        print('best score found:', final_es)
-        if args.debug:
-            print('optim placement:\n', final_value)
-
-    # PPO Feedforward FF
-    elif args.mode == 2:
-        device_topology = args.device_topology
-        action_dim = np.prod(args.device_topology)
-        # RL place each node
-        env = StreamingEngineEnv(args=args,
-                                 graphs=[graph],
-                                 graphdef=graphdef,
-                                 device_topology=device_topology,
-                                 device_cross_connections=True,
-                                 device_feat_size=action_dim,
-                                 graph_feat_size=32,
-                                 )
-
-        ppo = PPO(args,
-                  state_dim=args.nodes*2,
-                  action_dim=action_dim,
-                  gnn_in=env.compute_graph.ndata['feat'].shape[1],
-                  device_topology=device_topology)
-
-        # logging variables
-        reward = best_reward = 0
-        reward_buf = deque(maxlen=100)
-        reward_buf.append(0)
-        time_step = 0
-        start = time.time()
-        gprod = np.prod(device_topology[:2])
-        # training loop:
-        print('Starting PPO training...')
-        for i_episode in range(1, args.epochs + 1):
-            env.reset()
-            gr_edges = torch.stack(env.compute_graph.edges()).unsqueeze(0).float()  # [[src_nodes], [dst_nodes]] 
-            state = -torch.ones(args.nodes)*2 #ready time: -2 not placed
-            action = -torch.ones(args.nodes, 3)
-            time_step += 1 #number of epoch to train model
-
-            if not args.no_sf_constr:
-                not_used = [ii for ii in range(gprod)]
-                for node_id in range(0, args.nodes):
-                    if len(env.compute_graph.predecessors(node_id)) == 0:
-                        place = random.choice(not_used)
-                        not_used.remove(place)
-                        x, y = np.unravel_index(place, device_topology[:2])
-                        action[node_id] = torch.Tensor([x, y, random.randint(0, 2)])
-
-            #find nodes that must go together because they use same tile mem var
-            grp_nodes = None
-            if not args.no_tm_constr:
-                grp_nodes = {} # node n : list of nodes that goes with node n
-                for n in range(args.nodes):
-                    grp = [] # nodes that goes with n
-                    tmem_n = graphdef['tile_memory_req'][n] # tile mem var used by n
-                    for nd, tmem in graphdef['tile_memory_req'].items(): #scan other nodes
-                        if nd == n:
-                            continue
-                        if not set(tmem).isdisjoint(tmem_n):
-                            grp.append(nd)
-                    grp_nodes[n] = grp
-
-            for node_id in range(0, args.nodes):
-                if (action[node_id] > -1).all() : #skip pre placed nodes
-                    continue
-                node_1hot = torch.zeros(args.nodes)
-                node_1hot[node_id] = 1.0
-                rl_state = torch.cat((torch.FloatTensor(state).view(-1).unsqueeze(1), node_1hot.unsqueeze(1)), axis=1) # grid, node to place
-                assigment, tobuff = ppo.select_action(rl_state, graph, node_id, grp_nodes=grp_nodes, prev_act=action) # node assigment index in streaming eng slice
-                action = ppo.get_coord(assigment, action, node_id) # put node assigment to vector of node assigments, 2D tensor
-                reward, state, isvalid = env.step(action)
-
-                # Saving reward and is_terminals:
-                done = node_id == (args.nodes - 1)
-                ppo.add_buffer(tobuff, reward, done)
-                best_reward = max(best_reward, state.max().item())
-                reward_buf.append(reward.mean())
-
-            # learning:
-            if time_step % args.update_timestep == 0:
-                ppo.update()
-                time_step = 0
+        # learning:
+        if time_step % args.update_timestep == 0:
+            ppo.update()
+            time_step = 0
 
 
-            # logging
-            if i_episode % args.log_interval == 0:
-                writer.add_scalar('mean reward/episode', np.mean(reward_buf), i_episode)
-                writer.add_scalar('total time/episode', best_reward, i_episode)
-                writer.flush()
-                end = time.time()
-                print(f'\rEpisode: {i_episode} | Ready time: {best_reward} | Mean Reward: {np.mean(reward_buf):.2f} | Time elpased: {end - start:.2f}s', end='')
-                # writer.add_scalar('avg improvement/episode', avg_improve, i_episode)
-                # print('Episode {} \t Avg improvement: {}'.format(i_episode, avg_improve))
-                torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
-                running_reward = 0
-
-    # Sinkhorn
-    elif args.mode == 3:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        device_topology = args.device_topology
-        action_dim = np.prod(args.device_topology)
-        grid, grid_in, place = initial_fill(nodes, device_topology)
-
-        # initialize Environment, Network and Optimizer
-        env = StreamingEngineEnv(args=args,
-                                 graphs=[graph],
-                                 graphdef=graphdef,
-                                 device_topology=device_topology,
-                                 device_cross_connections=True,
-                                 device_feat_size=action_dim,
-                                 graph_feat_size=32,
-                                 init_place=None, # torch.tensor(grid_in),
-                                 emb_mode='topological',
-                                 placement_mode='coord_index')
-        policy = PolicyNet(cg_in_feats=action_dim,
-                           cg_hidden_dim=64,
-                           cg_conv_k=1,
-                           transformer_dim=action_dim,
-                           transformer_nhead=4,
-                           transformer_ffdim=128,
-                           transformer_dropout=0.1,
-                           transformer_num_layers=4,
-                           sinkhorn_iters=100)
-        optim = Adam(policy.parameters(), lr=args.lr)
-        if args.model != '':
-            policy.load_state_dict(torch.load(args.pre_train)['model_state_dict'])
-            optim.load_state_dict(torch.load(args.pre_train)['optimizer_state_dict'])
-
-        # to keep track of average reward
-        reward_buf = deque(maxlen=100)
-        reward_buf.append(0)
-
-        # train
-        for episode in range(args.epochs):
-
-            # reset env
-            state = env.reset()
-
-            # collect 'trajectory'
-            # only one trajectory step
-            with torch.no_grad():
-                old_action, old_logp, old_entropy, old_scores = policy(*state)
-                old_reward, _, _ = env.step(old_action)
-
-            # use 'trajectory' to train network
-            for epoch in range(args.ppo_epoch):
-
-                action, logp, entropy, scores = policy(*state)
-                reward, ready_time, _ = env.step(action)
-
-                ratio = torch.exp(logp) / (torch.exp(old_logp) + 1e-8)
-                surr1 = ratio * reward
-                surr2 = torch.clamp(ratio, 1-args.eps_clip, 1+args.eps_clip) * reward
-                action_loss = -torch.fmin(surr1, surr2)
-                entropy_loss = entropy * args.loss_entropy_c
-
-                loss = (action_loss + entropy)
-                loss = loss.mean()
-
-                optim.zero_grad()
-                loss.backward()
-                clip_grad_norm_(policy.parameters(), args.max_grad_norm)
-                optim.step()
-
-                reward_buf.append(reward.mean())
-            if episode % args.log_interval == 0:
-                # TODO: Add number of nodes places to this prompt and also log it
-                print(f'Episode: {episode} | Epoch: {epoch} | Ready time: {ready_time.max().item()} | Loss: {loss.item()} | Mean Reward: {np.mean(reward_buf)}')
-                # TODO: Is mean of reward buffer the total mean up until now?
-                writer.add_scalar('mean reward/episode', np.mean(reward_buf), episode)
-                writer.add_scalar('total time/episode', ready_time.max().item(), episode)
-                writer.flush()
-
-            if episode % args.log_interval == 0 and args.debug:
-                plt.imshow(old_scores[0].exp().detach(), vmin=0, vmax=1)
-                plt.pause(1e-6)
-                #plt.show()
-                #env.render()
-
-            if episode % 1000 == 0:
-                torch.save({
-                    'model_state_dict': policy.state_dict(),
-                    'optimizer_state_dict': optim.state_dict(),
-                    'mean_reward': np.mean(reward_buf)
-                }, 'models/model'+ str(episode) +'.pth')
-    
-    # PPO multiple graphs
-    elif args.mode == 4:
-        device_topology = args.device_topology
-        action_dim = np.prod(args.device_topology)
-        # different graphs
-        g_defs = [([1, 1, 2, 2, 3, 4, 6, 6, 8, 10, 11, 11], [2, 3, 4, 6, 6, 5, 7, 8, 9, 11, 12, 13], 0),
-                  ([1, 1, 2, 3, 4, 6, 6, 8, 10, 11, 11], [2, 3, 4, 6, 5, 7, 8, 9, 11, 12, 13], 0),
-                  ([1, 1, 2, 2, 3, 4, 6, 6, 8, 10, 11, 12], [2, 3, 4, 6, 6, 5, 7, 8, 9, 11, 12, 13], 0),
-                  ([1, 1, 2, 2, 3, 4, 4, 6, 6, 8, 10, 11, 11], [2, 3, 4, 6, 6, 5, 7, 7, 8, 9, 11, 12, 13], 0)]
-        graphs = []
-        for gdef in g_defs:
-            g = create_graph(gdef)
-            graphs.append(g)
-
-        # RL place each node
-        env = StreamingEngineEnv(args=args,
-                                 graphs=graphs,
-                                 graphdef=graphdef,
-                                 device_topology=device_topology,
-                                 device_cross_connections=True,
-                                 device_feat_size=action_dim,
-                                 graph_feat_size=32)
-        ppo = PPO(args,
-                  state_dim=args.nodes*2,
-                  action_dim=action_dim,
-                  device_topology=device_topology)
-                 # mode='super', ntasks = len(graphs))
-
-        # logging variables
-        reward = best_reward = 0
-        reward_buf = deque(maxlen=100)
-        reward_buf.append(0)
-        time_step = 0
-        start = time.time()
-        # training loop:
-
-        for taskid in range(len(graphs)):
-            print(f'Starting PPO Different Graphs training {taskid} ...')
-            print('[WARNING] Multiple graphs with feed forward PPO is not currently supported. \n \
-                    Check `evaluate()` functio \n \
-                    Remove this warning if issue has been patched')
-            for i_episode in range(1, args.epochs + 1):
-                env.reset()
-                env.get_graph(taskid) #set compute_graph to a graph from collection of graphs
-                gr_edges = torch.stack(env.compute_graph.edges()).unsqueeze(0).float()
-                state = -torch.ones(args.nodes)*2 #ready time: -2 not placed
-                action = -torch.ones(args.nodes, 3)
-                time_step += 1 #number of epoch to train model
-
-                node_id = 0
-                while node_id < args.nodes:
-                    node_1hot = torch.zeros(args.nodes)
-                    node_1hot[node_id] = 1.0
-                    rl_state = torch.cat((torch.FloatTensor(state).view(-1), node_1hot))  # grid, node to place
-                    assigment, tobuff = ppo.select_action(rl_state, gr_edges, node_id)#, taskid=taskid) # node assigment index
-                    action = ppo.get_coord(assigment, action, node_id) # put node assigment to vector of node assigments
-                    reward, state, _ = env._calculate_reward(action)
-
-                    if not torch.any(state < 0):
-                        # Saving reward and is_terminals:
-                        done = node_id == (args.nodes - 1)
-                        ppo.add_buffer(tobuff, reward, done)
-                        best_reward = max(best_reward, state.max().item())
-                        reward_buf.append(reward.mean())
-                        node_id += 1
-
-                # learning:
-                if time_step % args.update_timestep == 0:
-                    ppo.update(taskid=taskid)
-                    time_step = 0
-
-                # logging
-                if i_episode % args.log_interval == 0:
-                    i_ep = i_episode + taskid * args.epochs
-                    print(f'Episode: {i_ep} | Ready time: {best_reward} | Mean Reward: {np.mean(reward_buf)}')
-                    writer.add_scalar('mean reward/episode', np.mean(reward_buf), i_ep)
-                    writer.add_scalar('total time/episode', best_reward, i_ep)
-                    writer.flush()
-                    end = time.time()
-                    print('Execution time {} s'.format(end - start))
-                    # torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
-
-    # PPO Sequence Transformer
-    elif args.mode == 5:
-        device_topology = args.device_topology
-        action_dim = np.prod(args.device_topology)
-        # RL place each node
-        env = StreamingEngineEnv(args=args,
-                                 graphs=[graph],
-                                 graphdef=graphdef,
-                                 device_topology=device_topology,
-                                 device_cross_connections=True,
-                                 device_feat_size=action_dim,
-                                 graph_feat_size=32)
-        ppo = PPO(args,
-                  state_dim=args.nodes,
-                  action_dim=action_dim,
-                  mode='transformer',
-                  device_topology=device_topology)
-
-        # logging variables
-        reward = best_reward = 0
-        reward_buf = deque(maxlen=100)
-        reward_buf.append(0)
-        time_step = 0
-        start = time.time()
-        # training loop:
-        print('Starting PPO Sequence training...')
-        for i_episode in range(1, args.epochs + 1):
-            env.reset()
-            gr_edges = torch.stack(env.compute_graph.edges()).unsqueeze(0).float()
-            time_step += 1 #number of epoch to train model
-            state = -torch.ones(args.nodes) * 2  # ready time: -2 not placed
-            action = -torch.ones(args.nodes, 3)
-            state_in = torch.zeros(args.nodes, 1, action_dim)
-            for node in range(0, args.nodes):
-                rl_state = (state_in, torch.tensor(node)) # grid, node to place
-                assigment = ppo.select_action(rl_state, gr_edges, node) # node assigment index
-                action = ppo.get_coord(assigment, action, node) # put node assigment to vector of node assigments
-                reward, state, _ = env._calculate_reward(action)
-                state_in[node, :, assigment] = state[node]
-                # Saving reward and is_terminals:
-                ppo.buffer.rewards.append(reward.mean())
-                if node == (args.nodes - 1):
-                    done = True
-                else:
-                    done = False
-                ppo.buffer.is_terminals.append(done)
-                best_reward = max(best_reward, state.max().item())
-                reward_buf.append(reward.mean())
-            # learning:
-            if time_step % args.update_timestep == 0:
-                ppo.update()
-                time_step = 0
-
-
-            # logging
-            if i_episode % args.log_interval == 0:
-                print(f'Episode: {i_episode} | Ready time: {best_reward} | Mean Reward: {np.mean(reward_buf)}')
-                writer.add_scalar('mean reward/episode', np.mean(reward_buf), i_episode)
-                writer.add_scalar('total time/episode', best_reward, i_episode)
-                writer.flush()
-                end = time.time()
-                print('Execution time {} s'.format(end - start))
-                # writer.add_scalar('avg improvement/episode', avg_improve, i_episode)
-                # print('Episode {} \t Avg improvement: {}'.format(i_episode, avg_improve))
-                torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
-                running_reward = 0
+        # logging
+        if i_episode % args.log_interval == 0:
+            writer.add_scalar('mean reward/episode', np.mean(reward_buf), i_episode)
+            writer.add_scalar('total time/episode', best_reward, i_episode)
+            writer.flush()
+            end = time.time()
+            print(f'\rEpisode: {i_episode} | Ready time: {best_reward} | Mean Reward: {np.mean(reward_buf):.2f} | Time elpased: {end - start:.2f}s', end='')
+            # writer.add_scalar('avg improvement/episode', avg_improve, i_episode)
+            # print('Episode {} \t Avg improvement: {}'.format(i_episode, avg_improve))
+            torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
+            running_reward = 0
 

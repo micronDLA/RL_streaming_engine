@@ -17,7 +17,7 @@ from net import NormalHashLinear, TransformerModel
 from dgl import nn as gnn
 from util import ravel_index
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+_engine = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class RolloutBuffer:
     def __init__(self):
@@ -160,6 +160,7 @@ class ACRNN(nn.Module): # rnn ppo
 
 class ActorCritic(nn.Module):
     def __init__(self,
+                 args,
                  device,
                  state_dim,
                  emb_size,
@@ -167,11 +168,10 @@ class ActorCritic(nn.Module):
                  graph_size,
                  gnn_in,
                  mode = 'linear',
-                 ntasks = 1,
-                 device_topology=(16,1,3)):
+                 ntasks = 1):
         super(ActorCritic, self).__init__()
+        self.args = args
         self.device = device
-        self.device_topology = device_topology
         # self.graph_model = GraphEmb_Conv(graph_size)
         self.graph_model = nn.ModuleList([
             gnn.SGConv(gnn_in, 64, 1, False, nn.ReLU),
@@ -208,8 +208,8 @@ class ActorCritic(nn.Module):
         raise NotImplementedError
 
     def act_seq(self, state, graph_info):
-        state_in = state[0].to(self.device)
-        mask = state[1].to(self.device)
+        state_in = state[0].to(_engine)
+        mask = state[1].to(_engine)
         emb = self.graph_model(graph_info).squeeze()
         o = self.model(state_in)
         o = o.view(-1)
@@ -235,7 +235,7 @@ class ActorCritic(nn.Module):
         state_values = self.critic(act_in)
         return action_logprobs, state_values, dist_entropy
 
-    def act(self, state, graph_info, node_id, taskid=None, grp_nodes=None, prev_act = None):
+    def act(self, state, graph_info, node_id, prev_act, pre_constr):
         graph = dgl.add_self_loop(graph_info)
         graph_feat = graph.ndata['feat']
         for layer in self.graph_model:
@@ -250,25 +250,22 @@ class ActorCritic(nn.Module):
         act_in = self.pam_attention(act_in.unsqueeze(0)).squeeze(0) # attention module
         # act_in = self.cam_attention(act_in.unsqueeze(0)).squeeze(0)
         act_in = self.graph_avg_pool(graph, act_in)
-        if self.mode == 'super':
-            act_in = act_in.unsqueeze(0)
-            action_probs = self.actor(act_in, taskid)
-        else:
-            action_probs = self.actor(act_in)
+        action_probs = self.actor(act_in)
         dist = Categorical(action_probs)
         action = dist.sample() # flatten index of a tile coord
-        if grp_nodes is not None:
-            for nd in grp_nodes[node_id]:
+
+        if not self.args.no_tm_constr:
+            for nd in pre_constr['grp_nodes'][node_id]:
                 if (prev_act[nd] > -1).all(): # if a grouped node is already placed
-                    act_t = list(np.unravel_index(action.item(), self.device_topology))
+                    act_t = list(np.unravel_index(action.item(), self.device['topology']))
                     act_t[:2] = prev_act[nd][:2] #copy tile loc
                     if act_t[2] == prev_act[nd][2]:
-                        free_spoke = list(range(0, self.device_topology[2]))
+                        free_spoke = list(range(0, self.device['topology'][2]))
                         for p_act in prev_act:
                             if p_act[:2] == act_t[:2]:
                                 free_spoke.remove(p_act[2])
                         act_t[2] = random.choice(free_spoke)
-                    action.data = torch.tensor([int(ravel_index(act_t, self.device_topology).item())], dtype=torch.int64)
+                    action.data = torch.tensor([int(ravel_index(act_t, self.device['topology']).item())], dtype=torch.int64)
         action_logprob = dist.log_prob(action)
         return action.detach(), action_logprob.detach()
 
@@ -299,45 +296,45 @@ class ActorCritic(nn.Module):
         return action_logprobs, state_values, dist_entropy
 
 class PPO:
-    def __init__(self, args,
+    def __init__(self,
+                 args,
+                 graphdef,
+                 device,
                  state_dim,
-                 action_dim,
-                 gnn_in = 48,
                  mode='',
-                 ntasks = 1,
-                 device_topology=(16,1,3)):
-        #args.emb_size, betas, lr, gamma, K_epoch, eps_clip, loss_value_c, loss_entropy_c
+                 ntasks = 1):
+
         #ntasks: number of different graphs
         self.args = args
-        self.device = device
-        self.device_topology = device_topology
+        self.graphdef = graphdef
+        self.device_topology = device['topology']
         self.ntasks = ntasks
         self.state_dim = state_dim #input ready time (nodes, 1)
-        self.action_dim = action_dim #output (nodes, 48)
-
+        self.action_dim = device['action_dim'] #output (nodes, 48)
+        self.gnn_in = graphdef['graph'].ndata['feat'].shape[1]
         self.buffer = RolloutBuffer()
         self.ntokens = args.device_topology
 
-        self.policy = ActorCritic(device=self.device,
+        self.policy = ActorCritic(args=args,
+                                  device=device,
                                   state_dim=self.state_dim,
                                   emb_size=self.args.emb_size,
                                   action_dim=self.action_dim,
                                   graph_size=self.args.graph_size,
-                                  gnn_in=gnn_in,
+                                  gnn_in=self.gnn_in,
                                   mode=mode,
-                                  ntasks=ntasks,
-                                  device_topology=self.device_topology).to(self.device)
+                                  ntasks=ntasks).to(_engine)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.args.lr, betas=self.args.betas)
 
-        self.policy_old = ActorCritic(device=self.device,
+        self.policy_old = ActorCritic(args=args,
+                                      device=device,
                                       state_dim=self.state_dim,
                                       emb_size=self.args.emb_size,
                                       action_dim=self.action_dim,
                                       graph_size=self.args.graph_size,
-                                      gnn_in=gnn_in,
+                                      gnn_in=self.gnn_in,
                                       mode=mode,
-                                      ntasks=ntasks,
-                                      device_topology=self.device_topology).to(self.device)
+                                      ntasks=ntasks).to(_engine)
         self.policy_old.load_state_dict(self.policy.state_dict())
         if args.model != '':
             self.load(args.model)
@@ -355,14 +352,15 @@ class PPO:
         action[node] = torch.tensor(np.unravel_index(assigment, self.device_topology))
         return action
 
-    def select_action(self, state, graph_info, node_id, taskid=None, grp_nodes=None, prev_act=None):
+
+    def select_action(self, tensor_in, graphdef, node_id, action, pre_constr):
         with torch.no_grad():
-            graph_info = graph_info.to(self.device)
+            graph_info = graphdef['graph'].to(_engine)
             if self.mode=='transformer':
-                action, action_logprob = self.policy_old.act_seq(state, graph_info)
+                action, action_logprob = self.policy_old.act_seq(tensor_in, graph_info)
             else:
-                state = torch.FloatTensor(state).to(self.device)
-                action, action_logprob = self.policy_old.act(state, graph_info, node_id, taskid, grp_nodes=grp_nodes, prev_act=prev_act)
+                state = torch.FloatTensor(tensor_in).to(_engine)
+                action, action_logprob = self.policy_old.act(state, graph_info, node_id, action, pre_constr)
 
         return action.item(), (state, action, graph_info, action_logprob)
 
@@ -387,7 +385,7 @@ class PPO:
             rewards.insert(0, discounted_reward)
 
         # Normalizing the rewards:
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
+        rewards = torch.tensor(rewards, dtype=torch.float32).to(_engine)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
         # rewards = rewards.float().squeeze()
 
@@ -395,16 +393,16 @@ class PPO:
         old_masks = 0
         if self.mode == 'transformer':
             s = [i for i, _ in self.buffer.states]
-            old_states = torch.squeeze(torch.stack(s, dim=0)).detach().to(self.device)
+            old_states = torch.squeeze(torch.stack(s, dim=0)).detach().to(_engine)
             old_states = torch.permute(old_states, (1, 0, 2))
             m = [i for _, i in self.buffer.states]
-            old_masks = torch.squeeze(torch.stack(m, dim=0)).detach().to(self.device)
-            old_graph = torch.squeeze(torch.stack(self.buffer.graphs, dim=0)).detach().to(self.device)
+            old_masks = torch.squeeze(torch.stack(m, dim=0)).detach().to(_engine)
+            old_graph = torch.squeeze(torch.stack(self.buffer.graphs, dim=0)).detach().to(_engine)
         else:
-            old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(self.device)
-            old_graph = [graph.to(self.device) for graph in self.buffer.graphs]
-        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(self.device)
-        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(self.device)
+            old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(_engine)
+            old_graph = [graph.to(_engine) for graph in self.buffer.graphs]
+        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(_engine)
+        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(_engine)
 
         # Optimize policy for K epochs
         for _ in range(self.args.K_epochs):

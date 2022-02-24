@@ -17,6 +17,7 @@ PIPE_CYCLE = 4
 def create_graph(graphdef, numnodes = 10):
     # random generate a directed acyclic graph
     if graphdef is None:
+        graphdef = {}
         a = nx.generators.directed.gn_graph(numnodes)
         graph = dgl.from_networkx(a)
     else:
@@ -31,9 +32,10 @@ def create_graph(graphdef, numnodes = 10):
         for instr_idx, tm_idxs in tile_memory_req.items():
             for tm_idx in tm_idxs:
                 tm_req_feat[instr_idx][tm_idx] = 1
-
         graph.ndata['tm_req'] = tm_req_feat
-    return graph
+
+    graphdef['graph'] = graph
+    return graphdef
     
 def positional_encoding(pos, feat_size=16, timescale=10000):
     '''
