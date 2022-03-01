@@ -13,11 +13,12 @@ def get_args():
     parser = argparse.ArgumentParser(description='Streaming Engine RL Mapper')
     arg = parser.add_argument
 
-    arg('--device_topology', nargs='+', type=int, default=(4, 1, 3), help='Device topology of Streaming Engine')
+    arg('--device-topology', nargs='+', type=int, default=(4, 3), help='Device topology of Streaming Engine')
+    arg('--pipeline-depth', type=int, default=3, help='processing pipeline depth')
     arg('--epochs', type=int, default=50000, help='number of epochs')
     arg('--nodes', type=int, default=20,  help='number of nodes')
     arg('--debug', dest='debug', action='store_true', default=False, help='enable debug mode')
-    arg('--input', type=str, default='input_graphs/vector_add_bashartest.json', help='load input json from file')
+    arg('--input', type=str, default='input_graphs/vectorAdd_ir.json', help='load input json from file')
 
     # Constraints
     arg('--pass-timing', action='store_true', help='enable pass through timing')
@@ -74,8 +75,12 @@ if __name__ == "__main__":
     preproc = PreInput(args)
     graphdef = preproc.pre_graph(graphdef, device)
 
-    env = StreamingEngineEnv(graph=graphdef)
+    env = StreamingEngineEnv(graphdef=graphdef,
+                             tile_count=args.device_topology[0], 
+                             spoke_count=args.device_topology[1], 
+                             pipeline_depth=args.pipeline_depth)
 
+    """
     # Start training loop
     time_step = 0
     for i_episode in range(1, args.epochs + 1):
@@ -94,3 +99,4 @@ if __name__ == "__main__":
             if time_step % args.update_timestep == 0:
                 ppo.update()
                 time_step = 0
+    """
