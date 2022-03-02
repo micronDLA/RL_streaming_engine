@@ -75,7 +75,8 @@ if __name__ == "__main__":
     preproc = PreInput(args)
     graphdef = preproc.pre_graph(graphdef, device)
 
-    env = StreamingEngineEnv(graphdef=graphdef,
+    env = StreamingEngineEnv(args,
+                             graphdef=graphdef,
                              tile_count=args.device_topology[0], 
                              spoke_count=args.device_topology[1], 
                              pipeline_depth=args.pipeline_depth)
@@ -92,6 +93,9 @@ if __name__ == "__main__":
             mask = env.get_mask(node_id)
             action = ppo.get_action(node_id, state, mask)
             state, reward, done, _ = env.step(action)
+
+            if node_id == args.nodes - 1:
+                done = True
 
             # Save things to buffer
 
