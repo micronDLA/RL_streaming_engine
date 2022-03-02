@@ -3,7 +3,7 @@ import dgl
 from gym import spaces
 
 import numpy as np
-from torch import zero_
+import logging
 
 class Tile:
     """class for a Tile """
@@ -35,6 +35,7 @@ class StreamingEngine:
             for spoke_idx, spoke in enumerate(tile.spokes):
                 if spoke != None:
                     state[tile_idx*self.spoke_count + spoke_idx] = self.tiles[tile_idx].spokes[spoke_idx]  # or can be 1
+
         if view == 'human':
             state = state.reshape(self.tile_count, self.spoke_count)
         return state
@@ -45,7 +46,7 @@ class StreamingEngine:
 
 class StreamingEngineEnv(gym.Env):
     """Streaming engine class"""
-    def __init__(self, graphdef=None, tile_count=16, spoke_count=3, pipeline_depth=3):
+    def __init__(self, args, graphdef=None, tile_count=16, spoke_count=3, pipeline_depth=3):
         super(StreamingEngineEnv, self).__init__()
         self.se = StreamingEngine(tile_count=tile_count, 
                                   spoke_count=spoke_count, 
@@ -62,6 +63,7 @@ class StreamingEngineEnv(gym.Env):
     def step(self, action):
         node, tile_idx, spoke_idx = action
         assert tile_idx >=0 and tile_idx < self.se.tile_count, f"Tile index not in range [0, {self.se.tile_count}]"
+        
         placed = False
         if not self._predecessors_placed(node):
             raise ValueError(f'All predecessors of node {node} not placed')
@@ -70,11 +72,11 @@ class StreamingEngineEnv(gym.Env):
         else:
             raise ValueError(f'Node {node} already placed at [Tile, Spoke]: {self.placed_nodes.get(node)}')
         if placed:  # `placed ` flag checks if no other node was already present at tile slice
-            ready_time = self._get_ready_time(action)
+            ready_time, predecessor_ready_time = self._get_ready_time(action)
             self.placed_nodes[node] = {'tile_slice': (tile_idx, spoke_idx), 'ready_time': ready_time}
         obs = self.se.get_state()  # Can change to boolean obs
-        reward = self._calculate_reward()
-        done = False  # TODO: Implement done determination
+        reward = self._calculate_reward(ready_time, predecessor_ready_time)
+        done = len(self.placed_nodes) == self.num_nodes
         return obs, reward, done, {}
 
     def reset(self):
@@ -84,24 +86,17 @@ class StreamingEngineEnv(gym.Env):
     def render(self):
         pass
 
-    def close(self):
-        pass
-
     def _get_ready_time(self, action):
-        # Assumes that node has already been placed
+        # Assumes that node has already been placed, along with its predecessors
         node, tile_idx, spoke_idx = action
         predecessors = self.graphdef['graph'].predecessors(node).numpy()
-        ready_time = -1
+        ready_time = 0
+        predecessor_ready_time = 0
         # If node doesn't have any predecessor, processing starts immediately
         if len(predecessors) == 0:
             ready_time = spoke_idx + self.se.pipeline_depth
 
         else:
-            # Check if all predecessors have been placed
-            predecessors_placed = self._predecessors_placed(node)
-            if not predecessors_placed:
-                return ready_time
-
             # Get ready greatest ready time of predecessor
             node_predecessor, predecessor_ready_time = -1, -1
             for predecessor in predecessors:
@@ -113,7 +108,7 @@ class StreamingEngineEnv(gym.Env):
             abs_dist = abs(predecessor_tile_idx - tile_idx)
             ready_time = predecessor_ready_time + abs_dist + self.se.pipeline_depth
 
-        return ready_time
+        return ready_time, predecessor_ready_time
 
     def _predecessors_placed(self, node: dgl.DGLGraph.nodes):
         """Check if predecessors of node have been placed
@@ -138,22 +133,29 @@ class StreamingEngineEnv(gym.Env):
         zero_mask = np.zeros(self.se.tile_count * self.se.spoke_count)
         # If node is already placed, return mask with all zeros
         if self.placed_nodes.get(node) != None:
+            logging.debug(f'Node {node} already placed, zero mask returned')
+            return zero_mask
+
+        # Check if predecessors have been placed
+        elif not self._predecessors_placed(node):
+            logging.debug(f'All predecessors not placed for node {node}, zero mask returned')
             return zero_mask
         
-        # If node does not have any predecessors, it can be placed at any open tile slice
-        if len(self.graphdef['graph'].predecessors(node).numpy()) == 0:
-            mask = 1 - (self.se.get_state() > -1).astype(int)
+        # Node can be placed at any open tile slice if no constraint is applied
+        mask = 1 - (self.se.get_state() > -1).astype(int)
+        
+        if not self.args.no_tm_constr:
+            # TODO: Implement tm constr mask
+            pass
 
-        # If node has predecessors, then predecessors already need to have been placed (return zero mask if not so)
-        else:
-            # Check if predecessors have been placed
-            if not self._predecessors_placed(node):
-                return zero_mask
-
-            # Check feasible locations based on predecessors
+        if not self.args.no_sf_constr:
+            # TODO: Implement sf constr mask
+            pass
 
         return mask
 
-    def _calculate_reward(self):
-        # TODO: Implement reward function
-        return 0
+
+    def _calculate_reward(self, ready_time, predecessor_ready_time):
+        # Ready time of node - ready time of parent
+        reward = ready_time - predecessor_ready_time
+        return reward
