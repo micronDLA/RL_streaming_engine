@@ -45,12 +45,14 @@ class StreamingEngine:
             tile.reset()
 
 class StreamingEngineEnv(gym.Env):
+    # TODO: Implement sibling nodes constraint
     """Streaming engine class"""
     def __init__(self, args, graphdef=None, tile_count=16, spoke_count=3, pipeline_depth=3):
         super(StreamingEngineEnv, self).__init__()
         self.se = StreamingEngine(tile_count=tile_count, 
                                   spoke_count=spoke_count, 
                                   pipeline_depth=pipeline_depth)
+        self.args = args
         self.graphdef = graphdef
         self.num_nodes = graphdef['graph'].num_nodes()
         # Action: [Node_idx, tile_idx, spoke_idx]
@@ -58,7 +60,6 @@ class StreamingEngineEnv(gym.Env):
         # Observation: Vector containing info about each tile slice
         self.observation_space = spaces.Discrete(self.se.tile_count * self.se.spoke_count)
         self.placed_nodes = {}  # Keys: node_idx, values: [(tile_idx, spoke_idx]), ready_time]
-
 
     def step(self, action):
         node, tile_idx, spoke_idx = action
@@ -145,8 +146,30 @@ class StreamingEngineEnv(gym.Env):
         mask = 1 - (self.se.get_state() > -1).astype(int)
         
         if not self.args.no_tm_constr:
-            # TODO: Implement tm constr mask
-            pass
+            # What TMs does node use
+            tms_used = self.graphdef['nodes_to_tm'][node]
+            if len(tms_used) == 0:  # Node doesn't use any TM
+                return mask
+
+            # What other nodes use these TMs?
+            other_nodes = set()
+            for tm in tms_used:
+                for other_node in self.graphdef['tm_to_nodes'][tm]:
+                    other_nodes.add(other_node)
+            other_nodes.remove(node)
+            other_nodes = list(other_nodes)
+            if len(other_nodes) == 0:  # TM used by node isn't used by any other node
+                return mask
+
+            # If other nodes are already placed, only the tile they are placed on should be available
+            for other_node in other_nodes:
+                other_node_placement = self.placed_nodes.get(other_node)
+                if other_node_placement != None:
+                    other_node_tile = other_node_placement['tile_slice'][0]  # Tile idx
+                    # Make everything except range [ont*spoke_count, ont*spoke_count+spoke_count) unavailable
+                    exculde_idxs = [i for i in range(other_node_tile * self.se.spoke_count, other_node_tile * self.se.spoke_count + self.se.spoke_count)]
+                    unavail_idxs = [j for j in range(len(mask)) if j not in exculde_idxs]
+                    mask[unavail_idxs] = 0
 
         if not self.args.no_sf_constr:
             # TODO: Implement sf constr mask
