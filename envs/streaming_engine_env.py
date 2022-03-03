@@ -64,17 +64,18 @@ class StreamingEngineEnv(gym.Env):
     def step(self, action):
         node, tile_idx, spoke_idx = action
         assert tile_idx >=0 and tile_idx < self.se.tile_count, f"Tile index not in range [0, {self.se.tile_count}]"
-        
+        mask = self.get_mask(node)
         placed = False
-        if not self._predecessors_placed(node):
+        if not self._predecessors_placed(node):  # Check if predecessors have been placed
             raise ValueError(f'All predecessors of node {node} not placed')
-        if self.placed_nodes.get(node) == None:  # Check if node hasn't been placed already
-            placed = self.se.tiles[tile_idx].place(node, spoke_idx)
-        else:
+        if self.placed_nodes.get(node) != None:  # Check if node hasn't been placed already
             raise ValueError(f'Node {node} already placed at [Tile, Spoke]: {self.placed_nodes.get(node)}')
-        if placed:  # `placed ` flag checks if no other node was already present at tile slice
-            ready_time, predecessor_ready_time = self._get_ready_time(action)
-            self.placed_nodes[node] = {'tile_slice': (tile_idx, spoke_idx), 'ready_time': ready_time}
+        if mask[tile_idx*self.se.spoke_count + spoke_idx] == 0:  # Check if mask allowed node to be placed
+            raise ValueError(f'Illegal placement, action not allowed by mask')
+        
+        self.se.tiles[tile_idx].place(node, spoke_idx)
+        ready_time, predecessor_ready_time = self._get_ready_time(action)
+        self.placed_nodes[node] = {'tile_slice': (tile_idx, spoke_idx), 'ready_time': ready_time}
         obs = self.se.get_state()  # Can change to boolean obs
         reward = self._calculate_reward(ready_time, predecessor_ready_time)
         done = len(self.placed_nodes) == self.num_nodes
@@ -90,7 +91,7 @@ class StreamingEngineEnv(gym.Env):
     def _get_ready_time(self, action):
         # Assumes that node has already been placed, along with its predecessors
         node, tile_idx, spoke_idx = action
-        predecessors = self.graphdef['graph'].predecessors(node).numpy()
+        predecessors = self._get_predecessors(node)
         ready_time = 0
         predecessor_ready_time = 0
         # If node doesn't have any predecessor, processing starts immediately
@@ -122,7 +123,7 @@ class StreamingEngineEnv(gym.Env):
         """
         predecessors_placed = True  # Assume predecessors_placed
         # Check if predecessors_placed
-        for predecessor in self.graphdef['graph'].predecessors(node).numpy():
+        for predecessor in self._get_predecessors(node):
             if self.placed_nodes.get(predecessor) == None:
                 predecessors_placed = False
                 break
@@ -148,32 +149,37 @@ class StreamingEngineEnv(gym.Env):
         if not self.args.no_tm_constr:
             # What TMs does node use
             tms_used = self.graphdef['nodes_to_tm'][node]
-            if len(tms_used) == 0:  # Node doesn't use any TM
-                return mask
 
             # What other nodes use these TMs?
             other_nodes = set()
             for tm in tms_used:
                 for other_node in self.graphdef['tm_to_nodes'][tm]:
-                    other_nodes.add(other_node)
-            other_nodes.remove(node)
+                    if other_node != node:
+                        other_nodes.add(other_node)
             other_nodes = list(other_nodes)
-            if len(other_nodes) == 0:  # TM used by node isn't used by any other node
-                return mask
 
             # If other nodes are already placed, only the tile they are placed on should be available
             for other_node in other_nodes:
                 other_node_placement = self.placed_nodes.get(other_node)
                 if other_node_placement != None:
                     other_node_tile = other_node_placement['tile_slice'][0]  # Tile idx
-                    # Make everything except range [ont*spoke_count, ont*spoke_count+spoke_count) unavailable
-                    exculde_idxs = [i for i in range(other_node_tile * self.se.spoke_count, other_node_tile * self.se.spoke_count + self.se.spoke_count)]
+                    # Make every idx in except those in other_node_tile unavailable
+                    exculde_idxs = self._get_spoke_idxs_in_tile(other_node_tile)
                     unavail_idxs = [j for j in range(len(mask)) if j not in exculde_idxs]
                     mask[unavail_idxs] = 0
 
         if not self.args.no_sf_constr:
-            # TODO: Implement sf constr mask
-            pass
+            predecessors = self._get_predecessors(node)
+            if len(predecessors) == 0:
+                # Iterate over other sf nodes
+                for sf_node in self.graphdef['sf_nodes']:
+                    if sf_node != node:
+                        sf_node_placement = self.placed_nodes.get(sf_node)
+                        if sf_node_placement != None:
+                            sf_node_tile = sf_node_placement['tile_slice'][0]
+                            # Make spokes in sf_node_tile unavailable
+                            unavail_idxs = self._get_spoke_idxs_in_tile(sf_node_tile)
+                            mask[unavail_idxs] = 0
 
         return mask
 
@@ -182,3 +188,10 @@ class StreamingEngineEnv(gym.Env):
         # Ready time of node - ready time of parent
         reward = ready_time - predecessor_ready_time
         return reward
+
+    def _get_predecessors(self, node):
+        return self.graphdef['graph'].predecessors(node).numpy()
+
+    def _get_spoke_idxs_in_tile(self, tile_idx):
+        idxs = [i for i in range(tile_idx * self.se.spoke_count, tile_idx * self.se.spoke_count + self.se.spoke_count)]
+        return idxs
