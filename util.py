@@ -34,7 +34,14 @@ def create_graph(graphdef, numnodes = 10):
                 tm_req_feat[instr_idx][tm_idx] = 1
         graph.ndata['tm_req'] = tm_req_feat
 
+        # create list of sync start flow nodes
+        sf_nodes = []
+        for node in graph.nodes():
+            if len(graph.predecessors(node).numpy()) == 0:
+                sf_nodes.append(node.item())
+
     graphdef['graph'] = graph
+    graphdef['sf_nodes'] = sf_nodes
     return graphdef
     
 def positional_encoding(pos, feat_size=16, timescale=10000):
