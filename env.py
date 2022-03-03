@@ -51,7 +51,7 @@ class StreamingEngineEnv:
         self.args = args
 
     def get_tm_to_node_mapping(self):
-        tile_memory_req = self.graphdef['tile_memory_req']
+        tile_memory_req = self.graphdef['nodes_to_tm']
         nodes_per_tm = {tm_idx:[] for tm_idx in range(1, self.tm_idx_total+1)}
         for instr_idx, tm_idxs in tile_memory_req.items():
             for tm_idx in tm_idxs:
