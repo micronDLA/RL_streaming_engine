@@ -55,8 +55,7 @@ class StreamingEngineEnv:
         nodes_per_tm = {tm_idx:[] for tm_idx in range(1, self.tm_idx_total+1)}
         for instr_idx, tm_idxs in tile_memory_req.items():
             for tm_idx in tm_idxs:
-                if tm_idx != 0:
-                    nodes_per_tm[tm_idx].append(instr_idx)
+                nodes_per_tm[tm_idx].append(instr_idx)
 
         return nodes_per_tm
 

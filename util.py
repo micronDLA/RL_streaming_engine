@@ -96,11 +96,10 @@ def get_graph_json(path):
                 nidx += 1
 
         # Create TM to node mappings
-        tm_to_nodes = {tm_idx:[] for tm_idx in range(1, len(tmem_map.keys()))}
+        tm_to_nodes = {tm_idx:[] for tm_idx in range(0, len(tmem_map.keys()))}
         for instr_idx, tm_idxs in tmem_req.items():
             for tm_idx in tm_idxs:
-                if tm_idx != 0:
-                    tm_to_nodes[tm_idx].append(instr_idx)
+                tm_to_nodes[tm_idx].append(instr_idx)
     return {'graphdef': (edge_src, edge_dst, extra_node), 
             # 'tile_memory_req': tmem_req,  # nodes_to_tm
             'nodes_to_tm': tmem_req,
