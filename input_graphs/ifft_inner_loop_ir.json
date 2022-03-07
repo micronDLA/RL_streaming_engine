@@ -19,6 +19,13 @@
             "size": 1,
             "data": 0
         },
+        "TM_dummy": {
+            "access_type": "T1",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 1,
+            "data": 0
+        },
         "TM_half_pnts": {
             "access_type": "T1",
             "tile_memory": "Auto",
@@ -54,7 +61,14 @@
             "size": 64,
             "data": 0
         },
-        "TM_lefti": {
+        "TM_lefti_0": {
+            "access_type": "T0",
+            "tile_memory": "Auto",
+            "replicate": "NoReplicate",
+            "size": 64,
+            "data": 0
+        },
+        "TM_lefti_1": {
             "access_type": "T0",
             "tile_memory": "Auto",
             "replicate": "NoReplicate",
@@ -144,7 +158,7 @@
                         "Predecessors": [],
                         "Successors": [
                             1,
-                            4
+                            2
                         ]
                     }
                 },
@@ -164,49 +178,9 @@
                             0
                         ],
                         "Successors": [
-                            2,
+                            3,
                             5
                         ]
-                    }
-                },
-                {
-                    "SEInst": {
-                        "SEInstUse": [
-                            "pnt",
-                            "TM_tablestep"
-                        ],
-                        "SEInstDefine": [
-                            "table_idx"
-                        ],
-                        "ops": [
-                            "MulU64"
-                        ],
-                        "Predecessors": [
-                            1
-                        ],
-                        "Successors": [
-                            3
-                        ]
-                    }
-                },
-                {
-                    "SEInst": {
-                        "SEInstUse": [
-                            "table_idx",
-                            "TM_table"
-                        ],
-                        "SEInstDefine": [],
-                        "ops": [
-                            "MulU64",
-                            "AddU64",
-                            "8",
-                            "afMemReq: ld_tablei",
-                            "afMsgSel: LdAddr"
-                        ],
-                        "Predecessors": [
-                            2
-                        ],
-                        "Successors": []
                     }
                 },
                 {
@@ -232,6 +206,46 @@
                 {
                     "SEInst": {
                         "SEInstUse": [
+                            "pnt",
+                            "TM_tablestep"
+                        ],
+                        "SEInstDefine": [
+                            "table_idx"
+                        ],
+                        "ops": [
+                            "MulU64"
+                        ],
+                        "Predecessors": [
+                            1
+                        ],
+                        "Successors": [
+                            4
+                        ]
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "table_idx",
+                            "TM_table"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "MulU64",
+                            "AddU64",
+                            "8",
+                            "afMemReq: ld_tablei",
+                            "afMsgSel: LdAddr"
+                        ],
+                        "Predecessors": [
+                            3
+                        ],
+                        "Successors": []
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
                             "stride",
                             "TM_size",
                             "pnt"
@@ -247,7 +261,7 @@
                         ],
                         "Predecessors": [
                             1,
-                            4
+                            2
                         ],
                         "Successors": [
                             6,
@@ -358,14 +372,14 @@
                         ],
                         "Successors": [
                             2,
-                            4
+                            3
                         ]
                     }
                 },
                 {
                     "SEInst": {
                         "SEInstUse": [
-                            "TM_lefti",
+                            "TM_lefti_0",
                             "tp"
                         ],
                         "SEInstDefine": [],
@@ -377,8 +391,26 @@
                         "Predecessors": [
                             1
                         ],
+                        "Successors": []
+                    }
+                },
+                {
+                    "SEInst": {
+                        "SEInstUse": [
+                            "TM_lefti_1",
+                            "tp"
+                        ],
+                        "SEInstDefine": [],
+                        "ops": [
+                            "AddF32",
+                            "afMemReq: store_lefti",
+                            "afMsgSel: StData"
+                        ],
+                        "Predecessors": [
+                            1
+                        ],
                         "Successors": [
-                            3
+                            4
                         ]
                     }
                 },
@@ -397,25 +429,7 @@
                             "afMsgSel: StAddr"
                         ],
                         "Predecessors": [
-                            2
-                        ],
-                        "Successors": []
-                    }
-                },
-                {
-                    "SEInst": {
-                        "SEInstUse": [
-                            "TM_lefti",
-                            "tp"
-                        ],
-                        "SEInstDefine": [],
-                        "ops": [
-                            "AddF32",
-                            "afMemReq: store_lefti",
-                            "afMsgSel: StData"
-                        ],
-                        "Predecessors": [
-                            1
+                            3
                         ],
                         "Successors": [
                             5
@@ -448,7 +462,9 @@
             "SyncFlow": [
                 {
                     "SEInst": {
-                        "SEInstUse": [],
+                        "SEInstUse": [
+                            "TM_dummy"
+                        ],
                         "SEInstDefine": [],
                         "ops": [
                             "afMsgDest: loop_head",

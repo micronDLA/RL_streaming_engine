@@ -81,7 +81,7 @@ if __name__ == "__main__":
     #graphdef:
     # graphdef['graph']: dgl graph, ndata['tm_req'], ndata['feat']
     # graphdef['graphdef']: (edge_src, edge_dst, extra_node)
-    # graphdef['tile_memory_req']: dict{ tile_mem variable str : int index }
+    # graphdef['nodes_to_tm']: dict{ tile_mem variable str : int index }
     # graphdef['tile_memory_map']: dict{ node id : list of tile mem var indexes }
     #tensor_in:
     # tensor_in['state'] = torch.FloatTensor(state).view(-1).unsqueeze(1)
