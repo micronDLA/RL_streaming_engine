@@ -1,0 +1,341 @@
+%%
+%% This is file `sample-sigplan.tex',
+%% generated with the docstrip utility.
+%%
+%% The original source files were:
+%%
+%% samples.dtx  (with options: `sigplan')
+%% 
+%% IMPORTANT NOTICE:
+%% 
+%% For the copyright see the source file.
+%% 
+%% Any modified versions of this file must be renamed
+%% with new filenames distinct from sample-sigplan.tex.
+%% 
+%% For distribution of the original source see the terms
+%% for copying and modification in the file samples.dtx.
+%% 
+%% This generated file may be distributed as long as the
+%% original source files, as listed above, are part of the
+%% same distribution. (The sources need not necessarily be
+%% in the same archive or directory.)
+%%
+%% The first command in your LaTeX source must be the \documentclass command.
+\documentclass[sigplan,screen]{acmart}
+%% NOTE that a single column version is required for 
+%% submission and peer review. This can be done by changing
+%% the \doucmentclass[...]{acmart} in this template to 
+%% \documentclass[manuscript,screen,review]{acmart}
+%% 
+%% To ensure 100% compatibility, please check the white list of
+%% approved LaTeX packages to be used with the Master Article Template at
+%% https://www.acm.org/publications/taps/whitelist-of-latex-packages 
+%% before creating your document. The white list page provides 
+%% information on how to submit additional LaTeX packages for 
+%% review and adoption.
+%% Fonts used in the template cannot be substituted; margin 
+%% adjustments are not allowed.
+%%
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
+
+%% Rights management information.  This information is sent to you
+%% when you complete the rights form.  These commands have SAMPLE
+%% values in them; it is your responsibility as an author to replace
+%% the commands and values with those provided to you when you
+%% complete the rights form.
+\setcopyright{acmcopyright}
+\copyrightyear{2018}
+\acmYear{2018}
+\acmDOI{XXXXXXX.XXXXXXX}
+
+%% These commands are for a PROCEEDINGS abstract or paper.
+\acmConference[Conference acronym 'XX]{Make sure to enter the correct
+  conference title from your rights confirmation emai}{June 03--05,
+  2018}{Woodstock, NY}
+%
+%  Uncomment \acmBooktitle if th title of the proceedings is different
+%  from ``Proceedings of ...''!
+%
+%\acmBooktitle{Woodstock '18: ACM Symposium on Neural Gaze Detection,
+%  June 03--05, 2018, Woodstock, NY} 
+\acmPrice{15.00}
+\acmISBN{978-1-4503-XXXX-X/18/06}
+
+
+%%
+%% Submission ID.
+%% Use this when submitting an article to a sponsored event. You'll
+%% receive a unique submission ID from the organizers
+%% of the event, and this ID should be used as the parameter to this command.
+%%\acmSubmissionID{123-A56-BU3}
+
+%%
+%% The majority of ACM publications use numbered citations and
+%% references.  The command \citestyle{authoryear} switches to the
+%% "author year" style.
+%%
+%% If you are preparing content for an event
+%% sponsored by ACM SIGGRAPH, you must use the "author year" style of
+%% citations and references.
+%% Uncommenting
+%% the next command will enable that style.
+%%\citestyle{acmauthoryear}
+
+%%
+%% end of the preamble, start of the body of the document source.
+\begin{document}
+
+%%
+%% The "title" command has an optional parameter,
+%% allowing the author to define a "short title" to be used in page headers.
+\title{Reinforcement learning approach for mapping applications to dataflow-based Coarse-Grained Reconfigurable Array }
+
+%%
+%% The "author" command and its associated commands are used to define
+%% the authors and their affiliations.
+%% Of note is the shared affiliation of the first two authors, and the
+%% "authornote" and "authornotemark" commands
+%% used to denote shared contribution to the research.
+% \author{Parth}
+% \authornote{Both authors contributed equally to this research.}
+% \email{trovato@corporation.com}
+% \orcid{1234-5678-9012}
+% \author{G.K.M. Tobin}
+% \authornotemark[1]
+% \email{webmaster@marysville-ohio.com}
+% \affiliation{%
+%   \institution{Institute for Clarity in Documentation}
+%   \streetaddress{P.O. Box 1212}
+%   \city{Dublin}
+%   \state{Ohio}
+%   \country{USA}
+%   \postcode{43017-6221}
+% }
+
+% \author{Andre Chang}
+% \affiliation{%
+%   \institution{The Th{\o}rv{\"a}ld Group}
+%   \streetaddress{1 Th{\o}rv{\"a}ld Circle}
+%   \city{Hekla}
+%   \country{Iceland}}
+% \email{larst@affiliation.org}
+
+% \author{Valerie B\'eranger}
+% \affiliation{%
+%   \institution{Inria Paris-Rocquencourt}
+%   \city{Rocquencourt}
+%   \country{France}
+% }
+
+% \author{Abhishek Chaurasia}
+% \affiliation{%
+%  \institution{Rajiv Gandhi University}
+%  \streetaddress{Rono-Hills}
+%  \city{Doimukh}
+%  \state{Arunachal Pradesh}
+%  \country{India}}
+
+% \author{Huifen Chan}
+% \affiliation{%
+%   \institution{Tsinghua University}
+%   \streetaddress{30 Shuangqing Rd}
+%   \city{Haidian Qu}
+%   \state{Beijing Shi}
+%   \country{China}}
+
+% \author{Charles Palmer}
+% \affiliation{%
+%   \institution{Palmer Research Laboratories}
+%   \streetaddress{8600 Datapoint Drive}
+%   \city{San Antonio}
+%   \state{Texas}
+%   \country{USA}
+%   \postcode{78229}}
+% \email{cpalmer@prl.com}
+
+% \author{John Smith}
+% \affiliation{%
+%   \institution{The Th{\o}rv{\"a}ld Group}
+%   \streetaddress{1 Th{\o}rv{\"a}ld Circle}
+%   \city{Hekla}
+%   \country{Iceland}}
+% \email{jsmith@affiliation.org}
+
+% \author{Julius P. Kumquat}
+% \affiliation{%
+%   \institution{The Kumquat Consortium}
+%   \city{New York}
+%   \country{USA}}
+% \email{jpkumquat@consortium.net}
+
+%%
+%% By default, the full list of authors will be used in the page
+%% headers. Often, this list is too long, and will overlap
+%% other information printed in the page headers. This command allows
+%% the author to define a more concise list
+%% of authors' names for this purpose.
+% \renewcommand{\shortauthors}{Trovato and Tobin, et al.}
+
+%%
+%% The abstract is a short summary of the work to be presented in the
+%% article.
+\begin{abstract}
+NDC architecture contains a Coarse Grain Reconfigurable Array (CGRA) Streaming Engine (SE). It is a custom hardware architecture that provides programming flexibility that enables high-performance and power savings. A program is represented as a computation graph and its operations need to be properly mapped into the SE device to ensure correct execution and dataflow. This creates an optimization problem with a vast and sparse search space. Creating mappings manually or using brute force algorithms mapping takes time and lots of effort. It also adds assumptions that reduce search-space trading off optimization possibilities. Programing SE manually requires expertise on how all the SE operates, which adds entry barrier to use SE device. In this work we propose a learning method to explore and optimize in an unsupervised manner using reinforcement learning (RL) framework. This provides an automated method that can produce programs quickly and searches for optimal mappings without programmers’ interference. This tool also improves the usability of the SE device by encapsulating device configuration details. Proximal Policy Optimization (PPO) training a model to place operations into the SE tiles based on a reward function that models the SE device and its constraints. Graph neural networks are added to create embeddings to represent the computation graph. A transformer block is used to model sequential operation placement mode. The trained model was able to create valid mappings for SE. The implemented method is compared against evolutionary search and baseline. 
+\end{abstract}
+
+%%
+%% The code below is generated by the tool at http://dl.acm.org/ccs.cfm.
+%% Please copy and paste the code instead of the example below.
+%%
+\begin{CCSXML}
+<ccs2012>
+ <concept>
+  <concept_id>10010520.10010553.10010562</concept_id>
+  <concept_desc>Computer systems organization~Embedded systems</concept_desc>
+  <concept_significance>500</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>10010520.10010575.10010755</concept_id>
+  <concept_desc>Computer systems organization~Redundancy</concept_desc>
+  <concept_significance>300</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>10010520.10010553.10010554</concept_id>
+  <concept_desc>Computer systems organization~Robotics</concept_desc>
+  <concept_significance>100</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>10003033.10003083.10003095</concept_id>
+  <concept_desc>Networks~Network reliability</concept_desc>
+  <concept_significance>100</concept_significance>
+ </concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Computer systems organization~Embedded systems}
+\ccsdesc[300]{Computer systems organization~Redundancy}
+\ccsdesc{Computer systems organization~Robotics}
+\ccsdesc[100]{Networks~Network reliability}
+
+%%
+%% Keywords. The author(s) should pick words that accurately describe
+%% the work being presented. Separate the keywords with commas.
+\keywords{reinforcement learning, data-flow mapping, coarse grain reconfigurable array}
+
+%% A "teaser" image appears between the author and affiliation
+%% information and the body of the document, and typically spans the
+%% page.
+% \begin{teaserfigure}
+%   \includegraphics[width=\textwidth]{sampleteaser}
+%   \caption{Seattle Mariners at Spring Training, 2010.}
+%   \Description{Enjoying the baseball game from the third-base
+%   seats. Ichiro Suzuki preparing to bat.}
+%   \label{fig:teaser}
+% \end{teaserfigure}
+
+%%
+%% This command processes the author and affiliation and title
+%% information and builds the first part of the formatted document.
+\maketitle
+
+\section{Introduction}
+As Dennard scaling ends, big-data applications such as real-time image processing, graph analytics, and deep learning continue to push the boundaries of performance and energy efficiency requirements for compute system. One solution to this challenge is to move compute closer to memory or storage for substantial energy savings of data movement. We have developed an innovative Compute Near Memory (CNM) architecture that leverages the dramatic opportunities provided by the new CXL protocol. CNM incorporates heterogenous compute elements in the memory/storage subsystem to accelerate various computing tasks near data. One of these compute elements is the Streaming Engine (SE). The SE is a Coarse-Grained Reconfigurable Array (CGRA) of interconnected compute tiles.  
+
+The tiles in the CGRA are interconnected with both a synchronous fabric (SF) and an asynchronous fabric (AF) as shown in Fig. 1. SF connects each tile with neighboring tiles that are one or two clocks away. It also interconnects tile memory, multiplexers, and Single Instruction Multiple Data (SIMD) units within each tile. Tiles can be pipelined through SF to form a synchronous data flow (SDF) through multiply/shift or add/logical SIMD units. AF connects a tile with all other tiles, dispatch interface (DI), and memory interfaces (MIs). It bridges SDFs through asynchronous operations, which include SDF initiation, asynchronous data transfer from one SDF to another, system memory accesses, and branching and looping constructs. Together, SF and AF allow the tiles to efficiently execute high-level programming language constructs. Simulation results of hand-crafted SE kernels have shown orders-of-magnitude better performance per watt on data-intensive applications than existing computing platforms.
+
+Mapping the instructions from the computation graph of a program onto the compute elements of the SE while adhering to architectural constraints is an NP-complete problem with a vast and sparse search space. Constraints related to tile memory and synchronous dataflow, use of delays to match timing requirements and more are necessary to ensure correct execution. Creating the mappings manually or using brute force algorithms takes time and lots of effort. This process also adds assumptions that reduce the search space, trading off optimization possibilities.  
+
+In this work we propose a Deep Reinforcement Learning (RL) method to explore and find optimal mappings in an unsupervised manner. Using the Proximal Policy Optimization (PPO) method we train a neural network model to place instructions onto the SE tiles guided by a reward function that models the SE device and its constraints. The trained model was able to create valid mappings for the SE by learning about the problem domain. By using a learning methodology, we are able to reuse what the neural network learned to obtain mappings for computation graphs that were not seen during training.  
+
+This line of research is inspired by recent work that used RL for chip placement. Our problem requirement of mapping nodes of a computation graph to available compute elements is similar to the problem of placing nodes of a chip netlist on a chip canvas. 
+
+\section{Method}
+In the computation graph to be mapped, each node represents an instruction that needs to be placed onto a SE tile. The edges of the graph represent the data dependencies of the instructions. The nodes also contain information about the variables that need to be present in tile memories during instruction execution. All data needed for the instruction must be present at the tile for the instruction to be executed. The tiles can pass data to their neighbors and each tile can be configured with a different number of initiation intervals (II). Each II can be allocated to run a single instruction during program execution. After one cycle, the tiles will move on to the next II, with execution returning to first II after the last. All tiles run the instruction in the same II in parallel. Thus, whenever possible, independent instructions should be mapped to different tiles and same II to exploit parallelism. The first operation of each disconnected component of the computation graph (one component representing a synchronous flow) needs to be placed on different tiles. The SE device configuration and its constraints are modeled in a simulation environment and the reward function. Violating a constraint or placing instructions sub-optimally leads to a reduced reward whereas placements that optimally reduce total execution time of the graph are rewarded. 
+
+Reinforcement learning tackles optimization problems by using the REINFORCE algorithm. It trains actor and critic models (represented as a neural networks). The actor model outputs actions (node placements) given an observation of the current state of the SE. The critic model is trained to predict the expected reward given an action in the current state. Proximal Policy Optimization (PPO) is a RL method widely used for continuous and discrete action problems. Our SE mapping task is formulated as a discrete action problem. In PPO, samples of SE state, actions performed, and rewards obtained at each time step are collected after executing the actions provided by the actor model in simulation. These samples are stored in a buffer that is used as data to train the models. In our case, the state is represented by a concatenation of an array of features of placed nodes, a selected node to be placed next and an embedding of the whole computation graph. An action is a tile location and an II count. The reward obtained is based on the number of cycles taken to execute all nodes. The actor model is trained to produce actions from sample states obtained during simulation and the critic model is trained to match the sampled rewards from the actions produced by the actor using a surrogate loss function. This sample and train process is repeated over various iterations. In this manner, the problem search space is explored using the reward function as a heuristic.  
+
+In our neural network architecture, a graph neural network (GNN) is used to create embeddings from the computation graph, so that the RL models have information of the data dependencies of different nodes in the graph. An actor model with MLP layers and transformer encoder layers were evaluated in this work. Fig. 2 provides information about how the neural network is trained. 
+
+\section{Related work}
+
+The RL mapper tool lowers SE usability barrier. The user doesn’t need to be SE architecture expert, saving training cost. RL tool can also assist other tools or programmers in the program SE mapping creation by providing placement suggestions or tile configuration labels. The RL mapper also provides a faster method of compilation than the brute force algorithm. The RL mapper performs unsupervised learning and optimization allowing it to search in a wider search space. The implemented reinforcement learning approach also shows an advantage compared to baseline random search and evolutionary search (ES) method. The RL approach can learn from a collection of programs and reuse some data for new programs, while other methods will have to perform a new search for every new program. PPO with graph embeddings showed that can search more optimizations by finding higher rewards than other RL approaches. This technique could be applied to other applications (e.g. chip placement). 
+
+In \cite{mirhoseini2020chip}, a RL method for chip placement is presented. A graph neural network to create embedding from a netlist graph and passed through an actor model via PPO. The produced output is the whole chip placement. Their actor is composed of deconvolution layers which are more computationally intensive. \cite{zhou2019gdp} presents a combination of graph neural network and transformer-XL model to place operations on devices. 
+
+In our case, the input is a combination of computation graph, SE device state and node to be placed. Instead of only feeding our actor model with embedding from graph neural network, we combine the graph neural network embedding with information from the SE device and a representation of node that is going to be placed. A configuration is also added to guide the model to optimize different goals.  
+
+Another difference from \cite{zhou2019gdp}  is that our strategy is to place one computation node at a time, instead of generating a whole assignment per iteration. This allows the model to break down the placement problem into sub-problems. This also allows the framework to start from a different start point. For example, if some nodes are already placed by some other algorithm, the RL mapper can place the remaining nodes. This approach also allows us to sample more data during sampling phase. It can save per node placement, instead of only saving a sample for an entire sequence.  
+
+\section{Results}
+
+The implemented RL approach was able to successfully map the computation graphs for vector addition and multiply-add operations. Fig. 3 shows the increase in the value of the rewards obtained as the number of training iterations increase. As the reward increases, we obtain mappings with lesser total execution times. 
+
+This method also presents an advantage compared to baselines random search and evolutionary search (ES) methods which do not learn. The RL approach can also learn from a collection of computation graphs and reuse the learning for mapping previously unseen computation graphs. The other methods on the other hand will have to perform a new search and start from scratch for every new computation graph. PPO with graph embeddings showed that we can obtain more optimized placements by finding higher rewards than other RL approaches. 
+
+
+\section{Conclusion}
+
+Our RL mapper improves and increments the capabilities of the toolset used to program the SE device. It can search for optimal mappings while using the learning to map previously unseen workloads. It improves on the total time required to get a mapping as compared to the existing brute force search approach and allows for automated search of mappings with different optimizations under different trade-offs. It also reduces the manual labor required to find mappings. The techniques presented could be applied to other applications such as chip placement, which is worth trying in future work. Our future work also includes: 
+\begin{itemize}
+\item Optimizing training methods to obtain mappings for problems like IFFT which have a bigger search space than currently used computation graphs. 
+\item Increasing sample efficiency of learning methods and improving the simulation environment for the SE by adding more constraints. 
+\item Integration of RL mapper into the SE toolset 
+\end{itemize}
+
+%%
+%% The acknowledgments section is defined using the "acks" environment
+%% (and NOT an unnumbered section). This ensures the proper
+%% identification of the section in the article metadata, and the
+%% consistent spelling of the heading.
+\begin{acks}
+To Robert, for the bagels and explaining CMYK and color spaces.
+\end{acks}
+
+%%
+%% The next two lines define the bibliography style to be used, and
+%% the bibliography file.
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{sample-base}
+
+%%
+%% If your work has an appendix, this is the place to put it.
+\appendix
+
+\section{Research Methods}
+
+\subsection{Part One}
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi
+malesuada, quam in pulvinar varius, metus nunc fermentum urna, id
+sollicitudin purus odio sit amet enim. Aliquam ullamcorper eu ipsum
+vel mollis. Curabitur quis dictum nisl. Phasellus vel semper risus, et
+lacinia dolor. Integer ultricies commodo sem nec semper.
+
+\subsection{Part Two}
+
+Etiam commodo feugiat nisl pulvinar pellentesque. Etiam auctor sodales
+ligula, non varius nibh pulvinar semper. Suspendisse nec lectus non
+ipsum convallis congue hendrerit vitae sapien. Donec at laoreet
+eros. Vivamus non purus placerat, scelerisque diam eu, cursus
+ante. Etiam aliquam tortor auctor efficitur mattis.
+
+\section{Online Resources}
+
+Nam id fermentum dui. Suspendisse sagittis tortor a nulla mollis, in
+pulvinar ex pretium. Sed interdum orci quis metus euismod, et sagittis
+enim maximus. Vestibulum gravida massa ut felis suscipit
+congue. Quisque mattis elit a risus ultrices commodo venenatis eget
+dui. Etiam sagittis eleifend elementum.
+
+Nam interdum magna at lectus dignissim, ac dignissim lorem
+rhoncus. Maecenas eu arcu ac neque placerat aliquam. Nunc pulvinar
+massa et mattis lacinia.
+
+\end{document}
+\endinput
+%%
+%% End of file `sample-sigplan.tex'.

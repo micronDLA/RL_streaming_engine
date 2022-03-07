@@ -1,0 +1,69 @@
+%%% -*-BibTeX-*-
+%%% Do NOT edit. File created by BibTeX with style
+%%% ACM-Reference-Format-Journals [18-Jan-2012].
+
+\begin{thebibliography}{2}
+
+%%% ====================================================================
+%%% NOTE TO THE USER: you can override these defaults by providing
+%%% customized versions of any of these macros before the \bibliography
+%%% command.  Each of them MUST provide its own final punctuation,
+%%% except for \shownote{}, \showDOI{}, and \showURL{}.  The latter two
+%%% do not use final punctuation, in order to avoid confusing it with
+%%% the Web address.
+%%%
+%%% To suppress output of a particular field, define its macro to expand
+%%% to an empty string, or better, \unskip, like this:
+%%%
+%%% \newcommand{\showDOI}[1]{\unskip}   % LaTeX syntax
+%%%
+%%% \def \showDOI #1{\unskip}           % plain TeX syntax
+%%%
+%%% ====================================================================
+
+\ifx \showCODEN    \undefined \def \showCODEN     #1{\unskip}     \fi
+\ifx \showDOI      \undefined \def \showDOI       #1{#1}\fi
+\ifx \showISBNx    \undefined \def \showISBNx     #1{\unskip}     \fi
+\ifx \showISBNxiii \undefined \def \showISBNxiii  #1{\unskip}     \fi
+\ifx \showISSN     \undefined \def \showISSN      #1{\unskip}     \fi
+\ifx \showLCCN     \undefined \def \showLCCN      #1{\unskip}     \fi
+\ifx \shownote     \undefined \def \shownote      #1{#1}          \fi
+\ifx \showarticletitle \undefined \def \showarticletitle #1{#1}   \fi
+\ifx \showURL      \undefined \def \showURL       {\relax}        \fi
+% The following commands are used for tagged output and should be
+% invisible to TeX
+\providecommand\bibfield[2]{#2}
+\providecommand\bibinfo[2]{#2}
+\providecommand\natexlab[1]{#1}
+\providecommand\showeprint[2][]{arXiv:#2}
+
+\bibitem[Mirhoseini et~al\mbox{.}(2020)]%
+        {mirhoseini2020chip}
+\bibfield{author}{\bibinfo{person}{Azalia Mirhoseini}, \bibinfo{person}{Anna
+  Goldie}, \bibinfo{person}{Mustafa Yazgan}, \bibinfo{person}{Joe Jiang},
+  \bibinfo{person}{Ebrahim Songhori}, \bibinfo{person}{Shen Wang},
+  \bibinfo{person}{Young-Joon Lee}, \bibinfo{person}{Eric Johnson},
+  \bibinfo{person}{Omkar Pathak}, \bibinfo{person}{Sungmin Bae},
+  {et~al\mbox{.}}} \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{Chip placement with deep reinforcement learning}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2004.10746}}
+  (\bibinfo{year}{2020}).
+\newblock
+
+
+\bibitem[Zhou et~al\mbox{.}(2019)]%
+        {zhou2019gdp}
+\bibfield{author}{\bibinfo{person}{Yanqi Zhou}, \bibinfo{person}{Sudip Roy},
+  \bibinfo{person}{Amirali Abdolrashidi}, \bibinfo{person}{Daniel Wong},
+  \bibinfo{person}{Peter~C Ma}, \bibinfo{person}{Qiumin Xu},
+  \bibinfo{person}{Ming Zhong}, \bibinfo{person}{Hanxiao Liu},
+  \bibinfo{person}{Anna Goldie}, \bibinfo{person}{Azalia Mirhoseini},
+  {et~al\mbox{.}}} \bibinfo{year}{2019}\natexlab{}.
+\newblock \showarticletitle{Gdp: Generalized device placement for dataflow
+  graphs}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:1910.01578}}
+  (\bibinfo{year}{2019}).
+\newblock
+
+
+\end{thebibliography}
