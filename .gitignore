@@ -142,3 +142,6 @@ stream_engine_env
 
 # Mac OS
 .DS_Store
+
+# VScode
+.vscode
