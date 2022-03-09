@@ -1,10 +1,26 @@
 # Streaming Engine Scheduler
 
-- Methods that use Random Search, ES and PPO to generate assignment for a given compute graph on a streaming engine topology.
-- Main hyperparameter to adjust is ```entropy_loss_factor``` and ```ppo_epoch```
-- Modify ```calculate_reward()``` to change how the streaming engine behavior is represented in training.
-- Optimal Transport and Sinkhorn Iterative Normalization code copied from SuperGlue's codebase.
+Gym environment for Streaming Engine and PPO code to generate assignment for a given compute graph on a streaming engine topology.
 
+## Dependencies
+
+First, install PyGraphViz on your system: https://pygraphviz.github.io/documentation/stable/install.html
+
+Install require Python packages
+```
+pip install -r requirements.txt
+```
+
+## Experiments
+Run training:
+```
+python train.py
+```
+
+See experiements results using:
+```
+tensorboard --logdir runs/ --bind_all
+```
 ## Usage
 ```
 usage: train.py [-h] [--device-topology DEVICE_TOPOLOGY [DEVICE_TOPOLOGY ...]] [--pipeline-depth PIPELINE_DEPTH]
@@ -48,19 +64,4 @@ optional arguments:
   --model MODEL         load saved model from file
   --log_interval LOG_INTERVAL
                         interval for logging data
-```
-
-## Dependencies
-
-First, install PyGraphViz on your system: https://pygraphviz.github.io/documentation/stable/install.html
-
-Install require Python packages
-```
-pip install -r requirements.txt
-```
-
-## Experiments
-See experiements results using:
-```
-tensorboard --logdir runs/ --bind_all
 ```
