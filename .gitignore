@@ -145,3 +145,8 @@ stream_engine_env
 
 # VScode
 .vscode
+
+# Experiment code
+mappings/
+runs/
+*.pth
