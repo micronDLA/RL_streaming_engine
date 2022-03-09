@@ -13,7 +13,7 @@ import torch.nn.functional as F
 # from torch.distributions import MultivariateNormal # continuous
 from torch.distributions import Categorical # discrete
 import numpy as np
-# from net import NormalHashLinear, TransformerModel
+from net import NormalHashLinear, TransformerModel
 from dgl import nn as gnn
 from util import ravel_index
 

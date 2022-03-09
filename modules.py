@@ -6,6 +6,7 @@ import torch.nn.functional as F
 # from torch.distributions import MultivariateNormal # continuous
 from torch import einsum
 from torch.distributions import Categorical # discrete
+from net import NormalHashLinear, TransformerModel
 import numpy as np
 from dgl import nn as gnn
 from util import ravel_index
