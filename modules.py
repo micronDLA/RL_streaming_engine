@@ -7,7 +7,6 @@ import torch.nn.functional as F
 from torch import einsum
 from torch.distributions import Categorical # discrete
 import numpy as np
-from net import NormalHashLinear, TransformerModel
 from dgl import nn as gnn
 from util import ravel_index
 from einops import reduce
@@ -189,43 +188,43 @@ class ActorCritic(nn.Module):
                  state_dim,
                  emb_size,
                  action_dim,
-                 graph_size,
+                 graph_feat_size,
                  gnn_in,
                  mode = 'linear',
                  ntasks = 1):
         super(ActorCritic, self).__init__()
         self.args = args
         self.device = device
-        # self.graph_model = GraphEmb_Conv(graph_size)
+        # self.graph_model = GraphEmb_Conv(graph_feat_size)
         self.graph_model = nn.ModuleList([
             gnn.SGConv(gnn_in, 64, 1, False, nn.ReLU),
             gnn.SGConv(64, 128, 1, False, nn.ReLU)
         ])
-        act_feat_sz = graph_size + 2  # graph feature + state: [readytime, node sel]
+        act_feat_sz = graph_feat_size + 2  # graph feature + state: [readytime, node sel]
         self.pam_attention = PAM_ModuleM(act_feat_sz)
         self.cam_attention = CAM_ModuleM(act_feat_sz)
 
         self.graph_avg_pool = gnn.AvgPooling()
         if mode == 'rnn':
-            self.actor = ACRNN(state_dim+graph_size, emb_size, action_dim, mode='soft')
-            self.critic = ACRNN(state_dim + graph_size, emb_size, 1, mode='')
+            self.actor = ACRNN(state_dim+graph_feat_size, emb_size, action_dim, mode='soft')
+            self.critic = ACRNN(state_dim + graph_feat_size, emb_size, 1, mode='')
 
         elif mode == 'transformer':
             # ntokens: 1hot device topology
             self.model = TransformerModel(ntoken=action_dim, ninp=16, nhead=4, nhid=emb_size, nlayers=2)
-            self.actor = ACFF(16*state_dim+graph_size, emb_size, action_dim, mode='soft')
-            self.critic = ACFF(16*state_dim+graph_size, emb_size, 1, mode='')
+            self.actor = ACFF(16*state_dim+graph_feat_size, emb_size, action_dim, mode='soft')
+            self.critic = ACFF(16*state_dim+graph_feat_size, emb_size, 1, mode='')
 
         elif mode == 'super':
-            self.actor = ACFF_SP(state_dim + graph_size, emb_size, action_dim, ntasks=ntasks, mode='soft')
-            self.critic = ACFF_SP(state_dim + graph_size, emb_size, 1, ntasks=ntasks, mode='')
+            self.actor = ACFF_SP(state_dim + graph_feat_size, emb_size, action_dim, ntasks=ntasks, mode='soft')
+            self.critic = ACFF_SP(state_dim + graph_feat_size, emb_size, 1, ntasks=ntasks, mode='')
         
         elif mode == 'simple_ff':
             self.actor = ACFF(state_dim, emb_size, action_dim, mode='')  # Don't apply softmax since we now use logits
             self.critic = ACFF(state_dim, emb_size, 1, mode='')
 
         else:
-            self.actor = ACFF(act_feat_sz, emb_size, action_dim, mode='soft')  # earlier: state_dim+graph_size
+            self.actor = ACFF(act_feat_sz, emb_size, action_dim, mode='soft')  # earlier: state_dim+graph_feat_size
             self.critic = ACFF(act_feat_sz, emb_size, 1, mode='')
         self.mode = mode
 

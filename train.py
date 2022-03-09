@@ -34,8 +34,7 @@ def get_args():
     arg('--no-device-cross-connections', action='store_true', help='disable sync flow constraint')
 
     # PPO
-    arg('--max-grad-norm', type=float, default=1)
-    arg('--graph_size', type=int, default=128, help='graph embedding size')
+    arg('--graph_feat_size', type=int, default=128, help='graph_feat_size')
     arg('--emb_size', type=int, default=64, help='embedding size')
     arg('--update_timestep', type=int, default=500, help='update policy every n episodes')
     arg('--K_epochs', type=int, default=4, help='update policy for K epochs')
@@ -47,7 +46,7 @@ def get_args():
     arg('--loss_value_c', type=float, default=0.5, help='coefficient for value term in loss')
     arg('--model', type=str, default='', help='load saved model from file')
     arg('--log_interval', type=int, default=100, help='interval for logging data')
-    arg('--graph_feat_size', type=int, default=32, help='graph_feat_size')
+    
 
     args = parser.parse_args()
     return args

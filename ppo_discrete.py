@@ -13,7 +13,7 @@ import torch.nn.functional as F
 # from torch.distributions import MultivariateNormal # continuous
 from torch.distributions import Categorical # discrete
 import numpy as np
-from net import NormalHashLinear, TransformerModel
+# from net import NormalHashLinear, TransformerModel
 from dgl import nn as gnn
 from util import ravel_index
 
@@ -46,7 +46,7 @@ class PPO:
                                   state_dim=self.state_dim,
                                   emb_size=self.args.emb_size,
                                   action_dim=self.action_dim,
-                                  graph_size=self.args.graph_size,
+                                  graph_feat_size=self.args.graph_feat_size,
                                   gnn_in=self.gnn_in,
                                   mode=mode,
                                   ntasks=ntasks).to(_engine)
@@ -57,7 +57,7 @@ class PPO:
                                       state_dim=self.state_dim,
                                       emb_size=self.args.emb_size,
                                       action_dim=self.action_dim,
-                                      graph_size=self.args.graph_size,
+                                      graph_feat_size=self.args.graph_feat_size,
                                       gnn_in=self.gnn_in,
                                       mode=mode,
                                       ntasks=ntasks).to(_engine)
