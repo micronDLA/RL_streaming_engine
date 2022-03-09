@@ -1,13 +1,20 @@
+import time
 import argparse
 import logging
+from collections import deque
 
+import gym
+import torch
 from util import get_graph_json, create_graph
 from preproc import PreInput
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
+from coolname import generate_slug
+from torch.utils.tensorboard import SummaryWriter
 
 from envs.streaming_engine_env import StreamingEngineEnv
+from ppo_discrete_gym import PPO
 
 def get_args():
     parser = argparse.ArgumentParser(description='Streaming Engine RL Mapper')
@@ -30,9 +37,9 @@ def get_args():
     arg('--ppo-epoch', type=int, default=4)
     arg('--max-grad-norm', type=float, default=1)
     arg('--graph_size', type=int, default=128, help='graph embedding size')
-    arg('--emb_size', type=int, default=128, help='embedding size')
-    arg('--update_timestep', type=int, default=500, help='update policy every n timesteps')
-    arg('--K_epochs', type=int, default=100, help='update policy for K epochs')
+    arg('--emb_size', type=int, default=64, help='embedding size')
+    arg('--update_timestep', type=int, default=500, help='update policy every n episodes')
+    arg('--K_epochs', type=int, default=4, help='update policy for K epochs')
     arg('--eps_clip', type=float, default=0.2, help='clip parameter for PPO')
     arg('--gamma', type=float, default=0.99, help='discount factor')
     arg('--lr', type=float, default=1e-3, help='parameters for Adam optimizer')
@@ -53,6 +60,12 @@ if __name__ == "__main__":
     logging.info('[ARGS]')
     logging.info('\n'.join(f'{k}={v}' for k, v in vars(args).items()))
 
+    # Tensorboard logging
+    writer = SummaryWriter(comment=f'_{generate_slug(2)}')
+    print(f'[INFO] Saving log data to {writer.log_dir}')
+    writer.add_text('experiment config', str(args))
+    writer.flush()
+
     # Get computation graph definition
     graph_json = get_graph_json(args.input)
     graphdef = create_graph(graph_json)
@@ -67,6 +80,7 @@ if __name__ == "__main__":
         nx.draw(nx_g, nx.nx_agraph.graphviz_layout(nx_g, prog='dot'), with_labels=True)
         plt.show()
 
+    # SE Device attributes
     device = {}
     device['topology'] = args.device_topology
     device['action_dim'] = np.prod(args.device_topology)
@@ -75,32 +89,65 @@ if __name__ == "__main__":
     preproc = PreInput(args)
     graphdef = preproc.pre_graph(graphdef, device)
 
+    # Init gym env
     env = StreamingEngineEnv(args,
-                             graphdef=graphdef,
-                             tile_count=args.device_topology[0], 
-                             spoke_count=args.device_topology[1], 
-                             pipeline_depth=args.pipeline_depth)
+                             graphdef = graphdef,
+                             tile_count = args.device_topology[0], 
+                             spoke_count = args.device_topology[1], 
+                             pipeline_depth = args.pipeline_depth)
 
-    """
-    # Start training loop
+    # Init ppo
+    ppo = PPO(args,
+             graphdef = graphdef,
+             device = device,
+             state_dim = env.observation_space.n,  # Will change later to include node to be placed
+             mode='simple_ff')
+
+    # Setup logging variables
+    reward_buf = deque(maxlen=100)
+    reward_buf.append(0)
+    start = time.time()
     time_step = 0
+
+    # Start training loop
     for i_episode in range(1, args.epochs + 1):
-        state = env.reset
+        state = env.reset()
         time_step += 1
+        total_reward = 0
+        done = False
         
         # Iterate over nodes to place
         for node_id in range(0, args.nodes):
             mask = env.get_mask(node_id)
-            action = ppo.get_action(node_id, state, mask)
+            tile_slice_idx, tobuff = ppo.select_action(state, graphdef, node_id, mask)
+            tile, spoke = np.unravel_index(tile_slice_idx, args.device_topology)
+            action = [node_id, tile, spoke]
             state, reward, done, _ = env.step(action)
 
+            total_reward += reward
             if node_id == args.nodes - 1:
                 done = True
 
             # Save things to buffer
+            ppo.add_buffer(tobuff, reward, done)
+            reward_buf.append(reward)
 
-            # learning:
-            if time_step % args.update_timestep == 0:
-                ppo.update()
-                time_step = 0
-    """
+        if len(env.placed_nodes) == args.nodes:
+            print(f'Episode {i_episode}: {env.placed_nodes}')
+            
+        # learning:
+        if i_episode % args.update_timestep == 0:
+            ppo.update()
+
+        # logging
+        if i_episode % args.log_interval == 0:
+            writer.add_scalar('Mean reward/episode', np.mean(reward_buf), i_episode)
+            writer.add_scalar('No. of nodes placed', len(env.placed_nodes), i_episode)
+            writer.flush()
+            end = time.time()
+            print(f'\rEpisode: {i_episode} | Total reward: {total_reward} | Mean Reward: {np.mean(reward_buf):.2f} | Nodes placed: {len(env.placed_nodes)} | Time elpased: {end - start:.2f}s', end='')
+            # writer.add_scalar('avg improvement/episode', avg_improve, i_episode)
+            # print('Episode {} \t Avg improvement: {}'.format(i_episode, avg_improve))
+            torch.save(ppo.policy.state_dict(), 'model_epoch.pth')
+            running_reward = 0
+        

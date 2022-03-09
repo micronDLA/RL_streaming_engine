@@ -63,14 +63,21 @@ class StreamingEngineEnv(gym.Env):
 
     def step(self, action):
         node, tile_idx, spoke_idx = action
-        assert tile_idx >=0 and tile_idx < self.se.tile_count, f"Tile index not in range [0, {self.se.tile_count}]"
+        assert tile_idx >=0 and tile_idx < self.se.tile_count, f"Tile index not in range [0, {self.se.tile_count-1}]"
         mask = self.get_mask(node)
+        if not mask.any():  # If no action is possible, return high negative reward
+            obs = self.se.get_state()
+            reward = -10.0
+            done = True
+            return obs, reward, done, {}
         placed = False
         if not self._predecessors_placed(node):  # Check if predecessors have been placed
             raise ValueError(f'All predecessors of node {node} not placed')
         if self.placed_nodes.get(node) != None:  # Check if node hasn't been placed already
             raise ValueError(f'Node {node} already placed at [Tile, Spoke]: {self.placed_nodes.get(node)}')
         if mask[tile_idx*self.se.spoke_count + spoke_idx] == 0:  # Check if mask allowed node to be placed
+            print(f'\nERROR while trying to place: {action}')
+            print(f'Currently placed nodes: {self.placed_nodes}', f'Mask: {mask}')
             raise ValueError(f'Illegal placement, action not allowed by mask')
         
         self.se.tiles[tile_idx].place(node, spoke_idx)
@@ -83,6 +90,7 @@ class StreamingEngineEnv(gym.Env):
 
     def reset(self):
         self.se.reset()
+        self.placed_nodes = {}
         return self.se.get_state()
 
     def render(self):
