@@ -1,0 +1,24 @@
+The RL mapper tool lowers SE usability barrier. 
+The user doesn’t need to be SE architecture expert, saving training cost. RL tool can also assist other tools or programmers in the program SE mapping creation by providing placement suggestions or tile configuration labels. 
+The RL mapper also provides a faster method of compilation than the brute force algorithm. 
+The RL mapper performs unsupervised learning and optimization allowing it to search in a wider search space. 
+The implemented reinforcement learning approach also shows an advantage compared to baseline random search and evolutionary search (ES) method. 
+The RL approach can learn from a collection of programs and reuse some data for new programs, while other methods will have to perform a new search for every new program. 
+PPO with graph embeddings showed that can search more optimizations by finding higher rewards than other RL approaches. 
+This technique could be applied to other applications (e.g. chip placement). 
+
+In \cite{mirhoseini2020chip}, a RL method for chip placement is presented. 
+A graph neural network to create embedding from a netlist graph and passed through an actor model via PPO. 
+The produced output is the whole chip placement. 
+Their actor is composed of deconvolution layers which are more computationally intensive. 
+\cite{zhou2019gdp} presents a combination of graph neural network and transformer-XL model to place operations on devices. 
+
+In our case, the input is a combination of computation graph, SE device state and node to be placed. 
+Instead of only feeding our actor model with embedding from graph neural network, we combine the graph neural network embedding with information from the SE device and a representation of node that is going to be placed. 
+A configuration is also added to guide the model to optimize different goals.  
+
+Another difference from \cite{zhou2019gdp}  is that our strategy is to place one computation node at a time, instead of generating a whole assignment per iteration. 
+This allows the model to break down the placement problem into sub-problems. 
+This also allows the framework to start from a different start point. For example, if some nodes are already placed by some other algorithm, the RL mapper can place the remaining nodes. 
+This approach also allows us to sample more data during sampling phase. 
+It can save per node placement, instead of only saving a sample for an entire sequence.  

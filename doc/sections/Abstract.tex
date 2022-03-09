@@ -1,0 +1,13 @@
+NDC architecture contains a Coarse Grain Reconfigurable Array (CGRA) Streaming Engine (SE). 
+It is a custom hardware architecture that provides programming flexibility that enables high-performance and power savings. 
+A program is represented as a computation graph and its operations need to be properly mapped into the SE device to ensure correct execution and dataflow. 
+This creates an optimization problem with a vast and sparse search space. Creating mappings manually or using brute force algorithms mapping takes time and lots of effort. 
+It also adds assumptions that reduce search-space trading off optimization possibilities. Programing SE manually requires expertise on how all the SE operates, which adds entry barrier to use SE device. 
+In this work we propose a learning method to explore and optimize in an unsupervised manner using reinforcement learning (RL) framework. 
+This provides an automated method that can produce programs quickly and searches for optimal mappings without programmers’ interference. 
+This tool also improves the usability of the SE device by encapsulating device configuration details. 
+Proximal Policy Optimization (PPO) training a model to place operations into the SE tiles based on a reward function that models the SE device and its constraints. 
+Graph neural networks are added to create embeddings to represent the computation graph.
+ A transformer block is used to model sequential operation placement mode. 
+ The trained model was able to create valid mappings for SE. 
+ The implemented method is compared against evolutionary search and baseline. 

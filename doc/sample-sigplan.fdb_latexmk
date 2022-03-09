@@ -1,12 +1,12 @@
 # Fdb version 3
-["bibtex sample-sigplan"] 1646415330 "sample-sigplan.aux" "sample-sigplan.bbl" "sample-sigplan" 1646861855
+["bibtex sample-sigplan"] 1646863321 "sample-sigplan.aux" "sample-sigplan.bbl" "sample-sigplan" 1646863324
   "./ACM-Reference-Format.bst" 1646860624 90330 871e55fb6d8dc37a22e9e4941a79e593 ""
   "sample-base.bib" 1646860625 10130 15222d5d6b8557ac60c357ec5fc2b594 ""
-  "sample-sigplan.aux" 1646861855 2529 b95181658d62c77ec4b9d75385395eb3 "pdflatex"
+  "sample-sigplan.aux" 1646863324 2529 b95181658d62c77ec4b9d75385395eb3 "pdflatex"
   (generated)
-  "sample-sigplan.bbl"
   "sample-sigplan.blg"
-["pdflatex"] 1646861855 "sample-sigplan.tex" "sample-sigplan.pdf" "sample-sigplan" 1646861855
+  "sample-sigplan.bbl"
+["pdflatex"] 1646863323 "sample-sigplan.tex" "sample-sigplan.pdf" "sample-sigplan" 1646863324
   "/etc/texmf/web2c/texmf.cnf" 1601891418 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/nethome/basharromano/.texlive2019/texmf-var/fonts/pk/ljfour/jknappen/ec/tcrm0800.600pk" 1646861511 9268 a86785cfb189ce83b116f95d79719932 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -156,14 +156,20 @@
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1644513012 146768 feda695c3a9a1806ea8445ddf1427826 ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1644513016 4791332 5101112c958b692c23364a30a3eb3477 ""
   "acmart.cls" 1646860624 103919 ee4ecec73ae0fbc65997495eb2b43ea5 ""
-  "comment.cut" 1646861855 64 0754424945249fbfae64d8991d811e64 "pdflatex"
-  "sample-sigplan.aux" 1646861855 2529 b95181658d62c77ec4b9d75385395eb3 "pdflatex"
-  "sample-sigplan.bbl" 1646860625 3089 dfc8d28b8df913ce1473844a271f1c20 "bibtex sample-sigplan"
-  "sample-sigplan.out" 1646861855 1346 35e5c324c8a4e48e4f4dc6da9457d77c "pdflatex"
-  "sample-sigplan.tex" 1646861846 22293 a947ae4479d2042dca11eb29e0e70b80 ""
+  "comment.cut" 1646863324 64 0754424945249fbfae64d8991d811e64 "pdflatex"
+  "sample-sigplan.aux" 1646863324 2529 b95181658d62c77ec4b9d75385395eb3 "pdflatex"
+  "sample-sigplan.bbl" 1646863321 3089 dfc8d28b8df913ce1473844a271f1c20 "bibtex sample-sigplan"
+  "sample-sigplan.out" 1646863324 1346 35e5c324c8a4e48e4f4dc6da9457d77c "pdflatex"
+  "sample-sigplan.tex" 1646863316 10106 740114aa1985899160778b44faa466f6 ""
+  "sections/Abstract.tex" 1646863319 1602 1f6a5032fb97f70b9a4ecbdf8c785c09 ""
+  "sections/Conclusion.tex" 1646863055 1000 128695b7d7fc03c9441045260a1023bd ""
+  "sections/Introduction.tex" 1646863000 3217 e5fb6deac2ae6955edf2a76afc23434c ""
+  "sections/Method.tex" 1646863013 3243 d2ea981650bbb4cad62885d994be1c73 ""
+  "sections/Related_work.tex" 1646863027 2444 68b5019906f0fdbe0e027a2b49485f57 ""
+  "sections/Results.tex" 1646863036 857 54776e84cc27e9989c0faa720c8338df ""
   (generated)
-  "sample-sigplan.out"
-  "sample-sigplan.aux"
   "sample-sigplan.pdf"
+  "sample-sigplan.out"
   "comment.cut"
   "sample-sigplan.log"
+  "sample-sigplan.aux"
