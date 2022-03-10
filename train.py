@@ -106,6 +106,7 @@ if __name__ == "__main__":
     reward_buf.append(0)
     start = time.time()
     time_step = 0
+    best_ready_time = float('inf')
 
     # Start training loop
     for i_episode in range(1, args.epochs + 1):
@@ -130,8 +131,10 @@ if __name__ == "__main__":
             ppo.add_buffer(tobuff, reward, done)
             reward_buf.append(reward)
 
-        if len(env.placed_nodes) == args.nodes:
-            print(f'Episode {i_episode}: {env.placed_nodes}')
+        if env.all_nodes_placed and env.graph_ready_time < best_ready_time:
+            best_ready_time = env.graph_ready_time
+            print(f'\nEpisode {i_episode}: {env.placed_nodes}')
+            print(f'Best graph ready time yet: {best_ready_time}')
             
         # learning:
         if i_episode % args.update_timestep == 0:

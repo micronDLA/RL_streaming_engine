@@ -60,6 +60,8 @@ class StreamingEngineEnv(gym.Env):
         # Observation: Vector containing info about each tile slice
         self.observation_space = spaces.Discrete(self.se.tile_count * self.se.spoke_count)
         self.placed_nodes = {}  # Keys: node_idx, values: [(tile_idx, spoke_idx]), ready_time]
+        self.all_nodes_placed = False
+        self.graph_ready_time = -1
 
     def step(self, action):
         node, tile_idx, spoke_idx = action
@@ -70,7 +72,6 @@ class StreamingEngineEnv(gym.Env):
             reward = -10.0
             done = True
             return obs, reward, done, {}
-        placed = False
         if not self._predecessors_placed(node):  # Check if predecessors have been placed
             raise ValueError(f'All predecessors of node {node} not placed')
         if self.placed_nodes.get(node) != None:  # Check if node hasn't been placed already
@@ -82,7 +83,11 @@ class StreamingEngineEnv(gym.Env):
         
         self.se.tiles[tile_idx].place(node, spoke_idx)
         ready_time, predecessor_ready_time = self._get_ready_time(action)
+        if ready_time > self.graph_ready_time:  # Keep track of highest ready time of nodes
+            self.graph_ready_time = ready_time
         self.placed_nodes[node] = {'tile_slice': (tile_idx, spoke_idx), 'ready_time': ready_time}
+        if len(self.placed_nodes) == self.num_nodes:
+            self.all_nodes_placed = True
         obs = self.se.get_state()  # Can change to boolean obs
         reward = self._calculate_reward(ready_time, predecessor_ready_time)
         done = len(self.placed_nodes) == self.num_nodes
@@ -91,6 +96,7 @@ class StreamingEngineEnv(gym.Env):
     def reset(self):
         self.se.reset()
         self.placed_nodes = {}
+        self.all_nodes_placed = False
         return self.se.get_state()
 
     def render(self):

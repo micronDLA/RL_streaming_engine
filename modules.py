@@ -35,6 +35,7 @@ class RolloutBuffer:
         del self.is_terminals[:]
         del self.masks[:]
 
+# From https://boring-guy.sh/posts/masking-rl/
 class CategoricalMasked(Categorical):
 
     def __init__(self, logits: torch.Tensor, mask: Optional[torch.Tensor] = None):
