@@ -1,16 +1,16 @@
-The RL mapper tool lowers SE usability barrier. 
-The user doesn’t need to be SE architecture expert, saving training cost. RL tool can also assist other tools or programmers in the program SE mapping creation by providing placement suggestions or tile configuration labels. 
-The RL mapper also provides a faster method of compilation than the brute force algorithm. 
-The RL mapper performs unsupervised learning and optimization allowing it to search in a wider search space. 
-The implemented reinforcement learning approach also shows an advantage compared to baseline random search and evolutionary search (ES) method. 
-The RL approach can learn from a collection of programs and reuse some data for new programs, while other methods will have to perform a new search for every new program. 
-PPO with graph embeddings showed that can search more optimizations by finding higher rewards than other RL approaches. 
-This technique could be applied to other applications (e.g. chip placement). 
+Reinforcement Learning (RL) is widely used to tackle unsupervised optimization problems. It has been applied in chip placement \cite{mirhoseini2020chip}, 
+workload distribution \cite{Mirhoseini_placementRNN, addanki2019placeto, zhou2019gdp}, compiler optimizations \cite{Zhou_compileGNN} and 
+other decision based tasks \cite{kormushev2013reinforcement, ZophL16_NASRL}. Alternative optimization algorithms includes 
+evolutionary strategies \cite{Zhichao_ESNAS} and bayesian optimization \cite{shi2020learned}. An advantage of RL approach is learning from 
+a collection of programs and reuse previous data for new programs by training a Deep Learning model \cite{zhou2019gdp}.
 
-In \cite{mirhoseini2020chip}, a RL method for chip placement is presented. 
-A graph neural network to create embedding from a netlist graph and passed through an actor model via PPO. 
-The produced output is the whole chip placement. 
-Their actor is composed of deconvolution layers which are more computationally intensive. 
+Recurrent neural networks (RNN) \cite{hochreiter1996lstm} were popular approach to process sequence of nodes from a graph representation. 
+Graph neural networks (GNN) \cite{gori2005new} showed success in processing structured data without preprocessing required for RNNs.
+GNNs are widely used task involves processing graphs \cite{Zhou_compileGNN, zhou2019gdp}. In addition, attention modules are used to 
+supplement the embeddings created by GNNs to further improve results \cite{addanki2019placeto}.
+
+In \cite{mirhoseini2020chip}, a RL method for chip placement is presented. A graph neural network to create embedding from a netlist graph and passed through an actor model via PPO. 
+The produced output is the whole chip placement. Their actor is composed of deconvolution layers which are more computationally intensive. 
 \cite{zhou2019gdp} presents a combination of graph neural network and transformer-XL model to place operations on devices. 
 
 In our case, the input is a combination of computation graph, SE device state and node to be placed. 

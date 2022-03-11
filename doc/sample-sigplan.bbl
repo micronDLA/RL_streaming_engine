@@ -2,7 +2,7 @@
 %%% Do NOT edit. File created by BibTeX with style
 %%% ACM-Reference-Format-Journals [18-Jan-2012].
 
-\begin{thebibliography}{2}
+\begin{thebibliography}{12}
 
 %%% ====================================================================
 %%% NOTE TO THE USER: you can override these defaults by providing
@@ -37,6 +37,88 @@
 \providecommand\natexlab[1]{#1}
 \providecommand\showeprint[2][]{arXiv:#2}
 
+\bibitem[Addanki et~al\mbox{.}(2019)]%
+        {addanki2019placeto}
+\bibfield{author}{\bibinfo{person}{Ravichandra Addanki},
+  \bibinfo{person}{Shaileshh~Bojja Venkatakrishnan}, \bibinfo{person}{Shreyan
+  Gupta}, \bibinfo{person}{Hongzi Mao}, {and} \bibinfo{person}{Mohammad
+  Alizadeh}.} \bibinfo{year}{2019}\natexlab{}.
+\newblock \showarticletitle{Placeto: Learning generalizable device placement
+  algorithms for distributed machine learning}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:1906.08879}}
+  (\bibinfo{year}{2019}).
+\newblock
+
+
+\bibitem[Gori et~al\mbox{.}(2005)]%
+        {gori2005new}
+\bibfield{author}{\bibinfo{person}{Marco Gori}, \bibinfo{person}{Gabriele
+  Monfardini}, {and} \bibinfo{person}{Franco Scarselli}.}
+  \bibinfo{year}{2005}\natexlab{}.
+\newblock \showarticletitle{A new model for learning in graph domains}. In
+  \bibinfo{booktitle}{\emph{Proceedings. 2005 IEEE international joint
+  conference on neural networks}}, Vol.~\bibinfo{volume}{2}.
+  \bibinfo{pages}{729--734}.
+\newblock
+
+
+\bibitem[Hochreiter and Schmidhuber(1996)]%
+        {hochreiter1996lstm}
+\bibfield{author}{\bibinfo{person}{Sepp Hochreiter} {and}
+  \bibinfo{person}{J{\"u}rgen Schmidhuber}.} \bibinfo{year}{1996}\natexlab{}.
+\newblock \showarticletitle{LSTM can solve hard long time lag problems}.
+\newblock \bibinfo{journal}{\emph{Advances in neural information processing
+  systems}}  \bibinfo{volume}{9} (\bibinfo{year}{1996}).
+\newblock
+
+
+\bibitem[Huang and Onta{\~{n}}{\'{o}}n(2020)]%
+        {Shengyi_mask}
+\bibfield{author}{\bibinfo{person}{Shengyi Huang} {and}
+  \bibinfo{person}{Santiago Onta{\~{n}}{\'{o}}n}.}
+  \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{A Closer Look at Invalid Action Masking in Policy
+  Gradient Algorithms}.
+\newblock \bibinfo{journal}{\emph{CoRR}}  \bibinfo{volume}{abs/2006.14171}
+  (\bibinfo{year}{2020}).
+\newblock
+\showeprint[arXiv]{2006.14171}
+\urldef\tempurl%
+\url{https://arxiv.org/abs/2006.14171}
+\showURL{%
+\tempurl}
+
+
+\bibitem[Kormushev et~al\mbox{.}(2013)]%
+        {kormushev2013reinforcement}
+\bibfield{author}{\bibinfo{person}{Petar Kormushev}, \bibinfo{person}{Sylvain
+  Calinon}, {and} \bibinfo{person}{Darwin~G Caldwell}.}
+  \bibinfo{year}{2013}\natexlab{}.
+\newblock \showarticletitle{Reinforcement learning in robotics: Applications
+  and real-world challenges}.
+\newblock \bibinfo{journal}{\emph{Robotics}} \bibinfo{volume}{2},
+  \bibinfo{number}{3} (\bibinfo{year}{2013}), \bibinfo{pages}{122--148}.
+\newblock
+
+
+\bibitem[Lu et~al\mbox{.}(2018)]%
+        {Zhichao_ESNAS}
+\bibfield{author}{\bibinfo{person}{Zhichao Lu}, \bibinfo{person}{Ian Whalen},
+  \bibinfo{person}{Vishnu Boddeti}, \bibinfo{person}{Yashesh~D. Dhebar},
+  \bibinfo{person}{Kalyanmoy Deb}, \bibinfo{person}{Erik~D. Goodman}, {and}
+  \bibinfo{person}{Wolfgang Banzhaf}.} \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{{NSGA-NET:} {A} Multi-Objective Genetic Algorithm
+  for Neural Architecture Search}.
+\newblock \bibinfo{journal}{\emph{CoRR}}  \bibinfo{volume}{abs/1810.03522}
+  (\bibinfo{year}{2018}).
+\newblock
+\showeprint[arXiv]{1810.03522}
+\urldef\tempurl%
+\url{http://arxiv.org/abs/1810.03522}
+\showURL{%
+\tempurl}
+
+
 \bibitem[Mirhoseini et~al\mbox{.}(2020)]%
         {mirhoseini2020chip}
 \bibfield{author}{\bibinfo{person}{Azalia Mirhoseini}, \bibinfo{person}{Anna
@@ -49,6 +131,58 @@
 \newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2004.10746}}
   (\bibinfo{year}{2020}).
 \newblock
+
+
+\bibitem[Mirhoseini et~al\mbox{.}(2017)]%
+        {Mirhoseini_placementRNN}
+\bibfield{author}{\bibinfo{person}{Azalia Mirhoseini}, \bibinfo{person}{Hieu
+  Pham}, \bibinfo{person}{Quoc~V. Le}, \bibinfo{person}{Benoit Steiner},
+  \bibinfo{person}{Rasmus Larsen}, \bibinfo{person}{Yuefeng Zhou},
+  \bibinfo{person}{Naveen Kumar}, \bibinfo{person}{Mohammad Norouzi},
+  \bibinfo{person}{Samy Bengio}, {and} \bibinfo{person}{Jeff Dean}.}
+  \bibinfo{year}{2017}\natexlab{}.
+\newblock \showarticletitle{Device Placement Optimization with Reinforcement
+  Learning}.
+\newblock \bibinfo{journal}{\emph{CoRR}}  \bibinfo{volume}{abs/1706.04972}
+  (\bibinfo{year}{2017}).
+\newblock
+\showeprint[arXiv]{1706.04972}
+\urldef\tempurl%
+\url{http://arxiv.org/abs/1706.04972}
+\showURL{%
+\tempurl}
+
+
+\bibitem[Shi et~al\mbox{.}(2020)]%
+        {shi2020learned}
+\bibfield{author}{\bibinfo{person}{Zhan Shi}, \bibinfo{person}{Chirag Sakhuja},
+  \bibinfo{person}{Milad Hashemi}, \bibinfo{person}{Kevin Swersky}, {and}
+  \bibinfo{person}{Calvin Lin}.} \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{Learned Hardware/Software Co-Design of Neural
+  Accelerators}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2010.02075}}
+  (\bibinfo{year}{2020}).
+\newblock
+
+
+\bibitem[Zhou et~al\mbox{.}(2020)]%
+        {Zhou_compileGNN}
+\bibfield{author}{\bibinfo{person}{Yanqi Zhou}, \bibinfo{person}{Sudip Roy},
+  \bibinfo{person}{AmirAli Abdolrashidi}, \bibinfo{person}{Daniel Wong},
+  \bibinfo{person}{Peter~C. Ma}, \bibinfo{person}{Qiumin Xu},
+  \bibinfo{person}{Hanxiao Liu}, \bibinfo{person}{Mangpo~Phitchaya
+  Phothilimtha}, \bibinfo{person}{Shen Wang}, \bibinfo{person}{Anna Goldie},
+  \bibinfo{person}{Azalia Mirhoseini}, {and} \bibinfo{person}{James Laudon}.}
+  \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{Transferable Graph Optimizers for {ML} Compilers}.
+\newblock \bibinfo{journal}{\emph{CoRR}}  \bibinfo{volume}{abs/2010.12438}
+  (\bibinfo{year}{2020}).
+\newblock
+\showeprint[arXiv]{2010.12438}
+\urldef\tempurl%
+\url{https://arxiv.org/abs/2010.12438}
+\showURL{%
+\tempurl}
 
 
 \bibitem[Zhou et~al\mbox{.}(2019)]%
@@ -64,6 +198,22 @@
 \newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:1910.01578}}
   (\bibinfo{year}{2019}).
 \newblock
+
+
+\bibitem[Zoph and Le(2016)]%
+        {ZophL16_NASRL}
+\bibfield{author}{\bibinfo{person}{Barret Zoph} {and} \bibinfo{person}{Quoc~V.
+  Le}.} \bibinfo{year}{2016}\natexlab{}.
+\newblock \showarticletitle{Neural Architecture Search with Reinforcement
+  Learning}.
+\newblock \bibinfo{journal}{\emph{CoRR}}  \bibinfo{volume}{abs/1611.01578}
+  (\bibinfo{year}{2016}).
+\newblock
+\showeprint[arXiv]{1611.01578}
+\urldef\tempurl%
+\url{http://arxiv.org/abs/1611.01578}
+\showURL{%
+\tempurl}
 
 
 \end{thebibliography}

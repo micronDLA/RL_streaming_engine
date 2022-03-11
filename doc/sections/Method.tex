@@ -64,7 +64,7 @@ has each node representing an instruction. The node features are tile memory dep
 used to process node dependencies and create an embedding for each node. An attention module is applied to the embedding matrix 
 to select which dependency nodes are relevant to the current node to be placed. The dynamic data is fed into a MLP model to 
 create another embedding to represent current state. The two embeddings are combined and fed into another MLP model to 
-create actions. Invalid actions are masked before being sent to the reward function.
+create actions. Invalid actions are masked before being sent to the reward function. Masking was shown to be effective in RL setting \cite{Shengyi_mask}.
 
 \begin{figure}[h]
   \centering
