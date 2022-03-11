@@ -2,7 +2,7 @@
 %%% Do NOT edit. File created by BibTeX with style
 %%% ACM-Reference-Format-Journals [18-Jan-2012].
 
-\begin{thebibliography}{3}
+\begin{thebibliography}{2}
 
 %%% ====================================================================
 %%% NOTE TO THE USER: you can override these defaults by providing
@@ -49,22 +49,6 @@
 \newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2004.10746}}
   (\bibinfo{year}{2020}).
 \newblock
-
-
-\bibitem[Schulman et~al\mbox{.}(2017)]%
-        {corr/SchulmanWDRK17}
-\bibfield{author}{\bibinfo{person}{John Schulman}, \bibinfo{person}{Filip
-  Wolski}, \bibinfo{person}{Prafulla Dhariwal}, \bibinfo{person}{Alec Radford},
-  {and} \bibinfo{person}{Oleg Klimov}.} \bibinfo{year}{2017}\natexlab{}.
-\newblock \showarticletitle{Proximal Policy Optimization Algorithms}.
-\newblock \bibinfo{journal}{\emph{CoRR}}  \bibinfo{volume}{abs/1707.06347}
-  (\bibinfo{year}{2017}).
-\newblock
-\showeprint[arXiv]{1707.06347}
-\urldef\tempurl%
-\url{http://arxiv.org/abs/1707.06347}
-\showURL{%
-\tempurl}
 
 
 \bibitem[Zhou et~al\mbox{.}(2019)]%

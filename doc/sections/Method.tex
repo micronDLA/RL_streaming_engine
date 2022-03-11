@@ -1,3 +1,10 @@
+
+
+\subsection{Streaming Engine environment}
+
+% describe the Streaming engine environment
+% state, obs, reward etc
+
 In the computation graph to be mapped, each node represents an instruction that needs to be placed onto a SE tile. 
 The edges of the graph represent the data dependencies of the instructions. 
 The nodes also contain information about the variables that need to be present in tile memories during instruction execution. 
@@ -7,50 +14,64 @@ Each II can be allocated to run a single instruction during program execution.
 After one cycle, the tiles will move on to the next II, with execution returning to first II after the last. 
 All tiles run the instruction in the same II in parallel. 
 Thus, whenever possible, independent instructions should be mapped to different tiles and same II to exploit parallelism. 
-The first operation of each disconnected component of the computation graph (one component representing a synchronous flow) needs to be placed on different tiles. 
+The first operation of each disconnected component of the computation graph (one component representing a synchronous flow) 
+needs to be placed on different tiles. 
 The SE device configuration and its constraints are modeled in a simulation environment and the reward function. 
-Violating a constraint or placing instructions sub-optimally leads to a reduced reward whereas placements that optimally reduce total execution time of the graph are rewarded. 
-
-Reinforcement learning tackles optimization problems by using the REINFORCE algorithm. 
-It trains actor and critic models (represented as a neural networks). 
-The actor model outputs actions (node placements) given an observation of the current state of the SE. 
-The critic model is trained to predict the expected reward given an action in the current state. 
-Proximal Policy Optimization (PPO) is a RL method widely used for continuous and discrete action problems. 
-Our SE mapping task is formulated as a discrete action problem. 
-In PPO, samples of SE state, actions performed, and rewards obtained at each time step are collected after executing the actions provided by the actor model in simulation. 
-These samples are stored in a buffer that is used as data to train the models. In our case, the state is represented by a concatenation of an array of features of placed nodes, a selected node to be placed next and an embedding of the whole computation graph. An action is a tile location and an II count. The reward obtained is based on the number of cycles taken to execute all nodes. The actor model is trained to produce actions from sample states obtained during simulation and the critic model is trained to match the sampled rewards from the actions produced by the actor using a surrogate loss function. This sample and train process is repeated over various iterations. In this manner, the problem search space is explored using the reward function as a heuristic.  
-
-In our neural network architecture, a graph neural network (GNN) is used to create embeddings from the computation graph, so that the RL models have information of the data dependencies of different nodes in the graph. 
-An actor model with MLP layers and transformer encoder layers were evaluated in this work. Fig. 2 provides information about how the neural network is trained. 
-
-\subsection{Streaming Engine environment}
-
-% describe the Streaming engine environment
-% state, obs, reward etc
-
-\subsection{Model design}
-
+Violating a constraint or placing instructions sub-optimally leads to a reduced reward whereas placements that optimally 
+reduce total execution time of the graph are rewarded. 
+In figure \ref{fig:se_diagram}, the tiles connections that enables various possible instruction placements.
 
 \begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{fig/ppo.png}
-  \caption{Diagram of the RL model. }
-\end{figure}
-
-
-% pre post processing
-% describe the graph neural network 
-% attention module
-
+    \centering
+    \includegraphics[width=\linewidth]{fig/SE_diagram.pdf}
+    \caption{Diagram of the Streaming Engine.}
+    \label{fig:se_diagram}
+  \end{figure}
 
 \subsection{Reinforcement learning}
 
-% describe the PPO training procedure
-
-\cite{corr/SchulmanWDRK17}
+Reinforcement learning (RL) framework was developed to explore and optimize the mapping of operations to SE in an unsupervised 
+manner. Proximal Policy Optimization (PPO) trains a neural network model to place operations into the SE tiles based on a reward 
+function that models the SE device and its constraints. The SE mapping task is formulated as a discrete action problem. In PPO, 
+samples of state, reward and action are collected by running inference on the latest copy of actor model and getting the outcome 
+from the SE reward function. These samples are stored in a buffer that will be used as data to train the models. The state is a 
+concatenation of an array of placed nodes, a selected node to be placed next and an embedding of the whole computation graph. An 
+action is a tile location and a II count. The reward is the number of cycles taken to execute all nodes. After each action, a node 
+is placed and its state, action, reward is saved as sample. The buffer can choose to keep or discard certain number unsuccessful 
+placements samples to balance number of successful and unsuccessful samples for the training phase. After sampling, the actor 
+model is trained to produce actions from the sample states and the critic model is trained to match the sampled rewards from the 
+actions produced by the actor using a surrogate loss function. This sample and train process is repeated over various iterations. 
+Figure \ref{fig:ppo} shows a diagram of the sample and training phase. After node placements, routing info and configurations for programming each tile are saved for final output.
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=\linewidth]{fig/ppo.png}
+  \includegraphics[width=\linewidth]{fig/ppo.pdf}
   \caption{Diagram of the RL framework showing the role of actor and critic networks during RL training. }
+  \label{fig:ppo}
 \end{figure}
+
+
+\subsection{Model design}
+
+The actor and critic models architecture is shown in figure \ref{fig:model}. 
+The input is separated in two categories: static and dynamic data. 
+Static data is infomation that doesn't change as nodes are being placed, such as: computation graph and tile memory constraint.
+Device state, node to be placed and placed node latencies are dynamic data that changes during placement.
+
+Tile memory variables need to be placed in a tile so that operation can use that variable. This memory constraint is captured as 
+memory dependency array. Tile memory constraints are incorporated into nodes in the computation graph. The computation graph 
+has each node representing an instruction. The node features are tile memory dependencies. A Graph Neural Network (GNN) is 
+used to process node dependencies and create an embedding for each node. An attention module is applied to the embedding matrix 
+to select which dependency nodes are relevant to the current node to be placed. The dynamic data is fed into a MLP model to 
+create another embedding to represent current state. The two embeddings are combined and fed into another MLP model to 
+create actions. Invalid actions are masked before being sent to the reward function.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{fig/model.pdf}
+  \caption{Actor and critic model architecture. GNN is used to process the computation graph (static data). 
+  Attention module gives importance to relevant nodes. The embedding created from dynamic data is combined with static data embedding. 
+  A final MLP model is used to generate actions. Actions are masked to ensure only valid actions are produced. }
+  \label{fig:model}
+\end{figure}
+
