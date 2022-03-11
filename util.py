@@ -113,7 +113,7 @@ def get_graph_json(path):
             'tm_to_nodes': tm_to_nodes, 
             'tile_memory_map': tmem_map}
 
-def output_json(instr_coords, no_of_tiles=16, spoke_count=3 ,out_file_name='mapping.json'):
+def output_json(placed_nodes, no_of_tiles=16, spoke_count=3 ,out_file_name='mapping.json'):
     """[summary]
 
     Args:
@@ -128,10 +128,18 @@ def output_json(instr_coords, no_of_tiles=16, spoke_count=3 ,out_file_name='mapp
     mappings = [{'tile_id': tile_idx, 'spoke_map': ['' for _ in range(spoke_count)]} for \
                 tile_idx in range (no_of_tiles)]
     # Iterate over assignment
+    """
     for instr_idx, tile_coord in enumerate(instr_coords):
         tile_idx = int(tile_coord[0])
         spoke_no = int(tile_coord[2])
         mappings[tile_idx]['spoke_map'][spoke_no] = f'instruction ID#{instr_idx}'
+    """
+
+    for node_idx, info in placed_nodes.items():
+        tile_idx = info['tile_slice'][0]
+        spoke_no = info['tile_slice'][1]
+        mappings[tile_idx]['spoke_map'][spoke_no] = f'instruction ID#{node_idx}'
+
 
     data['mappings'] = mappings
     with open(out_file_name, 'w') as outfile:

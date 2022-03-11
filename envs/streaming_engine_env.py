@@ -97,6 +97,7 @@ class StreamingEngineEnv(gym.Env):
         self.se.reset()
         self.placed_nodes = {}
         self.all_nodes_placed = False
+        self.graph_ready_time = -1
         return self.se.get_state()
 
     def render(self):

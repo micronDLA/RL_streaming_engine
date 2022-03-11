@@ -1,3 +1,4 @@
+import os
 import time
 import argparse
 import logging
@@ -5,7 +6,7 @@ from collections import deque
 
 import gym
 import torch
-from util import get_graph_json, create_graph
+from util import get_graph_json, create_graph, output_json
 from preproc import PreInput
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -135,6 +136,9 @@ if __name__ == "__main__":
             best_ready_time = env.graph_ready_time
             print(f'\nEpisode {i_episode}: {env.placed_nodes}')
             print(f'Best graph ready time yet: {best_ready_time}')
+            # Save mapping json
+            suffix = os.path.basename(args.input)
+            output_json(env.placed_nodes, out_file_name=f'mappings/mapping_{suffix}.json')
             
         # learning:
         if i_episode % args.update_timestep == 0:
