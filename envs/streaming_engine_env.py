@@ -161,6 +161,24 @@ class StreamingEngineEnv(gym.Env):
         # Node can be placed at any open tile slice if no constraint is applied
         mask = 1 - (self.se.get_state() > -1).astype(int)
         
+        # Mask for sibling constraint
+        siblings = []
+        predecessors = self._get_predecessors(node)
+        for predecessor in predecessors:
+            successors = self._get_successors(predecessor)
+            for successor in successors:
+                if successor != node:
+                    siblings.append(successor)
+
+        for sibling in siblings:
+            sibling_placement = self.placed_nodes.get(sibling)
+            if sibling_placement != None:
+                sibling_tile = sibling_placement['tile_slice'][0]
+                # Make spokes in sibling_tile unavailable
+                unavail_idxs = self._get_spoke_idxs_in_tile(sibling_tile)
+                mask[unavail_idxs] = 0
+
+        # Mask for TM constraint
         if not self.args.no_tm_constr:
             # What TMs does node use
             tms_used = self.graphdef['nodes_to_tm'][node]
@@ -183,6 +201,7 @@ class StreamingEngineEnv(gym.Env):
                     unavail_idxs = [j for j in range(len(mask)) if j not in exculde_idxs]
                     mask[unavail_idxs] = 0
 
+        # Mask for SF constraint
         if not self.args.no_sf_constr:
             predecessors = self._get_predecessors(node)
             if len(predecessors) == 0:
@@ -206,6 +225,9 @@ class StreamingEngineEnv(gym.Env):
 
     def _get_predecessors(self, node):
         return self.graphdef['graph'].predecessors(node).numpy()
+
+    def _get_successors(self, node):
+        return self.graphdef['graph'].successors(node).numpy()
 
     def _get_spoke_idxs_in_tile(self, tile_idx):
         idxs = [i for i in range(tile_idx * self.se.spoke_count, tile_idx * self.se.spoke_count + self.se.spoke_count)]
