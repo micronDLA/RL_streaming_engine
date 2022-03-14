@@ -1,3 +1,13 @@
+\subsection{CGRA}
+CGRAs are a heavily researched architectural paradigm with a long history and can provide an excellent balance of high-performance compute, memory bandwidth, and area and energy efficiency \cite{theodoridis2007survey}.
+Due to such advantages, CGRAs are currently enjoying a resurgence in interest—not just in the research realm \cite{prabhakar2018plasticine}, but also commercially \cite{morgan2018intel, nicol2017coarse, vissers2019versal}.
+SE differentiates from others as the first CGRA in a near-data computing architecture.
+SE also provides asynchronous messaging as a first-class programming construct along with synchronous data flow. 
+
+A key challenge with HTF applications is efficient compilation of high-level language code (for example, in C/C++) to executable program. 
+Research compilers targeting CGRAs are available (for example, \cite{adriaansen2016code, chin2017cgra, mei2003exploiting, prabhakar2018plasticine}) but they are limited in quality and code coverage. 
+Industry-strength compilers such as Clang/LLVM do not provide official support for CGRA-like architectures.
+\subsection{Reinforcement Learning}
 Reinforcement Learning (RL) is widely used to tackle unsupervised optimization problems. It has been applied in chip placement \cite{mirhoseini2020chip}, 
 workload distribution \cite{Mirhoseini_placementRNN, addanki2019placeto, zhou2019gdp}, compiler optimizations \cite{Zhou_compileGNN} and 
 other decision based tasks \cite{kormushev2013reinforcement, ZophL16_NASRL}. Alternative optimization algorithms includes 

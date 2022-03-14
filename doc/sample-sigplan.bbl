@@ -2,7 +2,7 @@
 %%% Do NOT edit. File created by BibTeX with style
 %%% ACM-Reference-Format-Journals [18-Jan-2012].
 
-\begin{thebibliography}{12}
+\begin{thebibliography}{20}
 
 %%% ====================================================================
 %%% NOTE TO THE USER: you can override these defaults by providing
@@ -47,6 +47,32 @@
   algorithms for distributed machine learning}.
 \newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:1906.08879}}
   (\bibinfo{year}{2019}).
+\newblock
+
+
+\bibitem[Adriaansen et~al\mbox{.}(2016)]%
+        {adriaansen2016code}
+\bibfield{author}{\bibinfo{person}{Micha{\"e}l Adriaansen},
+  \bibinfo{person}{Mark Wijtvliet}, \bibinfo{person}{Roel Jordans},
+  \bibinfo{person}{Luc Waeijen}, {and} \bibinfo{person}{Henk Corporaal}.}
+  \bibinfo{year}{2016}\natexlab{}.
+\newblock \showarticletitle{Code generation for reconfigurable explicit
+  datapath architectures with llvm}. In \bibinfo{booktitle}{\emph{2016
+  Euromicro Conference on Digital System Design (DSD)}}. IEEE,
+  \bibinfo{pages}{30--37}.
+\newblock
+
+
+\bibitem[Chin et~al\mbox{.}(2017)]%
+        {chin2017cgra}
+\bibfield{author}{\bibinfo{person}{S~Alexander Chin}, \bibinfo{person}{Noriaki
+  Sakamoto}, \bibinfo{person}{Allan Rui}, \bibinfo{person}{Jim Zhao},
+  \bibinfo{person}{Jin~Hee Kim}, \bibinfo{person}{Yuko Hara-Azumi}, {and}
+  \bibinfo{person}{Jason Anderson}.} \bibinfo{year}{2017}\natexlab{}.
+\newblock \showarticletitle{CGRA-ME: A unified framework for CGRA modelling and
+  exploration}. In \bibinfo{booktitle}{\emph{2017 IEEE 28th international
+  conference on application-specific systems, architectures and processors
+  (ASAP)}}. IEEE, \bibinfo{pages}{184--189}.
 \newblock
 
 
@@ -119,6 +145,19 @@
 \tempurl}
 
 
+\bibitem[Mei et~al\mbox{.}(2003)]%
+        {mei2003exploiting}
+\bibfield{author}{\bibinfo{person}{Bingfeng Mei}, \bibinfo{person}{Serge
+  Vernalde}, \bibinfo{person}{Diederik Verkest}, \bibinfo{person}{Hugo De~Man},
+  {and} \bibinfo{person}{Rudy Lauwereins}.} \bibinfo{year}{2003}\natexlab{}.
+\newblock \showarticletitle{Exploiting loop-level parallelism on coarse-grained
+  reconfigurable architectures using modulo scheduling}.
+\newblock \bibinfo{journal}{\emph{IEE Proceedings-Computers and Digital
+  Techniques}} \bibinfo{volume}{150}, \bibinfo{number}{5}
+  (\bibinfo{year}{2003}), \bibinfo{pages}{255}.
+\newblock
+
+
 \bibitem[Mirhoseini et~al\mbox{.}(2020)]%
         {mirhoseini2020chip}
 \bibfield{author}{\bibinfo{person}{Azalia Mirhoseini}, \bibinfo{person}{Anna
@@ -153,6 +192,41 @@
 \tempurl}
 
 
+\bibitem[Morgan(2018)]%
+        {morgan2018intel}
+\bibfield{author}{\bibinfo{person}{Timothy~Prickett Morgan}.}
+  \bibinfo{year}{2018}\natexlab{}.
+\newblock \bibinfo{title}{Intel’s Exascale Dataflow Engine Drops X86 and von
+  Neumann}.
+\newblock
+\newblock
+
+
+\bibitem[Nicol(2017)]%
+        {nicol2017coarse}
+\bibfield{author}{\bibinfo{person}{Chris Nicol}.}
+  \bibinfo{year}{2017}\natexlab{}.
+\newblock \showarticletitle{A coarse grain reconfigurable array (CGRA) for
+  statically scheduled data flow computing}.
+\newblock \bibinfo{journal}{\emph{Wave computing white paper}}
+  (\bibinfo{year}{2017}).
+\newblock
+
+
+\bibitem[Prabhakar et~al\mbox{.}(2018)]%
+        {prabhakar2018plasticine}
+\bibfield{author}{\bibinfo{person}{Raghu Prabhakar}, \bibinfo{person}{Yaqi
+  Zhang}, \bibinfo{person}{David Koeplinger}, \bibinfo{person}{Matt Feldman},
+  \bibinfo{person}{Tian Zhao}, \bibinfo{person}{Stefan Hadjis},
+  \bibinfo{person}{Ardavan Pedram}, \bibinfo{person}{Christos Kozyrakis}, {and}
+  \bibinfo{person}{Kunle Olukotun}.} \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{Plasticine: a reconfigurable accelerator for
+  parallel patterns}.
+\newblock \bibinfo{journal}{\emph{IEEE Micro}} \bibinfo{volume}{38},
+  \bibinfo{number}{3} (\bibinfo{year}{2018}), \bibinfo{pages}{20--31}.
+\newblock
+
+
 \bibitem[Shi et~al\mbox{.}(2020)]%
         {shi2020learned}
 \bibfield{author}{\bibinfo{person}{Zhan Shi}, \bibinfo{person}{Chirag Sakhuja},
@@ -162,6 +236,29 @@
   Accelerators}.
 \newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2010.02075}}
   (\bibinfo{year}{2020}).
+\newblock
+
+
+\bibitem[Theodoridis et~al\mbox{.}(2007)]%
+        {theodoridis2007survey}
+\bibfield{author}{\bibinfo{person}{George Theodoridis},
+  \bibinfo{person}{Dimitrios Soudris}, {and} \bibinfo{person}{Stamatis
+  Vassiliadis}.} \bibinfo{year}{2007}\natexlab{}.
+\newblock \showarticletitle{A survey of coarse-grain reconfigurable
+  architectures and cad tools}.
+\newblock In \bibinfo{booktitle}{\emph{Fine-and Coarse-Grain Reconfigurable
+  Computing}}. \bibinfo{publisher}{Springer}, \bibinfo{pages}{89--149}.
+\newblock
+
+
+\bibitem[Vissers(2019)]%
+        {vissers2019versal}
+\bibfield{author}{\bibinfo{person}{Kees Vissers}.}
+  \bibinfo{year}{2019}\natexlab{}.
+\newblock \showarticletitle{Versal: The xilinx adaptive compute acceleration
+  platform (acap)}. In \bibinfo{booktitle}{\emph{Proceedings of the 2019
+  ACM/SIGDA International Symposium on Field-Programmable Gate Arrays}}.
+  \bibinfo{pages}{83--83}.
 \newblock
 
 
