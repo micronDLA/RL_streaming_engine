@@ -25,6 +25,7 @@ class RolloutBuffer:
         self.rewards = []
         self.is_terminals = []
         self.masks = []
+        self.node_ids = []
 
     def clear(self):
         del self.actions[:]
@@ -34,6 +35,7 @@ class RolloutBuffer:
         del self.rewards[:]
         del self.is_terminals[:]
         del self.masks[:]
+        del self.node_ids[:]
 
 # From https://boring-guy.sh/posts/masking-rl/
 class CategoricalMasked(Categorical):
@@ -222,8 +224,8 @@ class ActorCritic(nn.Module):
             self.critic = ACFF_SP(state_dim + graph_feat_size, emb_size, 1, ntasks=ntasks, mode='')
         
         elif mode == 'simple_ff':
-            self.actor = ACFF(state_dim, emb_size, action_dim, mode='')  # Don't apply softmax since we now use logits
-            self.critic = ACFF(state_dim, emb_size, 1, mode='')
+            self.actor = ACFF(state_dim+1, emb_size, action_dim, mode='')  # Don't apply softmax since we now use logits
+            self.critic = ACFF(state_dim+1, emb_size, 1, mode='')  # +1 for node_id
 
         else:
             self.actor = ACFF(act_feat_sz, emb_size, action_dim, mode='soft')  # earlier: state_dim+graph_feat_size
@@ -265,7 +267,7 @@ class ActorCritic(nn.Module):
         state_values = self.critic(act_in)
         return action_logprobs, state_values, dist_entropy
 
-    def act(self, state, graph_info, node_id, mask): # prev_act, pre_constr):
+    def act(self, state, graph_info, node_id_or_ids, mask): # prev_act, pre_constr):
         # graph = dgl.add_self_loop(graph_info)
         # graph_feat = graph.ndata['feat']
         # for layer in self.graph_model:
@@ -281,8 +283,10 @@ class ActorCritic(nn.Module):
         # act_in = self.cam_attention(act_in.unsqueeze(0)).squeeze(0)
         # act_in = self.graph_avg_pool(graph, act_in)
 
+        state = torch.atleast_2d(state)
+        # Add node id
+        state = torch.cat((state, node_id_or_ids), dim=1)
         logits = self.actor(state)
-        logits = torch.atleast_2d(logits)
         dist = CategoricalMasked(logits=logits, mask=mask)
         action = dist.sample() # flattened index of a tile slice coord
         action_logprob = dist.log_prob(action)
@@ -303,7 +307,7 @@ class ActorCritic(nn.Module):
         
         return action.detach(), action_logprob.detach()
 
-    def evaluate(self, state, action, graph_info, mask, node_id=None, taskid=None):
+    def evaluate(self, state, action, graph_info, mask, node_id_or_ids=None, taskid=None):
         # graph = graph_info[0]
         # graph = dgl.add_self_loop(graph)
         # graph_feat = graph.ndata['feat']
@@ -323,8 +327,10 @@ class ActorCritic(nn.Module):
         if self.mode == 'super':
             action_probs = self.actor(act_in, taskid)
         else:
+            state = torch.atleast_2d(state)
+            # Add node id
+            state = torch.cat((state, node_id_or_ids), dim=1)
             logits = self.actor(state)
-            logits = torch.atleast_2d(logits)
 
         dist = CategoricalMasked(logits=logits, mask=mask)
         action_logprobs = dist.log_prob(action)
