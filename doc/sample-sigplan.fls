@@ -356,11 +356,14 @@ INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
 INPUT sections/Introduction.tex
 INPUT sections/Introduction.tex
 INPUT /var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map
+INPUT fig/SE_example.pdf
+INPUT ./fig/SE_example.pdf
+INPUT ./fig/SE_example.pdf
 INPUT sections/se.tex
 INPUT sections/se.tex
-INPUT fig/SE_diagram.pdf
-INPUT ./fig/SE_diagram.pdf
-INPUT ./fig/SE_diagram.pdf
+INPUT fig/se_device_tile.pdf
+INPUT ./fig/se_device_tile.pdf
+INPUT ./fig/se_device_tile.pdf
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss10.tfm
 INPUT sections/Method.tex
 INPUT sections/Method.tex
@@ -384,8 +387,8 @@ INPUT sample-sigplan.bbl
 INPUT sample-sigplan.aux
 INPUT ./sample-sigplan.out
 INPUT ./sample-sigplan.out
-INPUT /usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-ts1.enc
 INPUT /nethome/basharromano/.texlive2019/texmf-var/fonts/pk/ljfour/jknappen/ec/tcrm0800.600pk
+INPUT /usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-ts1.enc
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx9.pfb

@@ -4,7 +4,7 @@ Due to such advantages, CGRAs are currently enjoying a resurgence in interest—
 SE differentiates from others as the first CGRA in a near-data computing architecture.
 SE also provides asynchronous messaging as a first-class programming construct along with synchronous data flow. 
 
-A key challenge with HTF applications is efficient compilation of high-level language code (for example, in C/C++) to executable program. 
+A key challenge with SE applications is efficient compilation of high-level language code (for example, in C/C++) to executable program. 
 Research compilers targeting CGRAs are available (for example, \cite{adriaansen2016code, chin2017cgra, mei2003exploiting, prabhakar2018plasticine}) but they are limited in quality and code coverage. 
 Industry-strength compilers such as Clang/LLVM do not provide official support for CGRA-like architectures.
 \subsection{Reinforcement Learning}
@@ -16,7 +16,8 @@ a collection of programs and reuse previous data for new programs by training a 
 
 Recurrent neural networks (RNN) \cite{hochreiter1996lstm} were popular approach to process sequence of nodes from a graph representation. 
 Graph neural networks (GNN) \cite{gori2005new} showed success in processing structured data without preprocessing required for RNNs.
-GNNs are widely used task involves processing graphs \cite{Zhou_compileGNN, zhou2019gdp}. In addition, attention modules are used to 
+GNNs are widely used task involves processing graphs \cite{Zhou_compileGNN, zhou2019gdp}. 
+In addition, attention modules are used to 
 supplement the embeddings created by GNNs to further improve results \cite{addanki2019placeto}.
 
 In \cite{mirhoseini2020chip}, a RL method for chip placement is presented. A graph neural network to create embedding from a netlist graph and passed through an actor model via PPO. 
