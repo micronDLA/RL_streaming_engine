@@ -13,7 +13,27 @@ It bridges SDFs through asynchronous operations, which include SDF initiation, a
 Together, SF and AF allow the tiles to efficiently execute high-level programming language constructs. 
 Simulation results of hand-crafted SE kernels have shown orders-of-magnitude better performance per watt on data-intensive applications than existing computing platforms.
 
-Se example \ref{fig:se_example}
+A simple example that demonstrates how a program is mapped to and executed by the SE is shown in Fig. \ref{fig:se_example}.
+Mapping the distance calculation function, Eq. \ref{eq:dist} to the SE.
+
+\begin{equation}
+    \label{eq:dist}
+    D = \sqrt{(x - x_0)^2 +(y - y_0)^2 + (z - z_0)^2}
+\end{equation}
+
+To keep this example simple, we ignore the square root part of the equation.
+The programmer rewrites the program as a directed Acyclic Graph (DAG).
+Each Tile on the SE has a Multiply/Shift (MS) unit and an Arithmetic/Logic (AL) unit, as shown in Fig \ref{fig:se_diagram}.
+The Output of the MS unit is connected the one of the two inputs onf the AL unit.
+Each operation in Eq. \ref{eq:dist} is an instruction that is mapped to a slot at a tile on the SE.
+Therefore, each instruction can include both a multiplication and an addition, as shown in Eq. \ref{eq:msal}:
+
+\begin{equation}
+    \label{eq:msal}
+    MS/AL_{output} = (MS_{in1} \times MS_{in2}) + AL_{in2} 
+\end{equation}
+
+
 Mapping the instructions from the computation graph of a program onto the compute elements of the SE while adhering to architectural constraints is an NP-complete problem with a vast and sparse search space. 
 Constraints related to tile memory and synchronous dataflow, use of delays to match timing requirements and more are necessary to ensure correct execution. 
 Creating the mappings manually or using brute force algorithms takes time and lots of effort. 
@@ -24,15 +44,17 @@ Using the Proximal Policy Optimization (PPO) method we train a neural network mo
 The trained model was able to create valid mappings for the SE by learning about the problem domain. 
 By using a learning methodology, we are able to reuse what the neural network learned to obtain mappings for computation graphs that were not seen during training.  
 
-This work is motivated to provide improved tools set that lowers SE usability barrier. This also assist other tools or programmers in SE mapping creation by providing placement suggestions or tile 
-configuration labels. The RL mapper performs unsupervised learning and optimization allowing it to search a wide and sparse search space. 
+This work is motivated to provide improved tools set that lowers SE usability barrier.
+This also assist other tools or programmers in SE mapping creation by providing placement suggestions or tile configuration labels.
+The RL mapper performs unsupervised learning and optimization allowing it to search a wide and sparse search space. 
+Each operation is an instruction that is mapped to a specific slot on a tile.
 
-This line of research is inspired by recent work that used RL for chip placement. 
+This line of research is inspired by recent work that used RL for chip placement.
 Our problem requirement of mapping nodes of a computation graph to available compute elements is similar to the problem of placing nodes of a chip netlist on a chip canvas. 
 
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{fig/SE_example.pdf}
+    \includegraphics[trim=70 180 70 25, clip, width=\linewidth]{fig/SE_example.pdf}
     \caption{
       Diagram of the Streaming Engine.
     }
