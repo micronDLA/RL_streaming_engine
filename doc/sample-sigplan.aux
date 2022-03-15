@@ -21,20 +21,26 @@
 \providecommand\HyField@AuxAddToCoFields[2]{}
 \@writefile{toc}{\contentsline {section}{Abstract}{1}{section*.1}\protected@file@percent }
 \@writefile{tdo}{\contentsline {todo}{add metrics that show the merit of the proposed method}{1}{section*.3}\protected@file@percent }
-\pgfsyspdfmark {pgfid1}{14121733}{15826533}
-\pgfsyspdfmark {pgfid2}{2028503}{15838821}
-\pgfsyspdfmark {pgfid3}{2798551}{15614907}
+\pgfsyspdfmark {pgfid1}{11431116}{15345482}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\@writefile{tdo}{\contentsline {todo}{changed from CNM to NDC, right?}{1}{section*.6}\protected@file@percent }
+\pgfsyspdfmark {pgfid2}{28794552}{22075073}
 \@writefile{toc}{\contentsline {section}{\numberline {2}Background}{2}{section.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Streaming Engine environment}{2}{subsection.2.1}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Diagram of the Streaming Engine.\relax }}{2}{figure.caption.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}The Streaming Engine}{2}{subsection.2.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces  Diagram of the Streaming Engine. SF connects each tile with neighboring tiles that are one or two hops away. \relax }}{2}{figure.caption.7}\protected@file@percent }
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{fig:se_diagram}{{1}{2}{Diagram of the Streaming Engine.\relax }{figure.caption.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Reinforcement learning}{2}{subsection.2.2}\protected@file@percent }
+\newlabel{fig:se_diagram}{{1}{2}{Diagram of the Streaming Engine. SF connects each tile with neighboring tiles that are one or two hops away. \relax }{figure.caption.7}{}}
 \citation{Shengyi_mask}
 \citation{theodoridis2007survey}
 \citation{prabhakar2018plasticine}
 \citation{morgan2018intel,nicol2017coarse,vissers2019versal}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Method}{3}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Reinforcement learning}{3}{subsection.3.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Diagram of the RL framework showing the role of actor and critic networks during RL training. \relax }}{3}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:ppo}{{2}{3}{Diagram of the RL framework showing the role of actor and critic networks during RL training. \relax }{figure.caption.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Model design}{3}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Related work}{3}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}CGRA}{3}{subsection.4.1}\protected@file@percent }
 \citation{adriaansen2016code,chin2017cgra,mei2003exploiting,prabhakar2018plasticine}
 \citation{mirhoseini2020chip}
 \citation{Mirhoseini_placementRNN,addanki2019placeto,zhou2019gdp}
@@ -43,15 +49,6 @@
 \citation{Zhichao_ESNAS}
 \citation{shi2020learned}
 \citation{zhou2019gdp}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Diagram of the RL framework showing the role of actor and critic networks during RL training. \relax }}{3}{figure.caption.7}\protected@file@percent }
-\newlabel{fig:ppo}{{2}{3}{Diagram of the RL framework showing the role of actor and critic networks during RL training. \relax }{figure.caption.7}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {3}Method}{3}{section.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Model design}{3}{subsection.3.1}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Actor and critic model architecture. GNN is used to process the computation graph (static data). Attention module gives importance to relevant nodes. The embedding created from dynamic data is combined with static data embedding. A final MLP model is used to generate actions. Actions are masked to ensure only valid actions are produced. \relax }}{3}{figure.caption.8}\protected@file@percent }
-\newlabel{fig:model}{{3}{3}{Actor and critic model architecture. GNN is used to process the computation graph (static data). Attention module gives importance to relevant nodes. The embedding created from dynamic data is combined with static data embedding. A final MLP model is used to generate actions. Actions are masked to ensure only valid actions are produced. \relax }{figure.caption.8}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Related work}{3}{section.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}CGRA}{3}{subsection.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Reinforcement Learning}{3}{subsection.4.2}\protected@file@percent }
 \citation{hochreiter1996lstm}
 \citation{gori2005new}
 \citation{Zhou_compileGNN,zhou2019gdp}
@@ -59,6 +56,13 @@
 \citation{mirhoseini2020chip}
 \citation{zhou2019gdp}
 \citation{zhou2019gdp}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Actor and critic model architecture. GNN is used to process the computation graph (static data). Attention module gives importance to relevant nodes. The embedding created from dynamic data is combined with static data embedding. A final MLP model is used to generate actions. Actions are masked to ensure only valid actions are produced. \relax }}{4}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:model}{{3}{4}{Actor and critic model architecture. GNN is used to process the computation graph (static data). Attention module gives importance to relevant nodes. The embedding created from dynamic data is combined with static data embedding. A final MLP model is used to generate actions. Actions are masked to ensure only valid actions are produced. \relax }{figure.caption.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Reinforcement Learning}{4}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{4}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Experimental Setup}{4}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Abrasion study}{4}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{4}{section.6}\protected@file@percent }
 \bibstyle{ACM-Reference-Format}
 \bibdata{sample-base}
 \bibcite{addanki2019placeto}{{1}{2019}{{Addanki et~al\mbox  {.}}}{{}}}
@@ -67,12 +71,6 @@
 \bibcite{gori2005new}{{4}{2005}{{Gori et~al\mbox  {.}}}{{}}}
 \bibcite{hochreiter1996lstm}{{5}{1996}{{Hochreiter and Schmidhuber}}{{}}}
 \bibcite{Shengyi_mask}{{6}{2020}{{Huang and Onta{\~{n}}{\'{o}}n}}{{}}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{4}{section.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Experimental Setup}{4}{subsection.5.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Abrasion study}{4}{subsection.5.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{4}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{Acknowledgments}{4}{section*.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{References}{4}{section*.12}\protected@file@percent }
 \bibcite{kormushev2013reinforcement}{{7}{2013}{{Kormushev et~al\mbox  {.}}}{{}}}
 \bibcite{Zhichao_ESNAS}{{8}{2018}{{Lu et~al\mbox  {.}}}{{}}}
 \bibcite{mei2003exploiting}{{9}{2003}{{Mei et~al\mbox  {.}}}{{}}}
@@ -87,14 +85,16 @@
 \bibcite{Zhou_compileGNN}{{18}{2020}{{Zhou et~al\mbox  {.}}}{{}}}
 \bibcite{zhou2019gdp}{{19}{2019}{{Zhou et~al\mbox  {.}}}{{}}}
 \bibcite{ZophL16_NASRL}{{20}{2016}{{Zoph and Le}}{{}}}
+\@writefile{toc}{\contentsline {section}{Acknowledgments}{5}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{5}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {A}Research Methods}{5}{appendix.A}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Part One}{5}{subsection.A.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Part Two}{5}{subsection.A.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B}Online Resources}{5}{appendix.B}\protected@file@percent }
 \newlabel{tocindent-1}{0pt}
 \newlabel{tocindent0}{0pt}
 \newlabel{tocindent1}{7.50002pt}
 \newlabel{tocindent2}{15.27782pt}
 \newlabel{tocindent3}{0pt}
-\@writefile{toc}{\contentsline {section}{\numberline {A}Research Methods}{5}{appendix.A}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Part One}{5}{subsection.A.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Part Two}{5}{subsection.A.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {B}Online Resources}{5}{appendix.B}\protected@file@percent }
-\newlabel{TotPages}{{5}{5}{}{page.5}{}}
-\zref@newlabel{LastPage}{\default{B}\page{5}\abspage{5}}
+\newlabel{TotPages}{{6}{6}{}{page.6}{}}
+\zref@newlabel{LastPage}{\default{B}\page{6}\abspage{6}}

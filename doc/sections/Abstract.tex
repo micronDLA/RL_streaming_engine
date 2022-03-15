@@ -1,18 +1,18 @@
 The Streaming Engine (SE) is a Coarse-Grained Reconfigurable Array developed by Micron 
 Technology.
 The SE provides programming flexibility and high-performance with energy efficiency.
-A program is broken down into a set of one or more synchronous data-flows.
-A synchronous data-flow is represented as a computation graph, where every instruction a node.
-Each node need to be mapped to the right slot and array in the SE to ensure the correct execution of the synchronous dataflow and thus, the program.
+A program is broken down into a set of one or more Synchronous Data-Flows (SDFs).
+An SDF is represented as a computation graph, where every instruction a node.
+Each node need to be mapped to the right slot and array in the SE to ensure the correct execution of the SDF and thus, the program.
 This creates an optimization problem with a vast and sparse search space.
 A manual mapping of the graph takes an infeasible amount of time by the programmer.
 such manual mapping is impractical because it requires an expertise and knowledge in the SE micro-architecture and reduces the search-space, thus, trading off optimization possibilities.
 In this work we propose an AI-based mapper to explore mappings and optimize them in an unsupervised manner using reinforcement learning framework.
 This provides an automated method that can produce programs quickly and searches for optimal mappings without programmers interference. 
 This tool also improves the usability of the SE device by encapsulating device configuration details.
-Proximal Policy Optimization training a model to place operations into the SE tiles based on a reward function that models the SE device and its constraints.
+Proximal Policy Optimization (PPO) training a model to place operations into the SE tiles based on a reward function that models the SE device and its constraints.
 Graph neural networks are added to create embeddings to represent the computation graph.
 A transformer block is used to model sequential operation placement mode. 
 The trained model was able to create valid mappings for SE.
 The implemented method is compared against evolutionary search and baseline.
-\ldots\todo{add metrics that show the merit of the proposed method}
+\todo[inline]{add metrics that show the merit of the proposed method}

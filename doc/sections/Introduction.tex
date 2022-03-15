@@ -1,10 +1,11 @@
 As Dennard scaling ends, big-data applications such as real-time image processing, graph analytics, and deep learning continue to push the boundaries of performance and energy efficiency requirements for compute system. 
 One solution to this challenge is to move compute closer to memory or storage for substantial energy savings of data movement. 
-We have developed an innovative Compute Near Memory (CNM) architecture that leverages the dramatic opportunities provided by the new CXL protocol. 
-CNM incorporates heterogenous compute elements in the memory/storage subsystem to accelerate various computing tasks near data. 
-One of these compute elements is the Streaming Engine (SE). The SE is a Coarse-Grained Reconfigurable Array (CGRA) of interconnected compute tiles.  
+We have developed an innovative Near-Data Computing (NDC) architecture\todo[inline]{changed from CNM to NDC, right?} that leverages the dramatic opportunities provided by the new CXL protocol. 
+NDC incorporates heterogenous compute elements in the memory/storage subsystem to accelerate various computing tasks near data. 
+One of these compute elements is the Streaming Engine (SE).
 
-The tiles in the CGRA are interconnected with both a synchronous fabric (SF) and an asynchronous fabric (AF) as shown in Fig. 1. SF connects each tile with neighboring tiles that are one or two clocks away. 
+The SE is a Coarse-Grained Reconfigurable Array (CGRA) that is composed of interconnected compute tiles.  
+The compute tiles are interconnected with both a Synchronous Fabric (SF) and an Asynchronous Fabric (AF) as shown in Fig. \ref{fig:se_diagram}.
 It also interconnects tile memory, multiplexers, and Single Instruction Multiple Data (SIMD) units within each tile. 
 Tiles can be pipelined through SF to form a synchronous data flow (SDF) through multiply/shift or add/logical SIMD units. 
 AF connects a tile with all other tiles, dispatch interface (DI), and memory interfaces (MIs). 
