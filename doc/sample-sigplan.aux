@@ -21,19 +21,21 @@
 \providecommand\HyField@AuxAddToCoFields[2]{}
 \@writefile{toc}{\contentsline {section}{Abstract}{1}{section*.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
 \newlabel{eq:dist}{{1}{2}{Introduction}{equation.1.1}{}}
 \newlabel{eq:msal}{{2}{2}{Introduction}{equation.1.2}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces  Diagram of the Streaming Engine. \relax }}{2}{figure.caption.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces  Example showing the high-level steps of mapping of distance calculation using the SE device. The solid lines connecting the tiles, represent an SF connection with one clock cycle latency. The dotted lines connecting the tiles, represent an SF connection with two clock cycles latency. The pipeline latency for an instruction is three clock cycles. For example, instruction \#0 is scheduled at slot \#0 of tile \#3 and its output is sent to instruction \#3. The result of instruction \#0 is ready after three clock cycles, in addition to two clock cycles to move the result to tile \#1, instruction \#3 is correctly scheduled on on slot \#1 of tile \#1. \relax }}{2}{figure.caption.5}\protected@file@percent }
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{fig:se_example}{{1}{2}{Diagram of the Streaming Engine. \relax }{figure.caption.5}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {2}Background}{2}{section.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}The Streaming Engine}{2}{subsection.2.1}\protected@file@percent }
-\citation{Shengyi_mask}
+\newlabel{fig:se_example}{{1}{2}{Example showing the high-level steps of mapping of distance calculation using the SE device. The solid lines connecting the tiles, represent an SF connection with one clock cycle latency. The dotted lines connecting the tiles, represent an SF connection with two clock cycles latency. The pipeline latency for an instruction is three clock cycles. For example, instruction \#0 is scheduled at slot \#0 of tile \#3 and its output is sent to instruction \#3. The result of instruction \#0 is ready after three clock cycles, in addition to two clock cycles to move the result to tile \#1, instruction \#3 is correctly scheduled on on slot \#1 of tile \#1. \relax }{figure.caption.5}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces  Diagram of the Streaming Engine. \relax }}{3}{figure.caption.6}\protected@file@percent }
 \newlabel{fig:se_diagram}{{2}{3}{Diagram of the Streaming Engine. \relax }{figure.caption.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Background}{3}{section.2}\protected@file@percent }
+\newlabel{sec:background}{{2}{3}{Background}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}The Streaming Engine}{3}{subsection.2.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3}Method}{3}{section.3}\protected@file@percent }
+\newlabel{sec:rlmapper}{{3}{3}{Method}{section.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Reinforcement learning}{3}{subsection.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Model design}{3}{subsection.3.2}\protected@file@percent }
+\citation{Shengyi_mask}
 \citation{theodoridis2007survey}
 \citation{prabhakar2018plasticine}
 \citation{morgan2018intel,nicol2017coarse,vissers2019versal}
@@ -49,16 +51,18 @@
 \citation{gori2005new}
 \citation{Zhou_compileGNN,zhou2019gdp}
 \citation{addanki2019placeto}
-\citation{mirhoseini2020chip}
-\citation{zhou2019gdp}
-\citation{zhou2019gdp}
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Diagram of the RL framework showing the role of actor and critic networks during RL training. \relax }}{4}{figure.caption.7}\protected@file@percent }
 \newlabel{fig:ppo}{{3}{4}{Diagram of the RL framework showing the role of actor and critic networks during RL training. \relax }{figure.caption.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Model design}{4}{subsection.3.2}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Actor and critic model architecture. GNN is used to process the computation graph (static data). Attention module gives importance to relevant nodes. The embedding created from dynamic data is combined with static data embedding. A final MLP model is used to generate actions. Actions are masked to ensure only valid actions are produced. \relax }}{4}{figure.caption.8}\protected@file@percent }
 \newlabel{fig:model}{{4}{4}{Actor and critic model architecture. GNN is used to process the computation graph (static data). Attention module gives importance to relevant nodes. The embedding created from dynamic data is combined with static data embedding. A final MLP model is used to generate actions. Actions are masked to ensure only valid actions are produced. \relax }{figure.caption.8}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {4}Related work}{4}{section.4}\protected@file@percent }
+\newlabel{sec:relatedwork}{{4}{4}{Related work}{section.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}CGRA}{4}{subsection.4.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Reinforcement Learning}{4}{subsection.4.2}\protected@file@percent }
+\citation{mirhoseini2020chip}
+\citation{zhou2019gdp}
+\citation{zhou2019gdp}
 \bibstyle{ACM-Reference-Format}
 \bibdata{sample-base}
 \bibcite{addanki2019placeto}{{1}{2019}{{Addanki et~al\mbox  {.}}}{{}}}
@@ -70,6 +74,14 @@
 \bibcite{kormushev2013reinforcement}{{7}{2013}{{Kormushev et~al\mbox  {.}}}{{}}}
 \bibcite{Zhichao_ESNAS}{{8}{2018}{{Lu et~al\mbox  {.}}}{{}}}
 \bibcite{mei2003exploiting}{{9}{2003}{{Mei et~al\mbox  {.}}}{{}}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{5}{section.5}\protected@file@percent }
+\newlabel{sec:results}{{5}{5}{Results}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Experimental Setup}{5}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Abrasion study}{5}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{5}{section.6}\protected@file@percent }
+\newlabel{sec:conclusion}{{6}{5}{Conclusion}{section.6}{}}
+\@writefile{toc}{\contentsline {section}{Acknowledgments}{5}{section*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{5}{section*.12}\protected@file@percent }
 \bibcite{mirhoseini2020chip}{{10}{2020}{{Mirhoseini et~al\mbox  {.}}}{{}}}
 \bibcite{Mirhoseini_placementRNN}{{11}{2017}{{Mirhoseini et~al\mbox  {.}}}{{}}}
 \bibcite{morgan2018intel}{{12}{2018}{{Morgan}}{{}}}
@@ -77,12 +89,6 @@
 \bibcite{prabhakar2018plasticine}{{14}{2018}{{Prabhakar et~al\mbox  {.}}}{{}}}
 \bibcite{shi2020learned}{{15}{2020}{{Shi et~al\mbox  {.}}}{{}}}
 \bibcite{theodoridis2007survey}{{16}{2007}{{Theodoridis et~al\mbox  {.}}}{{}}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{5}{section.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Experimental Setup}{5}{subsection.5.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Abrasion study}{5}{subsection.5.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{5}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{Acknowledgments}{5}{section*.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{References}{5}{section*.12}\protected@file@percent }
 \bibcite{vissers2019versal}{{17}{2019}{{Vissers}}{{}}}
 \bibcite{Zhou_compileGNN}{{18}{2020}{{Zhou et~al\mbox  {.}}}{{}}}
 \bibcite{zhou2019gdp}{{19}{2019}{{Zhou et~al\mbox  {.}}}{{}}}
