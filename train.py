@@ -30,6 +30,7 @@ def get_args():
 
     # Constraints
     arg('--pass-timing', action='store_true', help='enable pass through timing')
+    arg('--no-sibling-constr', action='store_true', help='disable sibling nodes constraint')
     arg('--no-tm-constr', action='store_true', help='disable tile memory constraint')
     arg('--no-sf-constr', action='store_true', help='disable sync flow constraint')
     arg('--no-device-cross-connections', action='store_true', help='disable sync flow constraint')
@@ -37,7 +38,7 @@ def get_args():
     # PPO
     arg('--graph_feat_size', type=int, default=128, help='graph_feat_size')
     arg('--emb_size', type=int, default=64, help='embedding size')
-    arg('--update_timestep', type=int, default=500, help='update policy every n episodes')
+    arg('--update_timestep', type=int, default=100, help='update policy every n episodes')
     arg('--K_epochs', type=int, default=4, help='update policy for K epochs')
     arg('--eps_clip', type=float, default=0.2, help='clip parameter for PPO')
     arg('--gamma', type=float, default=0.99, help='discount factor')
@@ -73,6 +74,7 @@ if __name__ == "__main__":
     args.nodes = nodes = graphdef['graph'].number_of_nodes()
 
     if args.debug:
+        print(graphdef)
         graph_in = graphdef['graph'].adjacency_matrix_scipy().toarray()
         print('graph adjacency matrix: ', graph_in)
         nx_g = graphdef['graph'].to_networkx()
@@ -132,13 +134,18 @@ if __name__ == "__main__":
             ppo.add_buffer(tobuff, reward, done)
             reward_buf.append(reward)
 
+        writer.add_scalar('No. of nodes placed', len(env.placed_nodes), i_episode)
+
         if env.all_nodes_placed and env.graph_ready_time < best_ready_time:
             best_ready_time = env.graph_ready_time
             print(f'\nEpisode {i_episode}: {env.placed_nodes}')
             print(f'Best graph ready time yet: {best_ready_time}')
             # Save mapping json
             suffix = os.path.basename(args.input)
-            output_json(env.placed_nodes, out_file_name=f'mappings/mapping_{suffix}.json')
+            output_json(env.placed_nodes, 
+                        no_of_tiles=args.device_topology[0], 
+                        spoke_count=args.device_topology[1], 
+                        out_file_name=f'mappings/mapping_{suffix}')
             
         # learning:
         if i_episode % args.update_timestep == 0:
@@ -147,7 +154,6 @@ if __name__ == "__main__":
         # logging
         if i_episode % args.log_interval == 0:
             writer.add_scalar('Mean reward/episode', np.mean(reward_buf), i_episode)
-            writer.add_scalar('No. of nodes placed', len(env.placed_nodes), i_episode)
             writer.flush()
             end = time.time()
             print(f'\rEpisode: {i_episode} | Total reward: {total_reward} | Mean Reward: {np.mean(reward_buf):.2f} | Nodes placed: {len(env.placed_nodes)} | Time elpased: {end - start:.2f}s', end='')

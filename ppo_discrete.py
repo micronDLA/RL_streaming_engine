@@ -101,12 +101,13 @@ class PPO:
             else:
                 state = torch.FloatTensor(tensor_in).to(_engine)
                 mask = torch.tensor(mask, dtype=torch.bool).to(_engine)
+                node_id = torch.atleast_2d(torch.tensor(node_id)).to(_engine)
                 action, action_logprob = self.policy_old.act(state, graph_info, node_id, mask)
 
-        return action.item(), (state, action, graph_info, action_logprob, mask)
+        return action.item(), (state, action, graph_info, action_logprob, mask, node_id)
 
     def add_buffer(self, inbuff, reward, done):
-        state, action, graph_info, action_logprob, mask = inbuff
+        state, action, graph_info, action_logprob, mask, node_id = inbuff
         self.buffer.states.append(state)
         self.buffer.actions.append(action)
         self.buffer.graphs.append(graph_info)
@@ -114,6 +115,7 @@ class PPO:
         self.buffer.rewards.append(reward)
         self.buffer.is_terminals.append(done)
         self.buffer.masks.append(mask)
+        self.buffer.node_ids.append(node_id)
 
 
     def update(self, taskid=None):
@@ -146,6 +148,7 @@ class PPO:
             old_graph = [graph.to(_engine) for graph in self.buffer.graphs]
         old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(_engine)
         old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(_engine)
+        old_node_ids = torch.vstack(self.buffer.node_ids).detach().to(_engine)
 
         # Optimize policy for K epochs
         for _ in range(self.args.K_epochs):
@@ -154,7 +157,7 @@ class PPO:
             if self.mode == 'transformer':
                 logprobs, state_values, dist_entropy = self.policy.evaluate_seq((old_states, old_masks), old_actions, old_graph)
             else:
-                logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions, old_graph, old_masks, node_id=None, taskid=taskid)
+                logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions, old_graph, old_masks, old_node_ids, taskid=taskid)
 
             # match state_values tensor dimensions with rewards tensor
             state_values = torch.squeeze(state_values)

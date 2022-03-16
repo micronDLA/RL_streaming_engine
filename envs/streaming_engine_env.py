@@ -161,22 +161,39 @@ class StreamingEngineEnv(gym.Env):
         # Node can be placed at any open tile slice if no constraint is applied
         mask = 1 - (self.se.get_state() > -1).astype(int)
         
-        # Mask for sibling constraint
-        siblings = []
-        predecessors = self._get_predecessors(node)
-        for predecessor in predecessors:
-            successors = self._get_successors(predecessor)
-            for successor in successors:
-                if successor != node:
-                    siblings.append(successor)
+        predecessors = tuple(self._get_predecessors(node))
 
-        for sibling in siblings:
-            sibling_placement = self.placed_nodes.get(sibling)
-            if sibling_placement != None:
-                sibling_tile = sibling_placement['tile_slice'][0]
-                # Make spokes in sibling_tile unavailable
-                unavail_idxs = self._get_spoke_idxs_in_tile(sibling_tile)
+        # Mask according to timing constraints
+        if len(predecessors) != 0:
+            latest_pred= max(predecessors, key=lambda predecessor: self.placed_nodes.get(predecessor)['ready_time'])  # Get spoke of predecessor that has latest ready time
+            pred_tile = self.placed_nodes.get(latest_pred)['tile_slice'][0]
+            pred_spoke = self.placed_nodes.get(latest_pred)['tile_slice'][1]
+            for tile_idx in range(self.se.tile_count):
+                # Determine spoke idx in each tile which satisfies timing constraint (w/o considering delay)
+                avail_spoke_idx_in_tile = (pred_spoke + self.se.pipeline_depth + abs(tile_idx-pred_tile)) % self.se.spoke_count  # Assumes passthrough
+                avail_mask_idx = tile_idx * self.se.spoke_count + avail_spoke_idx_in_tile
+                unavail_idxs = self._get_spoke_idxs_in_tile(tile_idx)
+                unavail_idxs.remove(avail_mask_idx)
                 mask[unavail_idxs] = 0
+
+        # predecessor_spoke = self.placed_nodes.get()
+
+        # Mask for sibling constraint
+        if not self.args.no_sibling_constr:
+            siblings = []
+            for predecessor in predecessors:
+                successors = self._get_successors(predecessor)
+                for successor in successors:
+                    if successor != node:
+                        siblings.append(successor)
+
+            for sibling in siblings:
+                sibling_placement = self.placed_nodes.get(sibling)
+                if sibling_placement != None:
+                    sibling_tile = sibling_placement['tile_slice'][0]
+                    # Make spokes in sibling_tile unavailable
+                    unavail_idxs = self._get_spoke_idxs_in_tile(sibling_tile)
+                    mask[unavail_idxs] = 0
 
         # Mask for TM constraint
         if not self.args.no_tm_constr:
