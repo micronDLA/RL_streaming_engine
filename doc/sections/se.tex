@@ -93,12 +93,13 @@ The instruction intended to execute at a specific time-slice will only execute w
 %The first operation of each disconnected component of the computation graph (one component representing a synchronous flow) needs to be placed on different tiles. 
 
 \subsection{SE Mapping Constraints}
-The SE hardware imposes constraints that the RL mapper adhere to in order to for it to produce a valid mapping.
+The SE hardware imposes constraints that the RL mapper must adhere to in order to for it to produce a valid mapping. These constraints are:
 \begin{enumerate}
   \item Instructions that share one or more tile memory variables must be placed on the same tile.
   \item No two or more instructions that start a synchronous data-flow can share a tile.
   \item No two or more instructions that are siblings can share a tile.
 \end{enumerate}
-\todo[noline]{Parth \& Adre, Kindly elaborate more here about the mask}
-The SE device configuration and its constraints are modeled in a simulation environment and the reward function. 
-Violating a constraint or placing instructions sub-optimally leads to a reduced reward whereas placements that optimally reduce total execution time of the graph are rewarded. 
+The SE device configuration and its constraints are modeled in a simulation environment and the reward function.
+In order to enforce these constraints, we explore two methods: the first method is to give a negative reward when a 
+constraint is violated and the second is creation of a mask on the invalid actions so that the network only output valid actions.
+In both cases, placing instructions sub-optimally leads to a reduced reward whereas placements that optimally reduce total execution time of the graph are rewarded. 
