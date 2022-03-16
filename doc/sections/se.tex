@@ -1,5 +1,3 @@
-\subsection{The Streaming Engine}
-
 The SE is a coarse-grained fabric composed of compute tiles, which are interconnected with an SF, allowing data to traverse from one tile to another without queuing.
 This SF allows many tiles to be pipelined together to produce a continuous data flow through SIMD arithmetic operations.
 The tiles are also interconnected with an AF that allows synchronous domains of compute to be bridged by asynchronous operations.
@@ -32,14 +30,14 @@ The tiles use the AF to communicate between synchronous domains, send load and s
 Information is transferred over the AF with a non-deterministic latency.
 
 
-\subsubsection{Synchronous Fabric Interface}
+\subsection{Synchronous Fabric Interface}
 All tiles that participate in a synchronous domain act as a single pipelined data path.
 The Base Tile (BT) is define as the first tile of a synchronous domain initiates a thread of work through the pipelined tiles.
 The BT is responsible for starting work on a predefined cadence referred to as the Spoke Count or Initiation Interval (II).
 E.g. if $II = 3$ as in the example in Fig. \ref{fig:se_example}, then the BT can initiate work every third clock.
 The synchronous fabric provides both data and control information.
 
-\subsubsection{Asynchronous Fabric interface}
+\subsection{Asynchronous Fabric interface}
 The Asynchronous Fabric is used to perform operations that occur asynchronous to a synchronous domain.
 Each tile contains an interface to the Asynchronous Fabric.
 Asynchronous Fabric messages can be classified as either data messages or control.
@@ -54,7 +52,7 @@ The tile base contains data structures that are used to initiate a synchronous f
 A new thread is launched by the tile base of the BT every II.
 The II allows the base logic to launch new threads or continue previously launched threads when all resources needed for execution are available.
 
-\subsubsection{Tile Memory}
+\subsection{Tile Memory}
 Each tile contains two memories, each are the width of the data path (512-bits), and the depth will be in the range of 512 to 1024 elements.
 The tile memories are used to store data required to support data path operations.
 The stored data can be constants loaded as part of the program's arguments, or variables calculated as part of the data flow.
@@ -62,11 +60,11 @@ The tile memory can be written from the AF as either a data transfer from anothe
 initiated by another synchronous domain.
 %The tile memory is only read via synchronous data path instruction execution.
 
-\subsubsection{Instructions RAM}
+\subsection{Instructions RAM}
 Each tile has an instruction RAM has multiple entries to allow a tile to be time sliced, performing multiple, different operations in a pipelined synchronous domain.
 %Additionally, each time slice could conditionally perform different instructions depending on previous tile time slice data dependent conditional operations. 
 
-\subsubsection{Spoke RAM}
+\subsection{Spoke RAM}
 The Spoke RAM entries are used to configure the tile at each time slice.
 The number of active entries spoke RAM in a tile is equal to the II of that tile.
 Some of the relevant configurations per an entry are: 
@@ -94,7 +92,7 @@ The instruction intended to execute at a specific time-slice will only execute w
 %Thus, whenever possible, independent instructions should be mapped to different tiles and same II to exploit parallelism. 
 %The first operation of each disconnected component of the computation graph (one component representing a synchronous flow) needs to be placed on different tiles. 
 
-\subsubsection{SE Mapping Constraints}
+\subsection{SE Mapping Constraints}
 The SE hardware imposes constraints that the RL mapper adhere to in order to for it to produce a valid mapping.
 \begin{enumerate}
   \item Instructions that share one or more tile memory variables must be placed on the same tile.
