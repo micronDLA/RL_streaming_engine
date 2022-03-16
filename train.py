@@ -145,7 +145,7 @@ if __name__ == "__main__":
             output_json(env.placed_nodes, 
                         no_of_tiles=args.device_topology[0], 
                         spoke_count=args.device_topology[1], 
-                        out_file_name=f'mappings/mapping_{suffix}.json')
+                        out_file_name=f'mappings/mapping_{suffix}')
             
         # learning:
         if i_episode % args.update_timestep == 0:
