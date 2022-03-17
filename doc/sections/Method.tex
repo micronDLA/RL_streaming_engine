@@ -39,6 +39,16 @@ This in turn sets the probability of sampling invalid actions to $0$, ensuring t
 Finally, we only calculate entropy on valid actions, so that our algorithm maximizes exploration only on valid actions.
 
 \subsection{Reward Function}
+Our goal in this work is to get optimal mappings in terms of total clock cycles taken and for this purpose, the reward that is given at each time step is the difference between the clock cycle at which the current node to be placed is ready (its ready time) and the ready time of its predecessor. $R_n$ is the reward obtained for placing node $n$ and $t_n$ is its ready time. The function $p(n)$ gives the predecessor of $n$. If the current node can't be placed because of the constraints (all values in the mask vector $m$ are zero), then a high negative reward $-\lambda$ is given.
+\[
+  R_n =
+  \begin{cases}
+    -\lambda,& m_i = 0, \, \forall \, i \in T \times I \\
+    t_n - t_{p(n)}, & \text{otherwise}
+    
+  \end{cases}
+\]
+
 
 
 
