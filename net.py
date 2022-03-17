@@ -8,6 +8,9 @@ import numpy as np
 import math
 from util import positional_encoding
 
+torch.manual_seed(0)
+np.random.seed(0)
+
 def arange_like(x, dim: int):
     return x.new_ones(x.shape[dim]).cumsum(0) - 1
 

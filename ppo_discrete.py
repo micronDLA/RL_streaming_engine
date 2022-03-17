@@ -5,18 +5,10 @@
 # PPO from: https://github.com/nikhilbarhate99/PPO-PyTorch
 # discrete version!
 
-import dgl
-import random
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-# from torch.distributions import MultivariateNormal # continuous
-from torch.distributions import Categorical # discrete
-import numpy as np
-from net import NormalHashLinear, TransformerModel
-from dgl import nn as gnn
-from util import ravel_index
 
+torch.manual_seed(0)
 _engine = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 from modules import RolloutBuffer, ActorCritic

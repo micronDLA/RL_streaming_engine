@@ -1,5 +1,4 @@
 import dgl
-import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,7 +6,6 @@ import torch.nn.functional as F
 from torch import einsum
 from torch.distributions import Categorical # discrete
 from net import NormalHashLinear, TransformerModel
-import numpy as np
 from dgl import nn as gnn
 from util import ravel_index
 from einops import reduce
@@ -15,6 +13,8 @@ from einops import reduce
 from typing import Optional
 
 _engine = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+torch.manual_seed(0)
 
 class RolloutBuffer:
     def __init__(self):
