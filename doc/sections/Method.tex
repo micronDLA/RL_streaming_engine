@@ -8,9 +8,9 @@ The actor model outputs actions (node placements) given an observation of the cu
 Our SE mapping task is formulated as a discrete action problem where samples of SE state, actions performed, and rewards obtained at each time step are collected after executing the actions provided by the actor model in simulation. These samples are stored in a buffer that is used as data to train the models. 
 The key components of our RL method are as follows:
 \begin{itemize}
-  \item States: In our case, the state is represented by a concatenation of an array of features of placed nodes, a selected node to be placed next and an embedding of the whole computation graph. 
-  \item Action: The action at each step is a tuple \((N,T,I)\) where $N$ is the node to be placed and $T$ and $I$ are the tile and initiation interval at which the node $N$ is to be placed.
-  \item Reward function: The reward obtained is based on the number of cycles tak-en to execute all nodes.
+  \item States: The state is represented by a concatenation of an array of features of placed nodes, a selected node to be placed next and an embedding of the whole computation graph. 
+  \item Action: The action consists of the node to be placed along with the tile and spoke location it is to be placed at.
+  \item Reward function: The reward obtained is based on the number of cycles taken to execute all nodes.
   \item Transition function: The transition function gives the probability distribution over next states given the current state and the action to be performed.
 \end{itemize}
 
@@ -26,7 +26,23 @@ Figure \ref{fig:ppo} shows the overall RL framework.
   \label{fig:ppo}
 \end{figure}
 
-\subsection{Environment Design}
+\subsection{State Representation}
+The state is a vector of size $TS+1$ where $TS$ is the number of tile slices in the Streaming Engine with $TS=T \times I$. $T$ and $I$ are the total number of tiles and initiation intervals per tile in the SE.
+
+\subsection{Action Representation}
+\todo[inline]{Ensure mathematical notations are consistent throughout paper}
+The action at each step is a tuple \((n,t,i)\) where $n \in N$ is the node to be placed and $t \in T$ and $i \in I$ are the tile and initiation interval at which the node $n$ is to be placed. Selecting the node to be placed is not a part of the learning problem. We place nodes in a topological order which ensures that all of the nodes predecessors have been placed before the node.
+
+\subsubsection{Masked Actions}
+In order to enure that the network only outputs valid actions, we determine a binary mask over all possible actions and set the value of logits corresponding to invalid actions to $-\infty$. 
+This in turn sets the probability of sampling invalid actions to $0$, ensuring that we never take an invalid action.
+Finally, we only calculate entropy on valid actions, so that our algorithm maximizes exploration only on valid actions.
+
+\subsection{Reward Function}
+
+
+
+
 
 \subsection{Model design}
 
