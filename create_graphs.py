@@ -5,10 +5,7 @@ from train import run_mapper, get_args
 
 
 def create_graphs():
-    lnode = [10, 50]
-    for i in range(9):
-        lnode.append(lnode[-1] + 50)
-
+    lnode = [10, 20, 30, 40, 50]
     graphs = {}
     for nnodes in tqdm(lnode):
         graphs[nnodes] = []
@@ -21,10 +18,11 @@ def create_graphs():
 
 
 if __name__ == "__main__":
-
     args = get_args()  # Holds all the input arguments
     args.quiet = True
     args.epochs = 50000
+    args.device_topology = [16, 6]
+
     with open("graphs.pkl", "rb") as file:
         dataset = pickle.load(file)
 
@@ -36,5 +34,6 @@ if __name__ == "__main__":
             results[num_node]['time'].append(time)
             results[num_node]['reward'].append(reward)
 
-    with open("results.pkl","wb") as file:
-       pickle.dump(results, file)
+        save = "results"+num_node+".pkl"
+        with open(save,"wb") as file:
+           pickle.dump(results, file)

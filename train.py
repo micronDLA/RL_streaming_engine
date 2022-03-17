@@ -3,9 +3,9 @@ import time
 import argparse
 import logging
 from collections import deque
-
+import dgl
 import torch
-from util import get_graph_json, create_graph, output_json, print_graph, initial_fill
+from util import get_graph_json, create_graph, output_json, print_graph
 from preproc import PreInput
 import numpy as np
 from coolname import generate_slug
@@ -22,7 +22,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='Streaming Engine RL Mapper')
     arg = parser.add_argument
 
-    arg('--device-topology', nargs='+', type=int, default=(4, 3), help='Device topology of Streaming Engine')
+    arg('--device-topology', nargs='+', type=int, default=(16, 6), help='Device topology of Streaming Engine')
     arg('--pipeline-depth', type=int, default=3, help='processing pipeline depth')
     arg('--epochs', type=int, default=5000000, help='number of epochs')
     arg('--nodes', type=int, default=20,  help='number of nodes')
@@ -125,9 +125,10 @@ def run_mapper(args, graphdef):
         time_step += 1
         total_reward = 0
         done = False
-        
-        # Iterate over nodes to place
-        for node_id in range(0, args.nodes):
+        # Iterate over nodes to place in topological order
+        asc = dgl.topological_nodes_generator(graphdef['graph'])
+        lnodes = [i.item() for t in asc for i in t]
+        for node_id in lnodes:
             mask = env.get_mask(node_id)
             tile_slice_idx, tobuff = ppo.select_action(state, graphdef, node_id, mask)
             tile, spoke = np.unravel_index(tile_slice_idx, args.device_topology)
@@ -148,14 +149,15 @@ def run_mapper(args, graphdef):
         if env.all_nodes_placed and env.graph_ready_time < best_ready_time:
             best_ready_time = env.graph_ready_time
             best_reward = np.mean(reward_buf)
-            print(f'\nEpisode {i_episode}: {env.placed_nodes}')
-            print(f'Best graph ready time yet: {best_ready_time}')
-            # Save mapping json
-            suffix = os.path.basename(args.input)
-            output_json(env.placed_nodes, 
-                        no_of_tiles=args.device_topology[0], 
-                        spoke_count=args.device_topology[1], 
-                        out_file_name=f'mappings/mapping_{suffix}')
+            if not args.quiet:
+                print(f'\nEpisode {i_episode}: {env.placed_nodes}')
+                print(f'Best graph ready time yet: {best_ready_time}')
+                # Save mapping json
+                suffix = os.path.basename(args.input)
+                output_json(env.placed_nodes,
+                            no_of_tiles=args.device_topology[0],
+                            spoke_count=args.device_topology[1],
+                            out_file_name=f'mappings/mapping_{suffix}')
             
         # learning:
         if i_episode % args.update_timestep == 0:

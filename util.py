@@ -23,8 +23,15 @@ def create_graph(graphdef, numnodes = 10):
     if graphdef is None:
         graphdef = {}
         a = nx.generators.directed.gn_graph(numnodes)
+        # a = nx.generators.directed.gnc_graph(numnodes)
         graph = dgl.from_networkx(a)
-        tm_idx_total = random.randint(numnodes//2, numnodes-1) #number of tm variables
+
+        # make one input node
+        asc = dgl.topological_nodes_generator(graph)
+        for i in range(1, len(asc[0])):
+            graph.add_edge(asc[0][0], asc[0][i])
+
+        tm_idx_total = random.randint(1, numnodes//2) #number of tm variables
         tile_memory_req = {}
         for i in range(0, tm_idx_total):
             nodeid = random.randint(0, numnodes-1)
