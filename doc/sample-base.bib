@@ -448,3 +448,123 @@
   journal={Tech. Rep.},
   year={2020}
 }
+
+%% to cite after writeup
+
+@article{li_chordmap_2022,
+	title = {{ChordMap}: {Automated} {Mapping} of {Streaming} {Applications} {Onto} {CGRA}},
+	volume = {41},
+	issn = {1937-4151},
+	doi = {10.1109/TCAD.2021.3058313},
+	abstract = {Streaming applications, consisting of several communicating kernels, are ubiquitous in the embedded computing systems. The synchronous data flow (SDF) is commonly used to capture the complex communication patterns among the kernels. The general-purpose processors cannot meet the throughput requirement of the compute-intensive kernels in the current and emerging applications. The coarse-grained reconfigurable arrays (CGRAs) are well-suited to accelerate the individual kernel and the compiler technology is well-developed to support the mapping of a kernel onto a CGRA accelerator. However, the system-level mapping of the entire streaming application onto a resource-constrained CGRA to maximize throughput remains unexplored. We introduce a novel CGRA mapper, called ChordMap, to automatically generate a high-quality mapping of streaming applications represented as SDF onto CGRAs. We propose an optimized spatio-temporal mapping with modulo-scheduling that judiciously employs concurrent execution of multiple kernels to improve parallelism and thereby maximize throughput. ChordMap achieves, on average, \$1.74{\textbackslash}times \$ higher throughput across eight streaming applications compared to the state-of-the-art.},
+	number = {2},
+	journal = {IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems},
+	author = {Li, Zhaoying and Wijerathne, Dhananjaya and Chen, Xianzhang and Pathania, Anuj and Mitra, Tulika},
+	month = feb,
+	year = {2022},
+	pages = {306--319},
+	file = {Li et al. - 2022 - ChordMap Automated Mapping of Streaming Applicati.pdf:C\:\\Users\\basharromano\\Zotero\\storage\\J49ABVM3\\Li et al. - 2022 - ChordMap Automated Mapping of Streaming Applicati.pdf:application/pdf},
+}
+
+@incollection{pathfinder,
+title = {Chapter 17 - Pathfinder: A Negotiation-Based Performance-Driven Router for FPGAs},
+editor = {Scott Hauck and André Dehon},
+booktitle = {Reconfigurable Computing},
+publisher = {Morgan Kaufmann},
+address = {Burlington},
+pages = {365-381},
+year = {2008},
+series = {Systems on Silicon},
+issn = {18759661},
+doi = {https://doi.org/10.1016/B978-012370522-8.50024-8},
+url = {https://www.sciencedirect.com/science/article/pii/B9780123705228500248},
+author = {Larry McMurchie and Carl Ebeling},
+abstract = {Publisher Summary
+The widespread use of PathFinder by commercial field-programmable gate array (FPGA) routers and university research efforts alike is a testimonial to its robustness. Several key facets of the algorithm make it attractive. However, its primary advantage is the iterative nature of resolving congestion, with both current as well as historical resource use in the formulation of the cost function. By very gradually increasing cost due to both usages, the routing search space is thoroughly explored. Routing with other objective functions, delay in particular, is easily integrated into the cost function. A primary feature implicit in PathFinder (that distinguishes it from previous efforts) is the allowance of non-physically feasible intermediate states—for example, shared resources—while converging to a physically feasible final state. By being grounded in a directed graph representation, PathFinder is very adaptable to changing FPGA architectures as well as other problems that can be abstracted to a directed graph. In the future the routing problem can be seen as being the increasingly dominant hurdle in the use of FPGAs with millions of resources. To reduce the runtime, more investigation will be required to effectively parallelize PathFinder, making use of additional computational resources. Given the growing focus on other objectives such as power consumption, it is likely that the experimentation with other cost function formulations will be seen as well.}
+}
+
+@article{tehre_survey_2012,
+	title = {Survey on coarse grained reconfigurable architectures},
+	volume = {48},
+	number = {16},
+	journal = {International Journal of Computer Applications},
+	author = {Tehre, Vaishali and Kshirsagar, Ravindra},
+	year = {2012},
+	note = {Publisher: Citeseer},
+	pages = {1--7},
+	file = {Tehre and Kshirsagar - 2012 - Survey on coarse grained reconfigurable architectu.pdf:C\:\\Users\\basharromano\\Zotero\\storage\\UZ32P6A5\\Tehre and Kshirsagar - 2012 - Survey on coarse grained reconfigurable architectu.pdf:application/pdf},
+}
+
+@article{liu_survey_2019,
+	title = {A {Survey} of {Coarse}-{Grained} {Reconfigurable} {Architecture} and {Design}: {Taxonomy}, {Challenges}, and {Applications}},
+	volume = {52},
+	issn = {0360-0300},
+	url = {https://doi.org/10.1145/3357375},
+	doi = {10.1145/3357375},
+	abstract = {As general-purpose processors have hit the power wall and chip fabrication cost escalates alarmingly, coarse-grained reconfigurable architectures (CGRAs) are attracting increasing interest from both academia and industry, because they offer the performance and energy efficiency of hardware with the flexibility of software. However, CGRAs are not yet mature in terms of programmability, productivity, and adaptability. This article reviews the architecture and design of CGRAs thoroughly for the purpose of exploiting their full potential. First, a novel multidimensional taxonomy is proposed. Second, major challenges and the corresponding state-of-the-art techniques are surveyed and analyzed. Finally, the future development is discussed.},
+	number = {6},
+	journal = {ACM Comput. Surv.},
+	author = {Liu, Leibo and Zhu, Jianfeng and Li, Zhaoshi and Lu, Yanan and Deng, Yangdong and Han, Jie and Yin, Shouyi and Wei, Shaojun},
+	month = oct,
+	year = {2019},
+	note = {Place: New York, NY, USA
+Publisher: Association for Computing Machinery},
+	keywords = {CGRA, dataflow, reconfigurable computing, scheduling, spatial architecture},
+	file = {Liu et al. - 2019 - A Survey of Coarse-Grained Reconfigurable Architec.pdf:C\:\\Users\\basharromano\\Zotero\\storage\\GYQFBCGM\\Liu et al. - 2019 - A Survey of Coarse-Grained Reconfigurable Architec.pdf:application/pdf},
+}
+
+@inproceedings{chin_cgra-me_2017,
+	title = {{CGRA}-{ME}: {A} unified framework for {CGRA} modelling and exploration},
+	doi = {10.1109/ASAP.2017.7995277},
+	abstract = {Coarse-grained reconfigurable arrays (CGRAs) are a style of programmable logic device situated between FPGAs and custom ASICs on the spectrum of programmability, performance, power and cost. CGRAs have been proposed by both academia and industry; however, prior works have been mainly self-contained without broad architectural exploration and comparisons with competing CGRAs. We present CGRA-ME - a unified CGRA framework that encompasses generic architecture description, architecture modelling, application mapping, and physical implementation. Within this framework, we discuss our architecture description language CGRA-ADL, a generic LLVM-based simulated annealing mapper, and a standard cell flow for physical implementation. An architecture exploration case study is presented, highlighting the capabilities of CGRA-ME by exploring a variety of architectures with varying functionality, interconnect, array size, and execution contexts through the mapping of application benchmarks and the production of standard cell designs.},
+	booktitle = {2017 {IEEE} 28th {International} {Conference} on {Application}-specific {Systems}, {Architectures} and {Processors} ({ASAP})},
+	author = {Chin, S. Alexander and Sakamoto, Noriaki and Rui, Allan and Zhao, Jim and Kim, Jin Hee and Hara-Azumi, Yuko and Anderson, Jason},
+	month = jul,
+	year = {2017},
+	note = {ISSN: 2160-052X},
+	pages = {184--189},
+	file = {Chin et al. - 2017 - CGRA-ME A unified framework for CGRA modelling an.pdf:C\:\\Users\\basharromano\\Zotero\\storage\\GE78H99W\\Chin et al. - 2017 - CGRA-ME A unified framework for CGRA modelling an.pdf:application/pdf},
+}
+
+@inproceedings{chin_architecture-agnostic_2018,
+	address = {New York, NY, USA},
+	series = {{DAC} '18},
+	title = {An {Architecture}-{Agnostic} {Integer} {Linear} {Programming} {Approach} to {CGRA} {Mapping}},
+	isbn = {978-1-4503-5700-5},
+	url = {https://doi.org/10.1145/3195970.3195986},
+	doi = {10.1145/3195970.3195986},
+	abstract = {Coarse-grained reconfigurable architectures (CGRAs) have gained traction as a potential solution to implement accelerators for compute-intensive kernels, particularly in domains requiring hardware programmability. Architecture and CAD for CGRAs are tightly intertwined, with many prior works having combined architectures and tools. In this work, we present an architecture-agnostic integer linear programming (ILP) approach for CGRA mapping, integrated within an open-source CGRA architecture evaluation framework. The mapper accepts an application and an architecture description as input and can generate an optimal mapping, if indeed mapping is feasible. An experimental study demonstrates its effectiveness over a range of CGRA architectures.},
+	booktitle = {Proceedings of the 55th {Annual} {Design} {Automation} {Conference}},
+	publisher = {Association for Computing Machinery},
+	author = {Chin, S. Alexander and Anderson, Jason H.},
+	year = {2018},
+	note = {event-place: San Francisco, California},
+	file = {Chin and Anderson - 2018 - An Architecture-Agnostic Integer Linear Programmin.pdf:C\:\\Users\\basharromano\\Zotero\\storage\\SB6384FP\\Chin and Anderson - 2018 - An Architecture-Agnostic Integer Linear Programmin.pdf:application/pdf},
+}
+
+@inproceedings{mrrg,
+	title = {{DRESC}: a retargetable compiler for coarse-grained reconfigurable architectures},
+	doi = {10.1109/FPT.2002.1188678},
+	abstract = {Coarse-grained reconfigurable architectures have become increasingly important in recent years. Automatic design or compiling tools are essential to their success. In this paper, we present a retargetable compiler for a family of coarse-grained reconfigurable architectures. Several key issues are addressed. Program analysis and transformation prepare dataflow for scheduling. Architecture abstraction generates an internal graph representation from a concrete architecture description. A modulo scheduling algorithm is key to exploit parallelism and achieve high performance. The experimental results show up to 28.7 instructions per cycle (IPC) over tested kernels.},
+	booktitle = {2002 {IEEE} {International} {Conference} on {Field}-{Programmable} {Technology}, 2002. ({FPT}). {Proceedings}.},
+	author = {Mei, Bingfeng and Vernalde, S. and Verkest, D. and De Man, H. and Lauwereins, R.},
+	month = dec,
+	year = {2002},
+	pages = {166--173},
+	file = {Mei et al. - 2002 - DRESC a retargetable compiler for coarse-grained .pdf:C\:\\Users\\basharromano\\Zotero\\storage\\P4NV9EMI\\Mei et al. - 2002 - DRESC a retargetable compiler for coarse-grained .pdf:application/pdf},
+}
+
+@article{zhao_towards_2020,
+	title = {Towards {Higher} {Performance} and {Robust} {Compilation} for {CGRA} {Modulo} {Scheduling}},
+	volume = {31},
+	issn = {1558-2183},
+	doi = {10.1109/TPDS.2020.2989149},
+	abstract = {Coarse-Grained Reconfigurable Architectures (CGRA) is a promising solution for accelerating computation intensive tasks due to its good trade-off in energy efficiency and flexibility. One of the challenging research topic is how to effectively deploy loops onto CGRAs within acceptable compilation time. Modulo scheduling (MS) has shown to be efficient on deploying loops onto CGRAs. Existing CGRA MS algorithms still suffer from the challenge of mapping loop with higher performance under acceptable compilation time, especially mapping large and irregular loops onto CGRAs with limited computational and routing resources. This is mainly due to the under utilization of the available buffer resources on CGRA, unawareness of critical mapping constraints and time consuming method of solving temporal and spatial mapping. This article focus on improving the performance and compilation robustness of the modulo scheduling mapping algorithm for CGRAs. We decomposes the CGRA MS problem into the temporal and spatial mapping problem and reorganize the processes inside these two problems. For the temporal mapping problem, we provide a comprehensive and systematic mapping flow that includes a powerful buffer allocation algorithm, and efficient interconnection \& computational constraints solving algorithms. For the spatial mapping problem, we develop a fast and stable spatial mapping algorithm with backtracking and reordering mechanism. Our MS mapping algorithm is able to map loops onto CGRA with higher performance and faster compilation time. Experiment results show that given the same compilation time budget, our mapping algorithm generates higher compilation success rate. Among the successfully compiled loops, our approach can improve 5.4 to 14.2 percent performance and takes x24 to x1099 less compilation time in average comparing with state-of-the-art CGRA mapping algorithms.},
+	number = {9},
+	journal = {IEEE Transactions on Parallel and Distributed Systems},
+	author = {Zhao, Zhongyuan and Sheng, Weiguang and Wang, Qin and Yin, Wenzhi and Ye, Pengfei and Li, Jinchao and Mao, Zhigang},
+	month = sep,
+	year = {2020},
+	pages = {2201--2219},
+	file = {Zhao et al. - 2020 - Towards Higher Performance and Robust Compilation .pdf:C\:\\Users\\basharromano\\Zotero\\storage\\93HXV6CS\\Zhao et al. - 2020 - Towards Higher Performance and Robust Compilation .pdf:application/pdf},
+}
