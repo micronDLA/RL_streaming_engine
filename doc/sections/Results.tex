@@ -7,6 +7,20 @@ The RL approach can also learn from a collection of computation graphs and reuse
 The other methods on the other hand will have to perform a new search and start from scratch for every new computation graph. 
 PPO with graph embeddings showed that we can obtain more optimized placements by finding higher rewards than other RL approaches. 
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{fig/ifft_rewards.png}
+    \caption{Mean reward during training on ifft graph}
+    \label{fig:ifft_rewards}
+  \end{figure}
+
+  \begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{fig/ifft_nodes_placed.png}
+    \caption{Number of ifft nodes placed per episode}
+    \label{fig:ifft_rewards}
+  \end{figure}
+
 \subsection{Experimental Setup}
 
-\subsection{Abrasion study}
+\subsection{Ablation study}

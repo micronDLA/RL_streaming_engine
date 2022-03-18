@@ -1,21 +1,22 @@
 \subsection{Reinforcement learning}
 
-Reinforcement learning (RL) framework was developed to explore and optimize the mapping of operations to SE in an unsupervised 
-manner. 
-Proximal Policy Optimization (PPO) trains a neural network model to place operations into the SE tiles based on a reward 
-function that models the SE device and its constraints. 
-The SE mapping task is formulated as a discrete action problem. 
-In PPO, samples of state, reward and action are collected by running inference on the latest copy of actor model and getting the outcome from the SE reward function. 
-These samples are stored in a buffer that will be used as data to train the models. 
-The state is a concatenation of an array of placed nodes, a selected node to be placed next and an embedding of the whole computation graph. 
-An action is a tile location and a II count. 
-The reward is the number of cycles taken to execute all nodes. 
-After each action, a node is placed and its state, action, reward is saved as sample. 
-The buffer can choose to keep or discard certain number unsuccessful placements samples to balance number of successful and unsuccessful samples for the training phase. 
-After sampling, the actor model is trained to produce actions from the sample states and the critic model is trained to match the sampled rewards from the actions produced by the actor using a surrogate loss function. 
-This sample and train process is repeated over various iterations. 
-Figure \ref{fig:ppo} shows a diagram of the sample and training phase. 
-After node placements, routing info and configurations for programming each tile are saved for final output.
+We present a Reinforcement learning (RL) based framework to explore and optimize the mapping of instructions for a given computation graph to the SE, guided by a reward function that informs the mapping algorithm about the quality of the produced mappings at each step. 
+
+\subsection{Overview}
+Proximal Policy Optimization (PPO) is an RL method widely used for continuous and discrete action problems. It trains actor and critic models (represented as neural networks).
+The actor model is trained to produce actions (node placements in our case) from sample states obtained during simulation and the critic model is trained to match the sampled rewards from the actions produced by the actor using a surrogate loss function. This sample and train process is repeated over various iterations. In this manner, the problem search space is explored using the reward function as a heuristic.
+Our SE mapping task is formulated as a discrete action problem where the goal is to place one node at each time step. Samples of SE state, actions performed and rewards obtained at each time step are collected after executing the actions provided by the actor model in simulation. These samples are stored in a buffer and are used as data to train the models.
+Figure \ref{fig:ppo} shows the overall RL framework. 
+\textcolor{red}{After node placements, routing info and configurations for programming each tile are saved for final output.}
+The key components of our RL method are as follows:
+\begin{itemize}
+  \item States: The state is represented by a concatenation of an array of features of placed nodes, a selected node to be placed next and an embedding of the whole computation graph. 
+  \item Action: The action consists of the node to be placed along with the tile and spoke location it is to be placed at.
+  \item Reward function: The reward obtained is based on the number of clock cycles taken for a node to finish executing given the ready time of its predecessors.
+  \item Transition function: The transition function gives the probability distribution over next states given the current state and the action to be performed.
+\end{itemize}
+
+
 
 \begin{figure}[h]
   \centering
@@ -23,6 +24,30 @@ After node placements, routing info and configurations for programming each tile
   \caption{Diagram of the RL framework showing the role of actor and critic networks during RL training. }
   \label{fig:ppo}
 \end{figure}
+
+\subsection{State Representation}
+The state is a vector of size $TS+1$ where $TS$ is the number of tile slices in the Streaming Engine with $TS=T \times I$. $T$ and $I$ are the total number of tiles and initiation intervals per tile in the SE.
+
+\subsection{Action Representation}
+\todo[inline]{Ensure mathematical notations are consistent throughout paper}
+The action at each step is a tuple \((n,t,i)\) where $n \in N$ is the node to be placed and $t \in T$ and $i \in I$ are the tile and initiation interval at which the node $n$ is to be placed. Selecting the node to be placed is not a part of the learning problem. We place nodes in a topological order which ensures that all of the nodes predecessors have been placed before the node.
+
+\subsubsection{Masked Actions}
+In order to enure that the network only outputs valid actions, we determine a binary mask over all possible actions and set the value of logits corresponding to invalid actions to $-\infty$. 
+This in turn sets the probability of sampling invalid actions to $0$, ensuring that we never take an invalid action.
+Finally, we only calculate entropy on valid actions, so that our algorithm maximizes exploration only on valid actions.
+
+\subsection{Reward Function}
+Our goal in this work is to get optimal mappings in terms of total clock cycles taken and for this purpose, the reward that is given at each time step is the difference between the clock cycle at which the current node to be placed is ready (its ready time) and the ready time of its predecessor. $R_n$ is the reward obtained for placing node $n$ and $t_n$ is its ready time. The function $p(n)$ gives the predecessor of $n$. If the current node can't be placed because of the constraints (all values in the mask vector $m$ are zero), then a high negative reward $-\lambda$ is given.
+\[
+  R_n =
+  \begin{cases}
+    -\lambda,& m_i = 0, \, \forall \, i \in T \times I \\
+    t_n - t_{p(n)}, & \text{otherwise}
+    
+  \end{cases}
+\]
+
 \subsection{Model design}
 
 The actor and critic models architecture is shown in figure \ref{fig:model}. 
