@@ -28,6 +28,7 @@ def get_args():
     arg('--nodes', type=int, default=20,  help='number of nodes')
     arg('--debug', dest='debug', action='store_true', default=False, help='enable debug mode')
     arg('--input', type=str, default='input_graphs/vectorAdd_ir.json', help='load input json from file')
+    arg('--nnmode', type=str, default='simple_ff', help='select nn to use as actor/critic model: simple_ff, ff_gnn, ff_gnn_attention')
 
     # Constraints
     arg('--pass-timing', action='store_true', help='enable pass through timing')
@@ -77,6 +78,8 @@ def run_mapper(args, graphdef):
     logging.info('[ARGS]')
     logging.info('\n'.join(f'{k}={v}' for k, v in vars(args).items()))
 
+    print(args)
+
     # Tensorboard logging
     if not args.quiet:
         writer = SummaryWriter(comment=f'_{generate_slug(2)}')
@@ -109,7 +112,7 @@ def run_mapper(args, graphdef):
              graphdef = graphdef,
              device = device,
              state_dim = env.observation_space.n,  # Will change later to include node to be placed
-             mode='simple_ff')
+    )
 
     # Setup logging variables
     reward_buf = deque(maxlen=100)

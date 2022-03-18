@@ -194,43 +194,48 @@ class ActorCritic(nn.Module):
                  action_dim,
                  graph_feat_size,
                  gnn_in,
-                 mode = 'linear',
                  ntasks = 1):
         super(ActorCritic, self).__init__()
         self.args = args
         self.device = device
+
+        #GNN
         # self.graph_model = GraphEmb_Conv(graph_feat_size)
         self.graph_model = nn.ModuleList([
             gnn.SGConv(gnn_in, 64, 1, False, nn.ReLU),
             gnn.SGConv(64, 128, 1, False, nn.ReLU)
         ])
-        act_feat_sz = graph_feat_size + 2  # graph feature + state: [readytime, node sel]
-        self.pam_attention = PAM_ModuleM(act_feat_sz)
-        self.cam_attention = CAM_ModuleM(act_feat_sz)
-
         self.graph_avg_pool = gnn.AvgPooling()
-        if mode == 'rnn':
+
+        #Attention modules
+        self.pam_attention = PAM_ModuleM(graph_feat_size)
+        self.cam_attention = CAM_ModuleM(graph_feat_size)
+
+        if args.nnmode == 'rnn':
             self.actor = ACRNN(state_dim+graph_feat_size, emb_size, action_dim, mode='soft')
             self.critic = ACRNN(state_dim + graph_feat_size, emb_size, 1, mode='')
 
-        elif mode == 'transformer':
+        elif args.nnmode == 'transformer':
             # ntokens: 1hot device topology
             self.model = TransformerModel(ntoken=action_dim, ninp=16, nhead=4, nhid=emb_size, nlayers=2)
             self.actor = ACFF(16*state_dim+graph_feat_size, emb_size, action_dim, mode='soft')
             self.critic = ACFF(16*state_dim+graph_feat_size, emb_size, 1, mode='')
 
-        elif mode == 'super':
+        elif args.nnmode == 'super':
             self.actor = ACFF_SP(state_dim + graph_feat_size, emb_size, action_dim, ntasks=ntasks, mode='soft')
             self.critic = ACFF_SP(state_dim + graph_feat_size, emb_size, 1, ntasks=ntasks, mode='')
         
-        elif mode == 'simple_ff':
+        elif args.nnmode == 'simple_ff':
             self.actor = ACFF(state_dim+1, emb_size, action_dim, mode='')  # Don't apply softmax since we now use logits
             self.critic = ACFF(state_dim+1, emb_size, 1, mode='')  # +1 for node_id
 
+        elif args.nnmode == 'ff_gnn' or self.args.nnmode == 'ff_gnn_attention':
+            self.actor = ACFF(state_dim+1+graph_feat_size, emb_size, action_dim, mode='')  # Don't apply softmax since we now use logits
+            self.critic = ACFF(state_dim+1+graph_feat_size, emb_size, 1, mode='')  # +1 for node_id
+
         else:
-            self.actor = ACFF(act_feat_sz, emb_size, action_dim, mode='soft')  # earlier: state_dim+graph_feat_size
-            self.critic = ACFF(act_feat_sz, emb_size, 1, mode='')
-        self.mode = mode
+            self.actor = ACFF(state_dim+graph_feat_size, emb_size, action_dim, mode='soft')  # earlier: state_dim+graph_feat_size
+            self.critic = ACFF(state_dim+graph_feat_size, emb_size, 1, mode='')
 
     def reset_lstm(self):
         self.actor.reset_lstm()
@@ -267,25 +272,26 @@ class ActorCritic(nn.Module):
         state_values = self.critic(act_in)
         return action_logprobs, state_values, dist_entropy
 
-    def act(self, state, graph_info, node_id_or_ids, mask): # prev_act, pre_constr):
-        # graph = dgl.add_self_loop(graph_info)
-        # graph_feat = graph.ndata['feat']
-        # for layer in self.graph_model:
-        #     graph_feat = layer(graph, graph_feat)
-        # graph_feat = self.graph_avg_pool(graph, graph_feat)
-        # node_feat = graph_feat[node_id, :]
-
-        # emb = self.graph_model(graph_info).squeeze()
-        # print('[INFO] state shape', state.shape)
-        # print('[INFO] graph_feat shape', graph_feat.shape)
-        # act_in = torch.cat((graph_feat, state), -1)
-        # act_in = self.pam_attention(act_in.unsqueeze(0)).squeeze(0) # attention module
-        # act_in = self.cam_attention(act_in.unsqueeze(0)).squeeze(0)
-        # act_in = self.graph_avg_pool(graph, act_in)
+    def act(self, state, graph_info, node_id_or_ids, mask):
 
         state = torch.atleast_2d(state)
-        # Add node id
-        state = torch.cat((state, node_id_or_ids), dim=1)
+
+        if self.args.nnmode == 'ff_gnn' or self.args.nnmode == 'ff_gnn_attention':
+            graph = dgl.add_self_loop(graph_info)
+            graph_feat = graph.ndata['feat']
+            for layer in self.graph_model:
+                graph_feat = layer(graph, graph_feat)
+
+            graph_feat = self.graph_avg_pool(graph, graph_feat)
+
+            if self.args.nnmode == 'ff_gnn_attention':
+                graph_feat = self.pam_attention(graph_feat.unsqueeze(1)).squeeze(1) # attention module
+                # graph_feat = self.cam_attention(graph_feat.unsqueeze(0)).squeeze(0)
+
+            state = torch.cat((state, node_id_or_ids, graph_feat), dim=1)# Add node id and graph embedding
+        else:
+            state = torch.cat((state, node_id_or_ids), dim=1) # Add node id
+
         logits = self.actor(state)
         dist = CategoricalMasked(logits=logits, mask=mask)
         action = dist.sample() # flattened index of a tile slice coord
@@ -308,35 +314,30 @@ class ActorCritic(nn.Module):
         return action.detach(), action_logprob.detach()
 
     def evaluate(self, state, action, graph_info, mask, node_id_or_ids=None, taskid=None):
-        # graph = graph_info[0]
-        # graph = dgl.add_self_loop(graph)
-        # graph_feat = graph.ndata['feat']
-        # for layer in self.graph_model:
-        #     graph_feat = layer(graph, graph_feat)
+        state = torch.atleast_2d(state)
 
-        # graph_feat = self.graph_avg_pool(graph, graph_feat)
-        # emb = self.graph_model(graph_info)
+        if self.args.nnmode == 'ff_gnn' or self.args.nnmode == 'ff_gnn_attention':
+            graph = graph_info[0]
+            graph = dgl.add_self_loop(graph)
+            graph_feat = graph.ndata['feat']
+            for layer in self.graph_model:
+                graph_feat = layer(graph, graph_feat)
+            graph_feat = self.graph_avg_pool(graph, graph_feat)
+            gnn_feat = graph_feat.broadcast_to(state.shape[0], -1)
 
-        # act_in = torch.cat((graph_feat.broadcast_to(state.shape[0], -1, -1), state), dim=-1)
-        # act_in = self.pam_attention(act_in) # attention module
-        # act_in = self.cam_attention(act_in)
+            if self.args.nnmode == 'ff_gnn_attention':
+                gnn_feat = self.pam_attention(gnn_feat.unsqueeze(1)).squeeze(1) # attention module
+                # gnn_feat = self.cam_attention(gnn_feat.unsqueeze(-1)).squeeze(-1)
 
-        # act_in = act_in.reshape(-1, act_in.shape[2])
-        # act_in = self.graph_avg_pool(dgl.batch(graph_info), act_in)
-
-        if self.mode == 'super':
-            action_probs = self.actor(act_in, taskid)
+            state = torch.cat((state, node_id_or_ids, gnn_feat), dim=1)  # Add node id and graph embedding
         else:
-            state = torch.atleast_2d(state)
-            # Add node id
-            state = torch.cat((state, node_id_or_ids), dim=1)
-            logits = self.actor(state)
+            state = torch.cat((state, node_id_or_ids), dim=1) # Add node id
+
+        logits = self.actor(state)
 
         dist = CategoricalMasked(logits=logits, mask=mask)
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
-        if self.mode == 'super':
-            state_values = self.critic(act_in, taskid)
-        else:
-            state_values = self.critic(state)
+
+        state_values = self.critic(state)
         return action_logprobs, state_values, dist_entropy

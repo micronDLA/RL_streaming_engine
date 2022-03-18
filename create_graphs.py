@@ -22,6 +22,7 @@ if __name__ == "__main__":
     args.quiet = True
     args.epochs = 50000
     args.device_topology = [16, 6]
+    args.nnmode = 'ff_gnn_attention'
 
     with open("graphs.pkl", "rb") as file:
         dataset = pickle.load(file)
@@ -29,11 +30,11 @@ if __name__ == "__main__":
     results = {}
     for num_node in tqdm(dataset):
         results[num_node] = {'time':[], 'reward':[]}
-        for i in range(0, 5):
+        for i in range(0, 2):
             time, reward = run_mapper(args, dataset[num_node][i])
             results[num_node]['time'].append(time)
             results[num_node]['reward'].append(reward)
 
-        save = "results"+num_node+".pkl"
+        save = "results"+str(num_node)+".pkl"
         with open(save,"wb") as file:
            pickle.dump(results, file)

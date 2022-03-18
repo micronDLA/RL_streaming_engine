@@ -64,13 +64,14 @@ class PreInput:
         #use initial placement
         # node_coord = initial_place[:, 0:2]
 
-        feat_size = self.args.graph_feat_size // 2  # TODO: Make this compatible with tile_mem_feat
-        encoding = positional_encoding(node_coord, feat_size // 2, 1000)  # Shape: (no_of_graph_nodes, 16)
+        # feat_size = self.args.graph_feat_size // 2  # TODO: Make this compatible with tile_mem_feat
+        encoding = positional_encoding(node_coord, self.args.graph_feat_size // 2, 1000)  # Shape: (no_of_graph_nodes, 16)
         rand_enc = encoding.clone().detach().normal_(generator=generator)  # Shape: (no_of_graph_nodes, 16)
 
         # Adding random vector to encoding helps distinguish between similar
         # nodes. This works pretty well, but maybe other solutions exist?
-        node_feat = torch.cat([encoding, rand_enc], -1)  # Shape: (no_of_graph_nodes, 32)
+        # node_feat = torch.cat([encoding, rand_enc], -1)  # Shape: (no_of_graph_nodes, 32)
+        node_feat = encoding
         # Add tile memory feature
         # This is a manual hack right now since in IFFT, number of TM is 14
         # and we have one more value for no TM
