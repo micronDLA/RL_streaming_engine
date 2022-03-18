@@ -1,23 +1,22 @@
 \subsection{Reinforcement learning}
 
-We present a Reinforcement learning (RL) based framework to explore and optimize the mapping of instructions to SE in an unsupervised manner, guided by a reward function that informs the mapping algorithm about the quality of the mapping at each step. 
+We present a Reinforcement learning (RL) based framework to explore and optimize the mapping of instructions for a given computation graph to the SE, guided by a reward function that informs the mapping algorithm about the quality of the produced mappings at each step. 
 
 \subsection{Overview}
-Proximal Policy Optimization (PPO) is an RL method widely used for continuous and discrete action problems. It trains actor and critic models (represented as a neural networks). 
-The actor model outputs actions (node placements) given an observation of the current state of the SE. The critic model is trained to predict the expected reward given an action in the current state. 
-Our SE mapping task is formulated as a discrete action problem where samples of SE state, actions performed, and rewards obtained at each time step are collected after executing the actions provided by the actor model in simulation. These samples are stored in a buffer that is used as data to train the models. 
+Proximal Policy Optimization (PPO) is an RL method widely used for continuous and discrete action problems. It trains actor and critic models (represented as neural networks).
+The actor model is trained to produce actions (node placements in our case) from sample states obtained during simulation and the critic model is trained to match the sampled rewards from the actions produced by the actor using a surrogate loss function. This sample and train process is repeated over various iterations. In this manner, the problem search space is explored using the reward function as a heuristic.
+Our SE mapping task is formulated as a discrete action problem where the goal is to place one node at each time step. Samples of SE state, actions performed and rewards obtained at each time step are collected after executing the actions provided by the actor model in simulation. These samples are stored in a buffer and are used as data to train the models.
+Figure \ref{fig:ppo} shows the overall RL framework. 
+\textcolor{red}{After node placements, routing info and configurations for programming each tile are saved for final output.}
 The key components of our RL method are as follows:
 \begin{itemize}
   \item States: The state is represented by a concatenation of an array of features of placed nodes, a selected node to be placed next and an embedding of the whole computation graph. 
   \item Action: The action consists of the node to be placed along with the tile and spoke location it is to be placed at.
-  \item Reward function: The reward obtained is based on the number of cycles taken to execute all nodes.
+  \item Reward function: The reward obtained is based on the number of clock cycles taken for a node to finish executing given the ready time of its predecessors.
   \item Transition function: The transition function gives the probability distribution over next states given the current state and the action to be performed.
 \end{itemize}
 
 
- The actor model is trained to produce actions from sample states obtained during simulation and the critic model is trained to match the sampled rewards from the actions produced by the actor using a surrogate loss function. This sample and train process is repeated over various iterations. In this manner, the problem search space is explored using the reward function as a heuristic.
-Figure \ref{fig:ppo} shows the overall RL framework. 
-\textcolor{red}{After node placements, routing info and configurations for programming each tile are saved for final output.}
 
 \begin{figure}[h]
   \centering
@@ -48,11 +47,6 @@ Our goal in this work is to get optimal mappings in terms of total clock cycles 
     
   \end{cases}
 \]
-
-
-
-
-
 
 \subsection{Model design}
 
