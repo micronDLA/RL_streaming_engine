@@ -1,26 +1,70 @@
-The implemented RL approach was able to successfully map the computation graphs for vector addition and multiply-add operations. 
-Fig. 3 shows the increase in the value of the rewards obtained as the number of training iterations increase. 
-As the reward increases, we obtain mappings with lesser total execution times. 
-
-This method also presents an advantage compared to baselines random search and evolutionary search (ES) methods which do not learn. 
-The RL approach can also learn from a collection of computation graphs and reuse the learning for mapping previously unseen computation graphs. 
-The other methods on the other hand will have to perform a new search and start from scratch for every new computation graph. 
-PPO with graph embeddings showed that we can obtain more optimized placements by finding higher rewards than other RL approaches. 
+The implemented RL approach was able to successfully mapped the computation graphs for different programs such as 
+vector add, distance function and IFFT. The IFFT graph is widely used several algorithms and its parsed computation graph is shown in figre \ref{fig:ifft_graph} 
+The SE device configuration used in following experiments 16 tiles and limit of 6 Initiation Interval (II). 
+Other SE device configurations could have been used.
 
 \begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{fig/ifft_rewards.png}
-    \caption{Mean reward during training on ifft graph}
-    \label{fig:ifft_rewards}
-  \end{figure}
+  \centering
+  \includegraphics[scale=0.4]{fig/ifft_graph.pdf}
+  \caption{IFFT application computation graph.}
+  \label{fig:nodes_graph}
+\end{figure}
 
-  \begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{fig/ifft_nodes_placed.png}
-    \caption{Number of ifft nodes placed per episode}
-    \label{fig:ifft_rewards}
-  \end{figure}
 
-\subsection{Experimental Setup}
+The RL framework was also benchmarked against a collection of random directed graphs. We compare a 
+PPO baseline composed of 3 MLPs stacked against an actor model with the proposed Global Graph Attention (GGA) module.
+We evaluate these models on varying computation graphs complexities by increasing number of nodes in the task. 
+In figure \ref{fig:nodes_graph}, we observe that the RL approach finds mappings for a variety of computation graphs, and GGA
+improves the best mapping found for the same number of epochs. In the figure \ref{fig:nodes_graph}, the epochs were limited to 
+50000 for both models. The cycle count is number of SE execution steps taken to process all nodes for a mapping, which 
+is calculated from the simulated SE environment.
 
-\subsection{Ablation study}
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.4]{fig/ifft_graph.pdf}
+  \caption{Cycle count for running all nodes in the best mapping given by RL model over 50000 epochs. 
+  PPO baseline MLP model and GGA model were evaluated with computation graphs with increasing number of nodes. }
+  \label{fig:nodes_graph}
+\end{figure}
+
+
+\subsection{Global Graph Attention (GGA)}
+
+In figure \ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the IFFT application. 
+The node and states changes for each iteration over all nodes in the computation graph. The GGA module provides 
+a representation of the entire graph while placing each node.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{fig/plot_gnn_atten_ppo.pdf}
+  \caption{Effect of using Global Graph Attention (GGA) module for mapping the IFFT application on device with 16 tiles. 
+  GGA module provides better sample efficiency and higher reward after training. }
+  \label{fig:ifft_rewards}
+\end{figure}
+
+
+\subsection{Node Iteration Order}
+
+The iteration order that the nodes are fed to the actor model into the RL framework is important for when placing 
+nodes in a sequence. In figure \ref{fig:ordered_placement}, we observe that iterating nodes in topological 
+ordering results in higher reward and eases the node placement task. By placing the leaf nodes first, the model needs
+to predict which tiles the predecessor nodes will be placed. This condition imposes unnecessary difficulty when training the model.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{fig/plot_ordered.pdf}
+  \caption{Iterating nodes in topological ordering results in higher reward and eases the placement task. 
+  In blue, no order was used to place nodes. In red, nodes were iterated in topological order. 
+  Task of placing 15 nodes computation graph in a device with 16 tiles.}
+  \label{fig:ordered_placement}
+\end{figure}
+
+
+\subsection{Output Masking}
+
+
+
+
+% sequence versus one by one
+
+
