@@ -24,7 +24,7 @@ In both of these works, the aim is similar to us i.e. to reduce the manual labor
 
 Our input is a combination of computation graph, SE device state and the node to be placed at a particular time step. 
 Instead of only feeding our actor model with embedding from graph neural network, we combine the graph neural network embedding with information from the SE device and a representation of node that is going to be placed. 
-\todo[More explanation needed]{A configuration is also added to guide the model to optimize different goals.}  
+A configuration is also added to guide the model to optimize different goals.
 
 A key difference between our work and \cite{zhou2019gdp} is that our strategy is to place one node at a time, instead of generating a whole assignment per iteration. 
 This allows our model to break down the placement problem into sub-problems and also allows the framework to start from a different starting configuration. For example, if some nodes are already placed by some other algorithm such as bruthe force, the RL mapper can place the remaining nodes. 
