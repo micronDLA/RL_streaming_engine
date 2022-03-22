@@ -16,34 +16,21 @@ The proposed method partitions the SDF and the CGRA, and maps the kernel instanc
 
 
 \subsection{Reinforcement Learning}
-<<<<<<< HEAD
 Reinforcement Learning (RL) is widely used to tackle unsupervised optimization problems.
 It has been applied in chip placement \cite{mirhoseini2020chip}, workload distribution \cite{Mirhoseini_placementRNN, addanki2019placeto, zhou2019gdp}, compiler optimizations \cite{Zhou_compileGNN} and other decision based tasks \cite{kormushev2013reinforcement, ZophL16_NASRL}. 
 Alternative optimization algorithms includes evolutionary strategies \cite{Zhichao_ESNAS} and bayesian optimization \cite{shi2020learned}. 
-An advantage of RL approach is learning from a collection of programs and reuse previous data for new programs by training a Deep Learning model \cite{zhou2019gdp}.
-
-Recurrent neural networks (RNN) \cite{hochreiter1996lstm} were popular approach to process sequence of nodes from a graph representation. 
-Graph neural networks (GNN) \cite{gori2005new} showed success in processing structured data without preprocessing required for RNNs.
-GNNs are widely used task involves processing graphs \cite{Zhou_compileGNN, zhou2019gdp}. 
-In addition, attention modules are used to supplement the embeddings created by GNNs to further improve results \cite{addanki2019placeto}.
-
-In \cite{mirhoseini2020chip}, a RL method for chip placement is presented. 
-A graph neural network to create embedding from a netlist graph and passed through an actor model via PPO. 
-The produced output is the whole chip placement. 
-Their actor is composed of deconvolution layers which are more computationally intensive. 
-\cite{zhou2019gdp} presents a combination of graph neural network and transformer-XL model to place operations on devices. 
-=======
-Reinforcement Learning (RL) is widely used to tackle unsupervised optimization problems. It has been applied in chip placement \cite{mirhoseini2020chip}, 
-workload distribution \cite{Mirhoseini_placementRNN, addanki2019placeto, zhou2019gdp}, compiler optimizations \cite{Zhou_compileGNN} and 
-other decision based tasks \cite{kormushev2013reinforcement, ZophL16_NASRL}. Alternative optimization algorithms includes 
-evolutionary strategies \cite{Zhichao_ESNAS} and bayesian optimization \cite{shi2020learned}. An advantage of RL approach is that it is able to learn from a collection of programs and reuse previous data for new programs by training a Deep Learning model \cite{zhou2019gdp}.
+An advantage of RL approach is that it is able to learn from a collection of programs and reuse previous data for new programs by training a Deep Learning model \cite{zhou2019gdp}.
 
 Recurrent neural networks (RNN) \cite{hochreiter1996lstm} were a popular approach to process sequence of nodes from a graph representation. 
 Graph neural networks (GNN) \cite{gori2005new} have shown success in processing structured data without requiring the preprocessing required for RNNs.
 GNNs are widely used for tasks involving graph processing \cite{Zhou_compileGNN, zhou2019gdp}. 
 In addition, attention modules have sometimes been used in literature to supplement the embeddings created by GNNs to further improve results \cite{addanki2019placeto}.
 
-In \cite{mirhoseini2020chip}, a RL based method for chip placement is presented. A graph neural network is used to create embeddings from a netlist graph and then passed through an actor model. The training is done using the PPO approach. Each component from the netlist is placed at a step until all components required for the chip have been placed. The actor network in this method is composed of deconvolution layers which are more computationally intensive than our approach. 
+In \cite{mirhoseini2020chip}, a RL based method for chip placement is presented.
+A graph neural network is used to create embeddings from a netlist graph and then passed through an actor model.
+The training is done using the PPO approach.
+Each component from the netlist is placed at a step until all components required for the chip have been placed.
+The actor network in this method is composed of deconvolution layers which are more computationally intensive than our approach. 
 \cite{zhou2019gdp} presents a combination of graph neural network and transformer-XL model to place operations in dataflow graphs on suitable devices.
 In both of these works, the aim is similar to us i.e. to reduce the manual labor and domain expertise required to produce mappings.
 
