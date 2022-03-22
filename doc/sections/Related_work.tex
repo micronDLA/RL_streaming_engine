@@ -46,7 +46,6 @@ In addition, attention modules have sometimes been used in literature to supplem
 In \cite{mirhoseini2020chip}, a RL based method for chip placement is presented. A graph neural network is used to create embeddings from a netlist graph and then passed through an actor model. The training is done using the PPO approach. Each component from the netlist is placed at a step until all components required for the chip have been placed. The actor network in this method is composed of deconvolution layers which are more computationally intensive than our approach. 
 \cite{zhou2019gdp} presents a combination of graph neural network and transformer-XL model to place operations in dataflow graphs on suitable devices.
 In both of these works, the aim is similar to us i.e. to reduce the manual labor and domain expertise required to produce mappings.
->>>>>>> cfe15bb9f24d6e88129fd30562e8e790de354695
 
 Our input is a combination of computation graph, SE device state and the node to be placed at a particular time step. 
 Instead of only feeding our actor model with embedding from graph neural network, we combine the graph neural network embedding with information from the SE device and a representation of node that is going to be placed. 
