@@ -49,7 +49,7 @@ An instruction can include both a multiplication and an addition, as shown in Eq
 Hence, instruction 6 produces $\Delta z^2$ on the output on MS unit followed which is added to $(\Delta x^2 + \Delta y^2)$ at the AL unit.
 
 
-Mapping the instructions from the computation graph of a program onto the compute elements of the SE while adhering to architectural constraints is an NP-complete problem with a vast and sparse search space. 
+Mapping the instructions from the computation graph of a program onto the compute elements of the SE while adhering to architectural constraints is an NP-complete problem with a vast and sparse search space \cite{10.1007/3-540-69346-7_30}. 
 Constraints related to tile memory and synchronous dataflow, use of delays to match timing requirements and more are necessary to ensure correct execution. 
 Creating the mappings manually or using brute force algorithms takes time and lots of effort. 
 This process also adds assumptions that reduce the search space, trading off optimization possibilities.  
