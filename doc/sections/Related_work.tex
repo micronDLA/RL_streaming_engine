@@ -9,11 +9,15 @@ Research compilers targeting CGRAs are available (for example, \cite{adriaansen2
 Industry-strength compilers such as Clang/LLVM do not provide official support for CGRA-like architectures.
 
 ChordMap, a mapper that maps synchronous data-flows to a CGRA was introduced in \cite{li_chordmap_2022}.
-ChordMap is based on modulo-scheduling to provides a spatio-temporal mapping.
-The mapper targets a classic $4\times4$ CGRA.
-The proposed method partitions the SDF and the CGRA, and maps the kernel instances within each partition ina spatio-temporal fashion.
+It is is based on modulo-scheduling to provides a spatio-temporal mapping.
+ChordMap creates a schedule and partitions the SDF and CGRA, then performs spatio-temporal mapping of every kernel instance in each partition.
+It uses and detects three levels of parallelism: application-level, kernel instances-level, and instruction-level parallelism.
+Parallel execution and high throughput are enabled by by time slicing the CGRA resources.
 
-
+In CGRA-ME\cite{chin_cgra-me_2017}, a CGRA device model is built using Module Routing Resource Graph (MRRG) \cite{mrrg}. 
+The parser converts an optimized C-language benchmark into a DFG using LLVM compiler framework. 
+Each operation in the DFG is mapped to a functional unit in the MMRG using simulated annealing. 
+The routing between inputs and outputs of each operation is selected using PathFinder-like algorithm \cite{pathfinder}.
 
 \subsection{Reinforcement Learning}
 Reinforcement Learning (RL) is widely used to tackle unsupervised optimization problems.

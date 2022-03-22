@@ -1,23 +1,24 @@
-The SE is a coarse-grained fabric composed of compute tiles, which are interconnected with an SF, allowing data to traverse from one tile to another without queuing.
+The SE is a coarse-grained fabric composed of compute elements or tiles, which are interconnected with an SF, allowing data to traverse from one tile to another without queuing.
 This SF allows many tiles to be pipelined together to produce a continuous data flow through SIMD arithmetic operations.
 The tiles are also interconnected with an AF that allows synchronous domains of compute to be bridged by asynchronous operations.
-These asynchronous operations include initiating synchronous domain operations, transferring data from one synchronous domain to another, accessing system memory (read and write), and performing branching and looping constructs.
-Together, the SF nad AF allow the tiles to efficiently execute high level language constructs.
+These asynchronous operations include initiating SDF operations, transferring data from one SDF to another, accessing system memory (read and write), and performing branching and looping constructs.
 
 \begin{figure}
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \includegraphics[trim=118 310 180 110, clip, width=0.7\linewidth]{fig/se_device.pdf}
+    \caption{Diagram of the SE device}
+    \label{fig:sub-se}
+    \end{subfigure}
+  \begin{subfigure}{.5\textwidth}
   \centering
-  \includegraphics[trim=10 100 8 50, clip, width=\linewidth]{fig/se_device_tile.pdf}
+  \includegraphics[trim=275 100 8 50, clip, width=0.5\linewidth]{fig/se_device_tile.pdf}
+  \caption{Detailed diagram of a tile in the SE device.
+  Note the two tile memory units, the MS and AL units, and the four SF inputs and four SF outputs}
+  \label{fig:sub-tile}
+  \end{subfigure}
   \caption{
-    Diagram of the Streaming Engine to the right and diagram of a tile to the left.
-    In the SE device diagram to the left, the solid black lines connecting the tiles, represent an SF connection with one clock cycle latency.
-    The dotted black lines connecting the tiles, represent an SF connection with two clock cycles latency.
-    The orange solid lines represent AF connections to the four MIs and the DI.
-    The green solid lines represent connections to the Network-On-Chip (NOC) interfaces.
-    The MIs and DI communicate with memory and the Command Manager using these NOC interfaces.
-    In the Tile diagram to the right, SF Out Up1 and SF Out Down1 represent outputs from the tile to the tiles are one-hop above and below the tile respectively.
-    SF Out U2 and SF Out Down2 represent outputs from the tile to the tiles are two-hops above and below the tile respectively.
-    SF In Up1 and SF In Down1 represent inputs from the tile to the tiles are one-hop above and below the tile respectively.
-    SF In U2 and SF In Down2 represent inputs from the tile to the tiles are two-hops above and below the tile respectively.
+    Layout of the SE device is shown in Fig. \ref{fig:sub-se}, while Fig. \ref{fig:sub-tile} details an SE tile.
   }
   \label{fig:se_diagram}
 \end{figure}
@@ -32,20 +33,20 @@ Information is transferred over the AF with a non-deterministic latency.
 
 \subsection{Synchronous Fabric Interface}
 All tiles that participate in a synchronous domain act as a single pipelined data path.
-The Base Tile (BT) is define as the first tile of a synchronous domain initiates a thread of work through the pipelined tiles.
+The Base Tile (BT) is defined as the first tile of a synchronous domain initiates a thread of work through the pipelined tiles.
 The BT is responsible for starting work on a predefined cadence referred to as the Spoke Count or Initiation Interval (II).
-E.g. if $II = 3$ as in the example in Fig. \ref{fig:se_example}, then the BT can initiate work every third clock.
-The synchronous fabric provides both data and control information.
+E.g. For $II = 3$, as in the example in Fig. \ref{fig:se_example}, then the BT can initiate work every third clock cycle.
+%The synchronous fabric provides both data and control information.
 
 \subsection{Asynchronous Fabric interface}
-The Asynchronous Fabric is used to perform operations that occur asynchronous to a synchronous domain.
-Each tile contains an interface to the Asynchronous Fabric.
-Asynchronous Fabric messages can be classified as either data messages or control.
+The Asynchronous Fabric is used to perform operations that occur asynchronously to a synchronous domain.
+Each tile contains an interface to the AF.
+AF messages can be classified as either data messages or control.
 Data messages contain a SIMD width data value that is written to one of the two tile memories.
 Control messages are for controlling thread creation, freeing resources, or issuing external memory requests.
 
 \subsection{Tile Base}
-The tile base contains data structures that are used to initiate a synchronous flow.
+The tile base contains data structures that are used to initiate an SDF.
 %It receives messages from the SF interface to configure state and set up the necessary conditions to start a synchronous flow.
 %It initiates a flow into the SF when the required conditions are met.
 %It also contains control logic to manage iterations of loops.
@@ -56,8 +57,7 @@ The II allows the base logic to launch new threads or continue previously launch
 Each tile contains two memories, each are the width of the data path (512-bits), and the depth will be in the range of 512 to 1024 elements.
 The tile memories are used to store data required to support data path operations.
 The stored data can be constants loaded as part of the program's arguments, or variables calculated as part of the data flow.
-The tile memory can be written from the AF as either a data transfer from another synchronous domain, or the result of a load operation
-initiated by another synchronous domain.
+The tile memory can be written from the AF as either a data transfer from another SDF, or the result of a load operation initiated by another SDF.
 %The tile memory is only read via synchronous data path instruction execution.
 
 \subsection{Instructions RAM}
@@ -65,26 +65,30 @@ Each tile has an instruction RAM has multiple entries to allow a tile to be time
 %Additionally, each time slice could conditionally perform different instructions depending on previous tile time slice data dependent conditional operations. 
 
 \subsection{Spoke RAM}
-The Spoke RAM entries are used to configure the tile at each time slice.
-The number of active entries spoke RAM in a tile is equal to the II of that tile.
-Some of the relevant configurations per an entry are: 
+The Spoke RAM has multiple entries to reconfigure the tile at each time slice (clock cycle).
+The number of active spoke RAM slots in a tile is equal to the II of that tile.
+A couple of relevant configurations are: 
 
 \begin{itemize}
   \item Which of the four SF inputs, feedback from the output of the tile's MS/AL unit, or the tile base is the master input.
-  \item Which of the four SF outputs is used to send the output of the MS/AL unit to another tile using SF.
+  \item Which of the four SF outputs are used to send the output of the MS/AL unit to other tile or tiles using SF.
 \end{itemize}
 
-The Spoke RAM iterates over its entries comes using a counter that modulo counts from zero to II minus one and back to zero.
+The Spoke RAM iterates over its slots using a counter that modulo counts from zero to II minus one and back to zero.
 %Using different spoke counts on different tiles can be a powerful mechanism that allows the number of slices required by an inner loop to determine the performance of an application.
-The proposed RL mapper provides the II and the configuration of each spoke RAM entry for each tile, as well as which entry from the instruction RAM can be active on that spoke entry.
+The proposed RL mapper provides the II and the configuration of each spoke RAM slot, including which tile instruction will be active, on each utilized tile.
 
-
-A program is broken down into a set of one or more synchronous data-flows.
-A synchronous data-flows is represented as a computation graph, where every instruction a node.
+\subsection{Programming the SE}
+The SE programmer breaks down the desired application into a set of one or more SDFs.
+An SDF is marked by instructions sending and receiving data in deterministic latency.
+All operations with nondeterministic latencies, e.g. load/store requests to the MI, mark either the beginning and/or ending of an SDF.
+We have a written an in-house parser that enables the programmer to express the program in terms of SDFs using our defined assembly language.
+The parser produces an Intermediate Representation (IR) that is used as an input to our proposed mapper.
+The IR represents each SDF as a DFG, where every instruction a node.
 Each node represents an instruction that needs to be placed onto a SE tile at he proper time-slice such that when all nodes are placed, the program executes correctly. 
 In Fig. \ref{fig:se_example}, the edges of the graph represent the data dependencies of the instructions. 
 The nodes also contain information about the variables that need to be present in tile memories during instruction execution. 
-The instruction intended to execute at a specific time-slice will only execute when the master input configured in the corresponding Spoke RAM entry receives a valid control message.
+The instruction intended to execute at a specific time-slice (clock cycle) will only execute when the master input configured in the corresponding Spoke RAM entry receives a valid control message.
 %The tiles can pass data to their neighbors and each tile can be configured with a different number of initiation intervals (II). 
 %Each II can be allocated to run a single instruction during program execution. 
 %After one cycle, the tiles will move on to the next II, with execution returning to first II after the last. 

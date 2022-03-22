@@ -5,9 +5,9 @@ NDC incorporates heterogenous compute elements in the memory/storage subsystem t
 One of these compute elements is the Streaming Engine (SE).
 
 The SE is a Coarse-Grained Reconfigurable Array (CGRA) that is composed of interconnected compute tiles.  
-The compute tiles are interconnected with both a Synchronous Fabric (SF) and an Asynchronous Fabric (AF) as shown in Fig. \ref{fig:se_diagram}.
-It also interconnects tile memory, multiplexers, and Single Instruction Multiple Data (SIMD) units within each tile. 
-Tiles can be pipelined through SF to form a synchronous data flow (SDF) through Multiply/Shift (MS) unit and an Arithmetic/Logic (AL) SIMD units. 
+The compute tiles are interconnected with both a Synchronous Fabric (SF) and an Asynchronous Fabric (AF) as shown in Fig. \ref{fig:sub-se}.
+It also interconnects tile memory, multiplexers, and Single Instruction Multiple Data (SIMD) units within each tile as shown in Fig. \ref{fig:sub-tile}. 
+Tiles can be pipelined through SF to form a Synchronous Data Flow (SDF) through Multiply/Shift (MS) unit and an Arithmetic/Logic (AL) SIMD units. 
 The output of the MS unit is connected the one of the two inputs onf the AL unit.
 AF connects a tile with all other tiles, dispatch interface (DI), and memory interfaces (MIs).
 It bridges SDFs through asynchronous operations, which include SDF initiation, asynchronous data transfer from one SDF to another, system memory accesses, and branching and looping constructs. 
@@ -18,12 +18,11 @@ Simulation results of hand-crafted SE kernels have shown orders-of-magnitude bet
   \centering
   \includegraphics[trim=70 180 70 25, clip, width=\linewidth]{fig/SE_example.pdf}
   \caption{
-    Example showing the high-level steps of mapping of distance calculation using the SE device.
-    The solid lines connecting the tiles, represent an SF connection with one clock cycle latency.
-    The dotted lines connecting the tiles, represent an SF connection with two clock cycles latency.
-    The pipeline latency for an instruction is three clock cycles.
-    For example, instruction \#0 is scheduled at slot \#0 of tile \#3 and its output is sent to instruction \#3.
-    The result of instruction \#0 is ready after three clock cycles, in addition to two clock cycles to move the result to tile \#1, instruction \#3 is correctly scheduled on on slot \#1 of tile \#1.
+    Example showing a mapping of a distance calculation function onto the SE device.
+    The instruction execution latency is three clock cycles.
+    The solid and dotted lines connecting the tiles, have one and two clock cycles transfer latency respectively.
+    E.g., instruction \#0 is scheduled at (tile \#3, slot \#0) and its output is sent to instruction \#3.
+    Instruction \#0 output is ready after three clock cycles, in addition to two clock cycles to move data to tile \#1, instruction \#3 gets scheduled on (tile \#1, slot \#1).
   }
   \label{fig:se_example}
 \end{figure}
@@ -37,21 +36,14 @@ The program in this example is a distance calculation function shown in Eq. \ref
 \end{equation}
 
 To keep this example simple, we ignore the square root part of the equation.
-The program is represented as a Directed Acyclic Graph (DAG) as shown in Fig. \ref{fig:se_example}.
+The program is represented as a Data-Flow Graph (DFG) as shown in Fig. \ref{fig:se_example}.
 Each operation in Eq. \ref{eq:dist} is an instruction that is mapped to a slot at a tile on the SE.
-An instruction can include both a multiplication and an addition, as shown in Eq. \ref{eq:msal}.
-
-\begin{equation}
-    \label{eq:msal}
-    MS/AL_{output} = (MS_{in1} \times MS_{in2}) + AL_{in2} 
-\end{equation}
-
-Hence, instruction 6 produces $\Delta z^2$ on the output on MS unit followed which is added to $(\Delta x^2 + \Delta y^2)$ at the AL unit.
+Since the output of the MS unit is connected to the input of AL unit, instruction 6 produces $\Delta z^2$ on the output on MS unit and adds it to $(\Delta x^2 + \Delta y^2)$ at the AL unit.
 
 
-Mapping the instructions from the computation graph of a program onto the compute elements of the SE while adhering to architectural constraints is an NP-complete problem with a vast and sparse search space \cite{10.1007/3-540-69346-7_30}. 
-Constraints related to tile memory and synchronous dataflow, use of delays to match timing requirements and more are necessary to ensure correct execution. 
-Creating the mappings manually or using brute force algorithms takes time and lots of effort. 
+Mapping the instructions from a program's DFG onto the compute elements of the SE while adhering to architectural constraints is an NP-hard problem with a vast and sparse search space \cite{10.1007/3-540-69346-7_30}. 
+Constraints related to tile memory, synchronous dataflow, and the use of delays to match timing requirements \dots etc. are necessary to ensure correct execution. 
+Creating the mappings manually or using brute force algorithms takes time and lots of effort even for the simplest of programs. 
 This process also adds assumptions that reduce the search space, trading off optimization possibilities.  
 
 In this work we propose a Deep Reinforcement Learning (RL) method to explore and find optimal mappings in an unsupervised manner. 
@@ -61,7 +53,7 @@ The trained model was able to create valid mappings for the SE by learning about
 
 The key contributions of this paper are as follows:
 \begin{enumerate}
-    \item A Reinforcement Learning methodology that is able to map the instructions for a given compute graph to the processing elements in our Streaming Engine CGRA and has the potential to be reused across computation graphs.
+    \item A Reinforcement Learning methodology that is able to map the instructions for a given DFG to the processing elements in the SE and has the potential to be reused across computation graphs.
     \item An analysis of different factors that impacts the quality of mappings obtained.
 \end{enumerate}
 
@@ -70,7 +62,7 @@ This will also assist other tools or programmers in SE mapping creation by provi
 The RL mapper performs unsupervised learning and optimization allowing it to search a wide and sparse search space. 
 Each operation is an instruction that is mapped to a specific slot on a tile.
 This line of research is inspired by recent work that used RL for chip placement \cite{mirhoseini2020chip}.
-Our problem requirement of mapping nodes of a computation graph to available compute elements is similar to the problem of placing nodes of a chip netlist on a chip canvas. 
+Our problem requirement of mapping nodes of a DFG to available compute elements is similar to the problem of placing nodes of a chip netlist on a chip canvas. 
 
 The rest of this paper is organized as follows: Section \ref{sec:background} provides the necessary background on the SE device architecture.
 Section \ref{sec:rlmapper} presents the proposed RL approach for mapping applications to the SE.
