@@ -1,5 +1,5 @@
-The implemented RL approach was able to successfully mapped the computation graphs for different programs such as 
-vector add, distance function and IFFT. The IFFT graph is widely used several algorithms and its parsed computation graph is shown in figre \ref{fig:ifft_graph} 
+The implemented RL approach was able to successfully mapped the computation graphs for different programs such as vector add, distance function and IFFT. 
+The IFFT graph is widely used several algorithms and its parsed computation graph is shown in figre \ref{fig:ifft_graph} 
 The SE device configuration used in following experiments 16 tiles and limit of 6 Initiation Interval (II). 
 Other SE device configurations could have been used.
 
@@ -7,7 +7,7 @@ Other SE device configurations could have been used.
   \centering
   \includegraphics[scale=0.4]{fig/ifft_graph.pdf}
   \caption{IFFT application computation graph.}
-  \label{fig:nodes_graph}
+  \label{fig:ifft_graph}
 \end{figure}
 
 
@@ -25,7 +25,7 @@ The cycle count is number of SE execution steps taken to process all nodes for a
   \includegraphics[width=\linewidth]{fig/nodes_graph.pdf}
   \caption{Cycle count for running all nodes in the best mapping given by RL model over 50000 epochs. 
   PPO baseline MLP model and GGA model were evaluated with computation graphs with increasing number of nodes. 
-  A larger device configuration with 64 tiles was used for experiements with computation graphs with 40 and 50 nodes. }
+  A larger device configuration with 64 tiles was used for experiments with computation graphs with 40 and 50 nodes. }
   \label{fig:nodes_graph}
 \end{figure}
 
