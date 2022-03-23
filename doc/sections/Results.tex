@@ -14,16 +14,18 @@ Other SE device configurations could have been used.
 The RL framework was also benchmarked against a collection of random directed graphs. We compare a 
 PPO baseline composed of 3 MLPs stacked against an actor model with the proposed Global Graph Attention (GGA) module.
 We evaluate these models on varying computation graphs complexities by increasing number of nodes in the task. 
+We also tested on a larger device with 64 tiles.
 In figure \ref{fig:nodes_graph}, we observe that the RL approach finds mappings for a variety of computation graphs, and GGA
-improves the best mapping found for the same number of epochs. In the figure \ref{fig:nodes_graph}, the epochs were limited to 
-50000 for both models. The cycle count is number of SE execution steps taken to process all nodes for a mapping, which 
-is calculated from the simulated SE environment.
+improves the best schedule found for the same number of epochs. The GGA also finds improved schedule for a larger device configuration. 
+In the figure \ref{fig:nodes_graph}, the epochs were limited to 50000 for both models. 
+The cycle count is number of SE execution steps taken to process all nodes for a mapping, which is calculated from the simulated SE environment. 
 
 \begin{figure}[h]
   \centering
-  \includegraphics[scale=0.4]{fig/ifft_graph.pdf}
+  \includegraphics[width=\linewidth]{fig/nodes_graph.pdf}
   \caption{Cycle count for running all nodes in the best mapping given by RL model over 50000 epochs. 
-  PPO baseline MLP model and GGA model were evaluated with computation graphs with increasing number of nodes. }
+  PPO baseline MLP model and GGA model were evaluated with computation graphs with increasing number of nodes. 
+  A larger device configuration with 64 tiles was used for experiements with computation graphs with 40 and 50 nodes. }
   \label{fig:nodes_graph}
 \end{figure}
 
