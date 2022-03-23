@@ -40,6 +40,8 @@ A graph neural network is used to create embeddings from a netlist graph and the
 The training is done using the PPO approach.
 Each component from the netlist is placed at a step until all components required for the chip have been placed.
 The actor network in this method is composed of deconvolution layers which are more computationally intensive than our approach. 
+\cite{wu_core_2020} proposes an RL based method that uses a deep deterministic policy gradient (DDPG) method for multi-chip many-core systems.
+\cite{khailany_accelerating_2020} presents a review of various Machine Learning approaches including Reinforcement Learning for chip design.
 \cite{zhou2019gdp} presents a combination of graph neural network and transformer-XL model to place operations in dataflow graphs on suitable devices.
 In both of these works, the aim is similar to us i.e. to reduce the manual labor and domain expertise required to produce mappings.
 
@@ -50,6 +52,4 @@ A configuration is also added to guide the model to optimize different goals.
 A key difference between our work and \cite{zhou2019gdp} is that our strategy is to place one node at a time, instead of generating a whole assignment per iteration. 
 This allows our model to break down the placement problem into sub-problems and also allows the framework to start from a different starting configuration. 
 For example, if some nodes are already placed by some other algorithm such as bruthe force, the RL mapper can place the remaining nodes. 
-This approach also allows us to sample more data during the sampling phase which consists of partial assignments instead of only saving one sample for an entire sequence of nodes.  
-
-cite \cite{khailany_accelerating_2020} and \cite{wu_core_2020} \todo{cite}
+This approach also allows us to sample more data during the sampling phase which consists of partial assignments instead of only saving one sample for an entire sequence of nodes.
