@@ -1,23 +1,28 @@
 \subsection{CGRA}
 CGRAs are a heavily researched architectural paradigm with a long history and can provide an excellent balance of high-performance compute, memory bandwidth, and area and energy efficiency \cite{theodoridis2007survey}.
 Due to such advantages, CGRAs are currently enjoying a resurgence in interest—not just in the research realm \cite{prabhakar2018plasticine}, but also commercially \cite{morgan2018intel, nicol2017coarse, vissers2019versal}.
-SE differentiates from others as the first CGRA in a near-data computing architecture.
-SE also provides asynchronous messaging as a first-class programming construct along with synchronous data flow. 
-
-A key challenge with SE applications is efficient compilation of high-level language code (for example, in C/C++) to executable program. 
 Research compilers targeting CGRAs are available (for example, \cite{adriaansen2016code, chin2017cgra, mei2003exploiting, prabhakar2018plasticine}) but they are limited in quality and code coverage. 
 Industry-strength compilers such as Clang/LLVM do not provide official support for CGRA-like architectures.
+For further information on the various taxonomy of CGRAs architectures and design, we refer the reader to \cite{liu_survey_2019, tehre_survey_2012}.
 
-ChordMap, a mapper that maps synchronous data-flows to a CGRA was introduced in \cite{li_chordmap_2022}.
-It is is based on modulo-scheduling to provides a spatio-temporal mapping.
+Mapping various programing constructs onto CGRAs is an extensive research topic.
+The  mapping of large and irregular loops onto CGRAs is analyzed in \cite{zhao_towards_2020} which proposed paying more attention to temporal mapping than spatial mapping. 
+The proposed temporal mapping, utilizes a buffer allocating heuristic with constraint on computations and interconnection resources. 
+The proposed spatial mapping uses a backtracking and reordering mechanism with greedy algorithm with the goal of minimizing II.
+A method for mapping SDFs to a CGRA is introduced in \cite{li_chordmap_2022}.
+The proposed method relies on modulo-scheduling to provides a spatio-temporal mapping.
 ChordMap creates a schedule and partitions the SDF and CGRA, then performs spatio-temporal mapping of every kernel instance in each partition.
-It uses and detects three levels of parallelism: application-level, kernel instances-level, and instruction-level parallelism.
-Parallel execution and high throughput are enabled by by time slicing the CGRA resources.
-
+ChordMap operates on three levels of parallelism: application-level, kernel instances-level, and instruction-level parallelism.
+%Parallel execution and high throughput are enabled by by time slicing the CGRA resources.
 In CGRA-ME\cite{chin_cgra-me_2017}, a CGRA device model is built using Module Routing Resource Graph (MRRG) \cite{mrrg}. 
 The parser converts an optimized C-language benchmark into a DFG using LLVM compiler framework. 
 Each operation in the DFG is mapped to a functional unit in the MMRG using simulated annealing. 
 The routing between inputs and outputs of each operation is selected using PathFinder-like algorithm \cite{pathfinder}.
+
+SE differentiates from others as the first CGRA in a near-data computing architecture.
+SE also provides asynchronous messaging as a first-class programming construct along with synchronous data flow. 
+%A key challenge with SE applications is efficient compilation of high-level language code (for example, in C/C++) to executable program. 
+
 
 \subsection{Reinforcement Learning}
 Reinforcement Learning (RL) is widely used to tackle unsupervised optimization problems.
