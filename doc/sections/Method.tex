@@ -67,12 +67,12 @@ The two embeddings are combined and fed into another MLP model to
 create actions. 
 Invalid actions are masked before being sent to the reward function. Masking was shown to be effective in RL setting \cite{Shengyi_mask}.
 
-\begin{figure}[h]
+\begin{figure*}[h]
   \centering
-  \includegraphics[width=\linewidth]{fig/model.pdf}
+  \includegraphics[width=\textwidth]{fig/model_diagram.pdf}
   \caption{Actor and critic model architecture. GNN is used to process the computation graph (static data). 
   Attention module gives importance to relevant nodes. The embedding created from dynamic data is combined with static data embedding. 
   A final MLP model is used to generate actions. Actions are masked to ensure only valid actions are produced. }
   \label{fig:model}
-\end{figure}
+\end{figure*}
 
