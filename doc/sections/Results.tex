@@ -64,7 +64,18 @@ to predict which tiles the predecessor nodes will be placed. This condition impo
 
 \subsection{Output Masking}
 
+Output masking to filter invalid placements was shown effective for RL in game environments \cite{Shengyi_mask}. 
+The SE instruction scheduling task has several invalid actions that adds noise to the samples and decision of the RL model. 
+After placement of each node, the following nodes have less options to be placed given their data dependecy with other nodes and device constraints.
+This reduces the search space as each node are being placed. 
+Figure \ref{fig:mask_nomask} demonstrates that masking improves the reward and sample efficiency of the RL model.
 
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{fig/ifft_masked_nomask.pdf}
+  \caption{Reward comparison between node placement with output masking (blue) and without output masking (red).}
+  \label{fig:mask_nomask}
+\end{figure}
 
 
 % sequence versus one by one
