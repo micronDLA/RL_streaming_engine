@@ -1,6 +1,6 @@
-The implemented RL approach was able to successfully mapped the computation graphs for different programs such as vector add, distance function and IFFT. 
-The IFFT graph is widely used several algorithms and its parsed computation graph is shown in figre \ref{fig:ifft_graph} 
-The SE device configuration used in following experiments 16 tiles and limit of 6 Initiation Interval (II). 
+The implemented RL approach was able to successfully map the computation graphs for different programs such as vector add, distance calculation function and IFFT. 
+IFFT is widely used by several algorithms and its computation graph is shown in Fig. \ref{fig:ifft_graph} 
+The SE device configuration for the following experiments used 16 tiles and a maximum of 6 Initiation Interval (II).
 Other SE device configurations could have been used.
 
 \begin{figure}[h]
@@ -11,11 +11,11 @@ Other SE device configurations could have been used.
 \end{figure}
 
 
-The RL framework was also benchmarked against a collection of random directed graphs. We compare a 
-PPO baseline composed of 3 MLPs stacked against an actor model with the proposed Global Graph Attention (GGA) module.
-We evaluate these models on varying computation graphs complexities by increasing number of nodes in the task. 
+We also benchmarked our RL framework against a collection of random directed graphs. 
+We compare a baseline PPO method composed of 3 stacked MLPs against an actor model with the proposed Global Graph Attention (GGA) module.
+We evaluate these models on varying computation graphs with different complexities by increasing number of nodes in the graph. 
 We also tested on a larger device with 64 tiles.
-In figure \ref{fig:nodes_graph}, we observe that the RL approach finds mappings for a variety of computation graphs, and GGA
+In Fig. \ref{fig:nodes_graph}, we observe that the RL approach finds mappings for a variety of computation graphs, and GGA
 improves the best schedule found for the same number of epochs. The GGA also finds improved schedule for a larger device configuration. 
 In the figure \ref{fig:nodes_graph}, the epochs were limited to 50000 for both models. 
 The cycle count is number of SE execution steps taken to process all nodes for a mapping, which is calculated from the simulated SE environment. 
@@ -32,9 +32,8 @@ The cycle count is number of SE execution steps taken to process all nodes for a
 
 \subsection{Global Graph Attention (GGA)}
 
-In figure \ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the IFFT application. 
-The node and states changes for each iteration over all nodes in the computation graph. The GGA module provides 
-a representation of the entire graph while placing each node.
+In Fig. \ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the IFFT application. 
+The node and states changes for each iteration over all nodes in the computation graph. The GGA module provides a representation of the entire graph while placing each node.
 
 \begin{figure}[h]
   \centering
@@ -47,27 +46,27 @@ a representation of the entire graph while placing each node.
 
 \subsection{Node Iteration Order}
 
-The iteration order that the nodes are fed to the actor model into the RL framework is important for when placing 
-nodes in a sequence. In figure \ref{fig:ordered_placement}, we observe that iterating nodes in topological 
-ordering results in higher reward and eases the node placement task. By placing the leaf nodes first, the model needs
-to predict which tiles the predecessor nodes will be placed. This condition imposes unnecessary difficulty when training the model.
+The iteration order is sequence in which nodes are fed to the actor model in the RL framework and plays an important role in whether the nodes can be successfully placed or not. 
+In Fig. \ref{fig:ordered_placement}, we observe that iterating over nodes in topological 
+ordering results in higher reward and eases the node placement task. 
+On the other hand, when placing the leaf nodes first, the model needs
+to predict which tiles the predecessor nodes will be placed on, making training and the learning problem harder.
 
 \begin{figure}[h]
   \centering
   \includegraphics[width=\linewidth]{fig/plot_ordered.pdf}
   \caption{Iterating nodes in topological ordering results in higher reward and eases the placement task. 
-  In blue, no order was used to place nodes. In red, nodes were iterated in topological order. 
-  Task of placing 15 nodes computation graph in a device with 16 tiles.}
+ The blue line is the reward curve for when nodes were randomly selected for placement. The red line is the reward curve for when nodes were iterated upon in topological order. The task involved is of placing 15 nodes computation graph in a device with 16 tiles.}
   \label{fig:ordered_placement}
 \end{figure}
 
 
 \subsection{Output Masking}
 
-Output masking to filter invalid placements was shown effective for RL in game environments \cite{Shengyi_mask}. 
-The SE instruction scheduling task has several invalid actions that adds noise to the samples and decision of the RL model. 
-After placement of each node, the following nodes have less options to be placed given their data dependecy with other nodes and device constraints.
-This reduces the search space as each node are being placed. 
+Output masking to filter invalid placements has been shown to be effective for RL in game environments \cite{Shengyi_mask}. 
+The SE instruction scheduling task has several invalid actions that adds noise to the samples and decision of the RL model, making convergence harder. 
+After placement of each node, the following nodes have fewer placement options due to their data dependecy with other nodes and device constraints.
+This reduces the search space as each node is being placed. 
 Figure \ref{fig:mask_nomask} demonstrates that masking improves the reward and sample efficiency of the RL model.
 
 \begin{figure}[h]
