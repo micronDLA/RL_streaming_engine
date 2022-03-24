@@ -23,7 +23,6 @@ class PPO:
 
         #ntasks: number of different graphs
         self.args = args
-        self.graphdef = graphdef
         self.device_topology = device['topology']
         self.ntasks = ntasks
         self.state_dim = state_dim  # Input ready time (Number of tiles slices, 1)

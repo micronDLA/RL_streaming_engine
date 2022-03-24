@@ -63,6 +63,10 @@ class StreamingEngineEnv(gym.Env):
         self.all_nodes_placed = False
         self.graph_ready_time = -1
 
+    def set_graph(self, graphdef):
+        self.graphdef = graphdef
+        self.num_nodes = graphdef['graph'].num_nodes()
+
     def step(self, action):
         node, tile_idx, spoke_idx = action
         assert tile_idx >=0 and tile_idx < self.se.tile_count, f"Tile index not in range [0, {self.se.tile_count-1}]"

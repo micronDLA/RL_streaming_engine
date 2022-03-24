@@ -11,11 +11,13 @@ import numpy as np
 from coolname import generate_slug
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+import random
 
 from envs.streaming_engine_env import StreamingEngineEnv
 from ppo_discrete import PPO
 
 torch.manual_seed(0)
+random.seed(0)
 np.random.seed(0)
 
 def get_args():
@@ -24,7 +26,7 @@ def get_args():
 
     arg('--device-topology', nargs='+', type=int, default=(16, 6), help='Device topology of Streaming Engine')
     arg('--pipeline-depth', type=int, default=3, help='processing pipeline depth')
-    arg('--epochs', type=int, default=5000000, help='number of epochs')
+    arg('--epochs', type=int, default=200000, help='number of epochs')
     arg('--nodes', type=int, default=20,  help='number of nodes')
     arg('--debug', dest='debug', action='store_true', default=False, help='enable debug mode')
     arg('--input', type=str, default='input_graphs/vectorAdd_ir.json', help='load input json from file')
@@ -54,7 +56,7 @@ def get_args():
     args = parser.parse_args()
     return args
 
-def run_mapper(args, graphdef):
+def run_mapper(args, graphs, writer=None):
     '''
     graphdef:
      graphdef['graph']: dgl graph, ndata['tm_req'], ndata['feat']
@@ -81,11 +83,16 @@ def run_mapper(args, graphdef):
     print(args)
 
     # Tensorboard logging
-    if not args.quiet:
+    if writer is None:
         writer = SummaryWriter(comment=f'_{generate_slug(2)}')
         print(f'[INFO] Saving log data to {writer.log_dir}')
         writer.add_text('experiment config', str(args))
         writer.flush()
+
+    if isinstance(graphs, list):
+        graphdef = graphs[0]
+    else:
+        graphdef = graphs
 
     args.nodes = graphdef['graph'].number_of_nodes()
 
@@ -98,7 +105,13 @@ def run_mapper(args, graphdef):
     device['action_dim'] = np.prod(args.device_topology)
 
     preproc = PreInput(args)
-    graphdef = preproc.pre_graph(graphdef, device)
+    if isinstance(graphs, list):
+        for i, gg in enumerate(graphs):
+            graphs[i] = preproc.pre_graph(gg, device)
+        graphdef = graphs[0]
+    else:
+        graphdef = preproc.pre_graph(graphdef, device)
+
 
     # Init gym env
     env = StreamingEngineEnv(args,
@@ -124,6 +137,10 @@ def run_mapper(args, graphdef):
 
     # Start training loop
     for i_episode in range(1, args.epochs + 1):
+        if isinstance(graphs, list):
+            graphdef = random.choice(graphs)
+            env.set_graph(graphdef)
+
         state = env.reset()
         time_step += 1
         total_reward = 0
@@ -132,6 +149,7 @@ def run_mapper(args, graphdef):
         asc = dgl.topological_nodes_generator(graphdef['graph'])
         lnodes = [i.item() for t in asc for i in t]
         for node_id in lnodes:
+        # for node_id in range(args.nodes):
             mask = env.get_mask(node_id)
             tile_slice_idx, tobuff = ppo.select_action(state, graphdef, node_id, mask)
             tile, spoke = np.unravel_index(tile_slice_idx, args.device_topology)
@@ -169,7 +187,7 @@ def run_mapper(args, graphdef):
         # logging
         if i_episode % args.log_interval == 0:
             end = time.time()
-            print(f'\rEpisode: {i_episode} | Total reward: {total_reward} | Mean Reward: {np.mean(reward_buf):.2f} | Nodes placed: {len(env.placed_nodes)} | Time elpased: {end - start:.2f}s', end='')
+            print(f'\rEpisode: {i_episode} | best time {best_ready_time} | Total reward: {total_reward} | Mean Reward: {np.mean(reward_buf):.2f} | Nodes placed: {len(env.placed_nodes)} | Time elpased: {end - start:.2f}s', end='')
             if not args.quiet:
                 writer.add_scalar('Mean reward/episode', np.mean(reward_buf), i_episode)
                 writer.flush()
