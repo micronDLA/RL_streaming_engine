@@ -7,10 +7,10 @@ This creates an optimization problem with a vast and sparse search space.
 A manual mapping of the graph takes an infeasible amount of time by the programmer.
 Such manual mapping is impractical because it requires expertise and knowledge in the SE micro-architecture and reduces the search-space, thus, trading off optimization possibilities.
 In this work we propose a Reinforcement Learning(RL) based mapper to explore mappings and optimize them in an unsupervised manner using a reinforcement learning framework.
-This provides us an automated method that can produce mappings for programs quickly and searches for optimal mappings without programmers interference. 
+This provides us an automated method that can produce mappings for programs quickly and searches for optimal mappings without the programmer's interference. 
 This tool also improves the usability of the SE device by encapsulating device configuration details.
 We use Proximal Policy Optimization (PPO) in order to train a model which places operations into the SE tiles based on a reward function that models the SE device and its constraints.
-Graph neural networks are added to create embeddings to represent the computation graph.
-A transformer block is used to model sequential operation placement mode. 
-We show results on how certain workloads are mapped to the SE.
+We use a Global Graph Attention (GGA) module which consists of a graph neural network and an attention module. 
+The Graph neural networks are added to create embeddings of the computation graph and the transformer block is used to model sequential operation placement mode. 
+We show results on how certain workloads are mapped to the SE and the factors affecting mapping quality.
 % The implemented method is compared against evolutionary search and baseline.

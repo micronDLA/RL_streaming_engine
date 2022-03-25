@@ -8,7 +8,7 @@ The SE is a Coarse-Grained Reconfigurable Array (CGRA) that is composed of inter
 The compute tiles are interconnected with both a Synchronous Fabric (SF) and an Asynchronous Fabric (AF) as shown in Fig. \ref{fig:sub-se}.
 It also interconnects tile memory, multiplexers, and Single Instruction Multiple Data (SIMD) units within each tile as shown in Fig. \ref{fig:sub-tile}. 
 Tiles can be pipelined through SF to form a Synchronous Data Flow (SDF) through Multiply/Shift (MS) unit and an Arithmetic/Logic (AL) SIMD units. 
-The output of the MS unit is connected the one of the two inputs onf the AL unit.
+The output of the MS unit is connected the one of the two inputs of the AL unit.
 AF connects a tile with all other tiles, dispatch interface (DI), and memory interfaces (MIs).
 It bridges SDFs through asynchronous operations, which include SDF initiation, asynchronous data transfer from one SDF to another, system memory accesses, and branching and looping constructs. 
 Together, SF and AF allow the tiles to efficiently execute high-level programming language constructs.
@@ -47,24 +47,25 @@ Creating the mappings manually or using brute force algorithms takes time and lo
 This process also adds assumptions that reduce the search space, trading off optimization possibilities.  
 
 In this work we propose a Deep Reinforcement Learning (RL) method to explore and find optimal mappings in an unsupervised manner. 
-Using the Proximal Policy Optimization (PPO) method we train a neural network model to place instructions onto the SE tiles guided by a reward function that models the SE device and its constraints. 
-The trained model was able to create valid mappings for the SE by learning about the problem domain. 
+Using the Proximal Policy Optimization (PPO) method we train a neural network model to place instructions onto the SE tiles guided by a reward function in an evironment that models the SE device and its constraints. 
+The trained model is able to create valid mappings for the SE by learning about the structure of the problem domain. 
 
 
 The key contributions of this paper are as follows:
 \begin{enumerate}
-    \item A Reinforcement Learning methodology that is able to map the instructions for a given DFG to the processing elements in the SE and has the potential to be reused across computation graphs.
+    \item A Reinforcement Learning methodology that is able to map the instructions from a given DFG to the processing elements in the SE and has the potential to be reused across computation graphs.
     \item An analysis of different factors that impacts the quality of mappings obtained.
 \end{enumerate}
 
-This work is motivated to provide an improved toolset that lowers SE usability barrier.
-This will also assist other tools or programmers in SE mapping creation by providing placement suggestions or tile configuration labels.
+This work is motivated by the need to provide an improved toolset that lowers SE usability barrier for a programmer.
+This will also assist other tools or programmers in SE mapping creation by providing even partial placement suggestions or tile configuration labels.
 The RL mapper performs unsupervised learning and optimization allowing it to search a wide and sparse search space. 
-Each operation is an instruction that is mapped to a specific slot on a tile.
+Each node in the DFG is an instruction that is mapped to a specific slot on a tile.
 This line of research is inspired by recent work that used RL for chip placement \cite{mirhoseini2020chip}.
 Our problem requirement of mapping nodes of a DFG to available compute elements is similar to the problem of placing nodes of a chip netlist on a chip canvas. 
 
-The rest of this paper is organized as follows: Section \ref{sec:background} provides the necessary background on the SE device architecture.
-Section \ref{sec:rlmapper} presents the proposed RL approach for mapping applications to the SE.
+The rest of this paper is organized as follows: 
 Section \ref{sec:relatedwork} discusses related work.
+Section \ref{sec:background} provides the necessary background on the SE device architecture needed to understand the details of the RL approach.
+Section \ref{sec:rlmapper} presents the proposed RL approach for mapping applications to the SE.
 Section \ref{sec:results} discusses results and finally, Section \ref{sec:conclusion} concludes the paper along with a discussion on future work.

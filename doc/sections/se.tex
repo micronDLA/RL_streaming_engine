@@ -33,8 +33,8 @@ Information is transferred over the AF with a non-deterministic latency.
 
 \subsection{Synchronous Fabric Interface}
 All tiles that participate in a synchronous domain act as a single pipelined data path.
-The Base Tile (BT) is defined as the first tile of a synchronous domain initiates a thread of work through the pipelined tiles.
-The BT is responsible for starting work on a predefined cadence referred to as the Spoke Count or Initiation Interval (II).
+The Base Tile (BT) is defined as the first tile of a synchronous domain that initiates a thread of work through the pipelined tiles.
+The BT is responsible for starting work on a predefined cadence, referred to as the Spoke Count or Initiation Interval (II).
 E.g. For $II = 3$, as in the example in Fig. \ref{fig:se_example}, then the BT can initiate work every third clock cycle.
 %The synchronous fabric provides both data and control information.
 
@@ -101,9 +101,9 @@ The SE hardware imposes constraints that the RL mapper must adhere to in order t
 \begin{enumerate}
   \item Instructions that share one or more tile memory variables must be placed on the same tile.
   \item No two or more instructions that start a synchronous data-flow can share a tile.
-  \item No two or more instructions that are siblings can share a tile.
+  \item No two or more instructions that are siblings in the DFG can share a tile.
 \end{enumerate}
-The SE device configuration and its constraints are modeled in a simulation environment and the reward function.
-In order to enforce these constraints, we explore two methods: the first method is to give a negative reward when a 
+The SE device configuration and its constraints are modeled in a simulation environment and a reward function is used to determine the quality of placements obtained.
+In order to enforce these constraints, we explore two methods in section \ref{subsec:output_masking}. The first method is to give a negative reward when a 
 constraint is violated and the second is creation of a mask on the invalid actions so that the network only outputs valid actions.
 In both cases, placing instructions sub-optimally leads to a reduced reward whereas placements that optimally reduce total execution time of the graph are rewarded. 
