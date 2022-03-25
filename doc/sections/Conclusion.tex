@@ -1,12 +1,11 @@
 Our RL mapper improves and increments the capabilities of the toolset used to program the SE device. 
 It can search for optimal mappings while using the learning to map previously unseen workloads. 
-It improves on the total time required to get a mapping as compared to the existing brute force search approach and allows for automated search of mappings with different optimizations under different trade-offs. 
-It also reduces the manual labor required to find mappings. 
-The techniques presented could be applied to other applications such as chip placement, which is worth trying in future work. 
+It improves on the total time required to get a mapping as compared to the existing manual placement approach and allows for automated search of mappings with different optimizations under different trade-offs, hence reducing the manual labor required to find mappings. 
+The techniques presented could be applied to other applications such as chip placement, which is worth exploring in the future. 
 Our future work also includes: 
 \begin{itemize}
     \item Optimizing training methods to obtain mappings for problems like IFFT which have a bigger search space than currently used computation graphs. 
     \item Increasing sample efficiency of learning methods and improving the simulation environment for the SE by adding more constraints. 
     \item Studying the impact of reusing the trained networks across graph rather than training a network from scratch for a given computation graph.
-    \item Integration of RL mapper into the SE toolset 
+    \item Integration of RL mapper into the SE toolset.
 \end{itemize}
