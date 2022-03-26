@@ -63,21 +63,20 @@ The input is separated in two categories: static and dynamic data.
 Static data is information that doesn't change as nodes are being placed and includes the graph features from the DFG that encapsulate node dependence based on SE constraints.
 Device state (including placed nodes) and node to be placed are dynamic data that change during placement.
 
-\subsubsection{Global Graph Attention Module}
+\subsection{Global Graph Attention Module}
 
-Tile memory variables need to be placed in a tile so that operation can use that variable. 
-This memory constraint is captured as memory dependency array. 
-Tile memory constraints are incorporated into nodes in the computation graph. 
-The computation graph has each node representing an instruction. 
-The node features are tile memory dependencies. 
-A Graph Neural Network (GNN) is used to process node dependencies and create an embedding for each node. 
-An attention module is applied to the embedding matrix to select which dependency nodes are relevant to the current node to be placed. The dynamic data is fed into a MLP model to 
-create another embedding to represent current state. 
-The two embeddings are combined and fed into another MLP model to 
-create actions. 
+For our RL framework, a GNN is used to process node dependencies and create an embedding for the computation graph.
+This is processing the static data, which is the same computation graph during placement of each node. 
+After placing all nodes in a rollout, a different graph can be fed into the GNN to train the RL model on a collection of computation graphs. 
+Each node contains a feature vector that is initialized with a combination of tile memory constraints and node dependencies. 
+Two layers of Graph Convolution \cite{wu2019simplifying} and a graph average pool layer produces a vector embedding.
+An attention module is applied to the embedding to highlight relevant components to the current node to be placed. 
+The Global Graph Attention Module is the GNN and attention module combination.
+The node selection and environment state change for each iteration over all nodes in the computation graph. 
+The dynamic data is fed into a Fully Connected (FC) layer model to create another embedding to represent current state. 
+The embeddings from dynamic data and static data are concatenated and fed to an MLP model with 3 FC layers to create actions. 
 Invalid actions are masked before being sent to the reward function. Masking was shown to be effective in RL setting \cite{Shengyi_mask}.
-
-
+We see the addition of GGA module provides improved reward and sample efficiency for various computation graphs and different device configuration as shown in section \ref{sec:GGA_result}.
 
 \begin{figure*}[h]
   \centering
