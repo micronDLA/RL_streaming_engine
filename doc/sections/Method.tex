@@ -67,16 +67,16 @@ Device state (including placed nodes) and node to be placed are dynamic data tha
 
 For our RL framework, a GNN is used to process node dependencies and create an embedding for the computation graph.
 This is processing the static data, which is the same computation graph during placement of each node. 
-After placing all nodes in a rollout, a different graph can be fed into the GNN to train the RL model on a collection of computation graphs. 
+After placing all nodes in an episode, a different graph can be fed into the GNN to train the RL model on a collection of computation graphs. 
 Each node contains a feature vector that is initialized with a combination of tile memory constraints and node dependencies. 
 Two layers of Graph Convolution \cite{wu2019simplifying} and a graph average pool layer produces a vector embedding.
-An attention module is applied to the embedding to highlight relevant components to the current node to be placed. 
-The Global Graph Attention Module is the GNN and attention module combination.
+An attention module is applied to the embedding to highlight relevant components for the current node to be placed. 
+The Global Graph Attention Module is the combination of the GNN and attention modules.
 The node selection and environment state change for each iteration over all nodes in the computation graph. 
 The dynamic data is fed into a Fully Connected (FC) layer model to create another embedding to represent current state. 
 The embeddings from dynamic data and static data are concatenated and fed to an MLP model with 3 FC layers to create actions. 
 Invalid actions are masked before being sent to the reward function. Masking was shown to be effective in RL setting \cite{Shengyi_mask}.
-We see the addition of GGA module provides improved reward and sample efficiency for various computation graphs and different device configuration as shown in section \ref{sec:GGA_result}.
+We see the addition of GGA module provides improves reward and sample efficiency for various computation graphs and different device configuration as shown in section \ref{sec:GGA_result}.
 
 \begin{figure*}[h]
   \centering
