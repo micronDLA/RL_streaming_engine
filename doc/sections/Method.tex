@@ -1,6 +1,6 @@
 \subsection{Reinforcement learning}
 
-We present a Reinforcement learning (RL) based framework to explore and optimize the mapping of instructions for a given computation graph to the SE, guided by a reward function that informs the mapping algorithm about the quality of the produced mappings at each step. In this section, we give an overview of the methods used along with the formulation required for detailed description of the various components of the RL approach.
+We present a Reinforcement learning (RL) based framework to explore and optimize the mapping of instructions for a given SDF graph to the SE, guided by a reward function that informs the mapping algorithm about the quality of the produced mappings at each step. In this section, we give an overview of the methods used along with the formulation required for detailed description of the various components of the RL approach.
 
 \subsection{Overview}
 Proximal Policy Optimization (PPO) \cite{schulman2017proximal} is an RL method that is  widely used for continuous and discrete action problems. 
@@ -45,7 +45,7 @@ Finally, we only calculate entropy on valid actions, so that our algorithm maxim
 \subsection{Reward Function}
 Our goal in this work is to get mappings that are optimal in terms of total clock cycles taken and for this purpose, the reward that is given at each time step is the difference between the clock cycle at which the current node to be placed is ready (its ready time) and the ready time of its predecessor. 
 $R_n$ is the reward obtained for placing node $n$ and $t_n$ is its ready time. 
-The function $p(n)$ gives the predecessor of $n$ in a computation graph. 
+The function $p(n)$ gives the predecessor of $n$ in an SDF graph. 
 If the current node can't be placed because of the constraints (all values in the mask vector $m$ are zero), then a high negative reward $-\lambda$ is given.
 \[
   R_n =
@@ -66,8 +66,8 @@ Device state (including placed nodes) and node to be placed are dynamic data tha
 \subsection{Global Graph Attention Module}
 
 For our RL framework, a GNN is used to process node dependencies and create an embedding for the computation graph.
-This is processing the static data, which is the same computation graph during placement of each node. 
-After placing all nodes in an episode, a different graph can be fed into the GNN to train the RL model on a collection of computation graphs. 
+This is processing the static data, which is the same SDF graph during placement of each node. 
+After placing all nodes in an episode, a different graph can be fed into the GNN to train the RL model on a collection of SDF graphs. 
 Each node contains a feature vector that is initialized with a combination of tile memory constraints and node dependencies. 
 Two layers of Graph Convolution \cite{wu2019simplifying} and a graph average pool layer produces a vector embedding.
 An attention module is applied to the embedding to highlight relevant components for the current node to be placed. 
@@ -76,12 +76,12 @@ The node selection and environment state change for each iteration over all node
 The dynamic data is fed into a Fully Connected (FC) layer model to create another embedding to represent current state. 
 The embeddings from dynamic data and static data are concatenated and fed to an MLP model with 3 FC layers to create actions. 
 Invalid actions are masked before being sent to the reward function. Masking was shown to be effective in RL setting \cite{Shengyi_mask}.
-We see the addition of GGA module provides improves reward and sample efficiency for various computation graphs and different device configuration as shown in section \ref{sec:GGA_result}.
+We see the addition of GGA module provides improves reward and sample efficiency for various SDF graphs and different device configuration as shown in section \ref{sec:GGA_result}.
 
 \begin{figure*}[h]
   \centering
   \includegraphics[width=\textwidth]{fig/model_diagram.pdf}
-  \caption{Actor and critic model architecture. GNN is used to process the computation graph (static data). 
+  \caption{Actor and critic model architecture. GNN is used to process the SDF graph (static data). 
   Attention module gives importance to relevant nodes. The embedding created from dynamic data is combined with static data embedding. 
   A final MLP model is used to generate actions. Actions are masked to ensure only valid actions are produced. }
   \label{fig:model}
