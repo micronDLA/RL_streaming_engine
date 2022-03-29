@@ -2,16 +2,16 @@
 The aim of this section is to evaluate the RL framework for mapping workload to Streaming Engine under training and finetuning scenarios. 
 We also analyse the effect of the different components of the RL model, such as: GGA module, output masking and node iteration ordering.
 
-The implemented RL approach was able to successfully map the SDF graphs for different programs such as vector add, distance calculation function and FFT. 
-FFT is widely used by several algorithms and its SDF graph is shown in Fig. \ref{fig:FFT_graph} 
+The implemented RL approach was able to successfully map the SDF graphs for different programs such as vector add, distance calculation function and IFFT. 
+IFFT is widely used by several algorithms and its SDF graph is shown in Fig. \ref{fig:ifft_graph} 
 The SE device configuration for the following experiments used 16 tiles and a maximum of 6 Initiation Interval (II).
 Other SE device configurations are possible.
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=\linewidth]{fig/FFT_graph.pdf}
-  \caption{FFT application SDF graph.}
-  \label{fig:FFT_graph}
+  \includegraphics[width=\linewidth]{fig/ifft_graph.pdf}
+  \caption{IFFT application SDF graph.}
+  \label{fig:ifft_graph}
 \end{figure}
 
 
@@ -36,15 +36,15 @@ The cycle count is number of SE execution steps taken to process all nodes for a
 
 \subsection{Global Graph Attention (GGA)} \label{sec:GGA_result}
 
-In Fig. \ref{fig:FFT_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the FFT application. 
+In Fig. \ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the IFFT application. 
 The node and states changes for each iteration over all nodes in the SDF graph. The GGA module provides a representation of the entire graph while placing each node.
 
 \begin{figure}[h]
   \centering
   \includegraphics[width=\linewidth]{fig/plot_gnn_atten_ppo.pdf}
-  \caption{Effect of using Global Graph Attention (GGA) module for mapping the FFT application on device with 16 tiles. 
+  \caption{Effect of using Global Graph Attention (GGA) module for mapping the IFFT application on device with 16 tiles. 
   GGA module provides better sample efficiency and higher reward after training. }
-  \label{fig:FFT_rewards}
+  \label{fig:ifft_rewards}
 \end{figure}
 
 
@@ -74,7 +74,7 @@ Figure \ref{fig:mask_nomask} demonstrates that masking improves the reward and s
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=\linewidth]{fig/FFT_masked_nomask.pdf}
+  \includegraphics[width=\linewidth]{fig/ifft_masked_nomask.pdf}
   \caption{Reward comparison between node placement with output masking (blue) and without output masking (red).}
   \label{fig:mask_nomask}
 \end{figure}
@@ -82,13 +82,13 @@ Figure \ref{fig:mask_nomask} demonstrates that masking improves the reward and s
 \subsection{Pretrain and Inferencing}
 
 After training the RL model on various SDF graphs, the RL model can be used for fine-tunning on specific graph or for inferencing.
-In figure \ref{fig:pretrain_FFT}, the RL model was pre-trained with random collection of SDF graphs and then fine-tuned for the FFT application.
+In figure \ref{fig:pretrain_ifft}, the RL model was pre-trained with random collection of SDF graphs and then fine-tuned for the IFFT application.
 The initial and final reward of the fine tuned RL model is higher than training the model from scratch.
 The model is able to reuse some of the previous experience of placing nodes for random input graphs.
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=\linewidth]{fig/pretrain_FFT.pdf}
+  \includegraphics[width=\linewidth]{fig/pretrain_ifft.pdf}
   \caption{.}
-  \label{fig:pretrain_FFT}
+  \label{fig:pretrain_ifft}
 \end{figure}
