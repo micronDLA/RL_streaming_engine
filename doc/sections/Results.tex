@@ -2,8 +2,8 @@
 The aim of this section is to evaluate the RL framework for mapping workload to Streaming Engine under training and finetuning scenarios. 
 We also analyse the effect of the different components of the RL model, such as: GGA module, output masking and node iteration ordering.
 
-The implemented RL approach was able to successfully map the computation graphs for different programs such as vector add, distance calculation function and IFFT. 
-IFFT is widely used by several algorithms and its computation graph is shown in Fig. \ref{fig:ifft_graph} 
+The implemented RL approach was able to successfully map the SDF graphs for different programs such as vector add, distance calculation function and IFFT. 
+IFFT is widely used by several algorithms and its SDF graph is shown in Fig. \ref{fig:ifft_graph} 
 The SE device configuration for the following experiments used 16 tiles and a maximum of 6 Initiation Interval (II).
 Other SE device configurations are possible.
 
@@ -81,8 +81,8 @@ Figure \ref{fig:mask_nomask} demonstrates that masking improves the reward and s
 
 \subsection{Pretrain and Inferencing}
 
-After training the RL model on various computation graphs, the RL model can be used for fine-tunning on specific graph or for inferencing.
-In figure \ref{fig:pretrain_ifft}, the RL model was pre-trained with random collection of computation graphs and then fine-tuned for the IFFT application.
+After training the RL model on various SDF graphs, the RL model can be used for fine-tunning on specific graph or for inferencing.
+In figure \ref{fig:pretrain_ifft}, the RL model was pre-trained with random collection of SDF graphs and then fine-tuned for the IFFT application.
 The initial and final reward of the fine tuned RL model is higher than training the model from scratch.
 The model is able to reuse some of the previous experience of placing nodes for random input graphs.
 
