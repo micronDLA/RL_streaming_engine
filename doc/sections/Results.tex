@@ -9,7 +9,7 @@ Other SE device configurations are possible.
 
 \begin{figure}[h]
   \centering
-  \includegraphics[scale=0.4]{fig/ifft_graph.pdf}
+  \includegraphics[width=\linewidth]{fig/ifft_graph.pdf}
   \caption{IFFT application SDF graph.}
   \label{fig:ifft_graph}
 \end{figure}
@@ -68,7 +68,7 @@ On the other hand, when placing the nodes randomly, sometimes nodes get placed b
 \label{subsec:output_masking}
 Output masking to filter invalid placements has been shown to be effective for RL in game environments \cite{Shengyi_mask}. 
 The SE instruction scheduling task has several invalid actions that adds noise to the samples and decision of the RL model, making convergence harder. 
-After placement of each node, the succeeding nodes have fewer placement options due to their data dependecy with other nodes and device constraints.
+After placement of each node, the succeeding nodes have fewer placement options due to their data dependency with other nodes and device constraints.
 Masking invalid placements reduces the search space as each node is being placed. 
 Figure \ref{fig:mask_nomask} demonstrates that masking improves the reward and sample efficiency of the RL model.
 

@@ -12,7 +12,7 @@ These asynchronous operations include initiating SDF operations, transferring da
     \end{subfigure}
   \begin{subfigure}{.5\textwidth}
   \centering
-  \includegraphics[trim=275 100 8 50, clip, width=0.5\linewidth]{fig/se_device_tile.pdf}
+  \includegraphics[trim=300 100 8 50, clip, width=0.5\linewidth]{fig/se_device_tile.pdf}
   \caption{Detailed diagram of a tile in the SE device.
   Note the two tile memory units, the MS and AL units, and the four SF inputs and four SF outputs}
   \label{fig:sub-tile}
@@ -31,7 +31,7 @@ The tiles use the AF to communicate between synchronous domains, send load and s
 Information is transferred over the AF with a non-deterministic latency.
 
 
-\subsection{Synchronous Fabric Interface}
+\par{Synchronous Fabric Interface}
 All tiles that participate in a synchronous domain act as a single pipelined data path.
 The Base Tile (BT) is defined as the first tile of a synchronous domain that initiates a thread of work through the pipelined tiles.
 The BT is responsible for starting work on a predefined cadence, referred to as the Spoke Count or Initiation Interval (II).
