@@ -9,8 +9,6 @@
 % In this work we propose a Reinforcement Learning(RL) based mapper to explore mappings and optimize them in an unsupervised manner using a reinforcement learning framework.
 % This provides us an automated method that can produce mappings for programs quickly and searches for optimal mappings without the programmer's interference. 
 % This tool also improves the usability of the SE device by encapsulating device configuration details.
-
-
 The Streaming Engine (SE) is a Coarse-Grained Reconfigurable Array (CGRA) which provides programming flexibility and high-performance with energy efficiency.
 A program to be executed on the SE is represented as a synchronous data flow (SDF) graph, where every instruction is a node.
 Each node needs to be mapped to the right slot and array in the SE to ensure the correct execution of the program.
@@ -20,5 +18,5 @@ We use Proximal Policy Optimization (PPO) in order to train a model which places
 The GGA module consists of a graph neural network and an attention module. 
 The Graph neural network creates embeddings of the SDF and the transformer block is used to model sequential operation placement mode. 
 We show results on how certain workloads are mapped to the SE and the factors affecting mapping quality.
-Additionally, we find that the addition of GGA, on average, finds 10\% better instruction schedules in terms of clock cycles taken and masking improves reward obtained by 20\%
+Additionally, we find that the addition of GGA, on average, finds 10\% better instruction schedules in terms of clock cycles taken and masking improves reward obtained by 20\%.
 % The implemented method is compared against evolutionary search and baseline.
