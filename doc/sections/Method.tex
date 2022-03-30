@@ -8,11 +8,11 @@ It trains an actor and a critic model (represented as neural networks).
 The actor model is trained to produce actions (node placements in our case) from sample states obtained during simulation and the critic model is trained to match the sampled rewards from the actions produced by the actor using a surrogate loss function. 
 This sample and train process is repeated over various iterations. 
 In this manner, the problem search space is explored using the reward function as a heuristic.
-Refer to algorithm \ref{alg1} for the complete RL training process.
+Refer to algorithm Alg.~\ref{alg1} for the complete RL training process.
 Our SE mapping task is formulated as a discrete action problem where the goal is to place one node at each time step. 
 Samples of SE state, actions performed and rewards obtained at each time step are collected after executing the actions provided by the actor model in simulation. 
 These samples are stored in a buffer and are used as data to train the models.
-Figure \ref{fig:ppo} shows the overall RL framework. 
+\figurename~\ref{fig:ppo} shows the overall RL framework. 
 
 The key components of our RL method are as follows:
 \begin{itemize}
@@ -67,7 +67,7 @@ If the current node can't be placed because of the constraints (all values in th
 
 \subsection{Model design}
 
-The architecture for actor and critic models is shown in Fig. \ref{fig:model}.
+The architecture for actor and critic models is shown in \figurename~\ref{fig:model}.
 The input is separated in two categories: static and dynamic data. 
 Static data is information that doesn't change as nodes are being placed and includes the graph features from the DFG that encapsulate node dependence based on SE constraints.
 Device state (including placed nodes) and node to be placed are dynamic data that change during placement.

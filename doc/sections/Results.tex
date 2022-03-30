@@ -7,7 +7,7 @@ FFT is widely used by several applications such as digital signal and image proc
 FFT has time complexity of $\mathcal{O}(N\log{N})$ and two nested loops.
 The outer loop and inner loop have time complexity of $\mathcal{O}(\log{N})$ and $\mathcal{O}(N)$ respectively.
 The inner loop is targeted for acceleration.
-The inner loop code is optimized and broken down into six SDFs which are shown in Fig. \ref{fig:ifft_graph}.
+The inner loop code is optimized and broken down into six SDFs which are shown in \figurename~\ref{fig:ifft_graph}.
 The SE device configuration for the following experiments used 16 tiles and a maximum of 6 Initiation Interval (II).
 Other SE device configurations are possible.
 
@@ -53,9 +53,9 @@ We also benchmarked our RL framework against a collection of random directed gra
 We compare a baseline PPO method composed of 3 stacked MLPs against an actor model with the proposed Global Graph Attention (GGA) module.
 We evaluate these models on varying SDF graphs with different complexities by increasing number of nodes in the graph. 
 We also tested on a larger device with 64 tiles.
-In Fig. \ref{fig:nodes_graph}, we observe that the RL approach finds mappings for a variety of computation graphs, and GGA
+In \figurename~\ref{fig:nodes_graph}, we observe that the RL approach finds mappings for a variety of computation graphs, and GGA
 improves the best schedule found for the same number of training epochs. The GGA also finds improved schedule in terms of clock cycles taken for a larger device configuration. 
-For the results in figure \ref{fig:nodes_graph}, the epochs were limited to 50,000 for both models. 
+For the results in \figurename~\ref{fig:nodes_graph}, the epochs were limited to 50,000 for both models. 
 The cycle count is number of SE execution steps taken to process all nodes for a mapping, which is calculated from the simulated SE environment. 
 
 \begin{figure}[tb]
@@ -69,13 +69,13 @@ The cycle count is number of SE execution steps taken to process all nodes for a
 
 \subsection{Global Graph Attention (GGA)} \label{sec:GGA_result}
 
-In Fig. \ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the FFT application. 
+In \figurename~\ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the FFT application. 
 The node and states changes for each iteration over all nodes in the SDF graph. The GGA module provides a representation of the entire graph while placing each node.
 
 \subsection{Node Iteration Order}
 
 The iteration order is the sequence in which nodes are fed to the actor model in the RL framework and plays an important role in whether the nodes can be successfully placed or not. 
-In Fig. \ref{fig:ordered_placement}, we observe that iterating over nodes in topological 
+In \figurename~\ref{fig:ordered_placement}, we observe that iterating over nodes in topological 
 ordering results in higher reward and eases the node placement task. 
 On the other hand, when placing the nodes randomly, sometimes nodes get placed before their predecessors are placed and the model needs to predict which tiles the predecessor nodes will be placed on, making training and the learning problem harder.
 
@@ -85,11 +85,11 @@ Output masking to filter invalid placements has been shown to be effective for R
 The SE instruction scheduling task has several invalid actions that adds noise to the samples and decision of the RL model, making convergence harder. 
 After placement of each node, the succeeding nodes have fewer placement options due to their data dependency with other nodes and device constraints.
 Masking invalid placements reduces the search space as each node is being placed. 
-Figure \ref{fig:mask_nomask} demonstrates that masking improves the reward and sample efficiency of the RL model.
+\figurename~\ref{fig:mask_nomask} demonstrates that masking improves the reward and sample efficiency of the RL model.
 
 \subsection{Pre-train and fine-tuning}
 
 After training the RL model on various SDF graphs, the RL model can be used for fine-tunning on specific graph or for inferencing.
-In figure \ref{fig:pretrain_ifft}, the RL model was pre-trained with random collection of SDF graphs and then fine-tuned for the FFT application.
+In \figurename~\ref{fig:pretrain_ifft}, the RL model was pre-trained with random collection of SDF graphs and then fine-tuned for the FFT application.
 The initial and final reward of the fine tuned RL model is higher than training the model from scratch.
 The model is able to reuse some of the previous experience of placing nodes for random input graphs.

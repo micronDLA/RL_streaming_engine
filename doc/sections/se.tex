@@ -18,12 +18,12 @@ These asynchronous operations include initiating SDF operations, transferring da
   \label{fig:sub-tile}
   \end{subfigure}
   \caption{
-    Layout of the SE device is shown in Fig. \ref{fig:sub-se}, while Fig. \ref{fig:sub-tile} details an SE tile.
+    Layout of the SE device is shown in \figurename~\ref{fig:sub-se}, while \figurename~\ref{fig:sub-tile} details an SE tile.
   }
   \label{fig:se_diagram}
 \end{figure}
 
-As shown in the Fig. \ref{fig:se_diagram}, tiles are interconnected in a $1 \times 16$ configuration.
+As shown in the \figurename~\ref{fig:se_diagram}, tiles are interconnected in a $1 \times 16$ configuration.
 The SF is used to connect a tile to another tile one hop above it, a tile two hops above it, a tile one hop below it and a tile two hops below it.
 Information is transferred over the SF with a deterministic latency. 
 Each tile acts independently, streaming data through internal memory and MS/AL units, to other tiles over the SF and AF.
@@ -35,7 +35,7 @@ Information is transferred over the AF with a non-deterministic latency.
 All tiles that participate in a synchronous domain act as a single pipelined data path.
 The Base Tile (BT) is defined as the first tile of a synchronous domain that initiates a thread of work through the pipelined tiles.
 The BT is responsible for starting work on a predefined cadence, referred to as the Spoke Count or Initiation Interval (II).
-E.g. For $II = 3$, as in the example in Fig. \ref{fig:se_example}, then the BT can initiate work every third clock cycle.
+E.g. For $II = 3$, as in the example in \figurename~\ref{fig:se_example}, then the BT can initiate work every third clock cycle.
 %The synchronous fabric provides both data and control information.
 
 \subsection{Asynchronous Fabric interface}
@@ -86,7 +86,7 @@ We have a written an in-house parser that enables the programmer to express the 
 The parser produces an Intermediate Representation (IR) that is used as an input to our proposed mapper.
 The IR represents each SDF as a DFG, where every instruction a node.
 Each node represents an instruction that needs to be placed onto a SE tile at he proper time-slice such that when all nodes are placed, the program executes correctly. 
-In Fig. \ref{fig:se_example}, the edges of the graph represent the data dependencies of the instructions. 
+In \figurename~\ref{fig:se_example}, the edges of the graph represent the data dependencies of the instructions. 
 The nodes also contain information about the variables that need to be present in tile memories during instruction execution. 
 The instruction intended to execute at a specific time-slice (clock cycle) will only execute when the master input configured in the corresponding Spoke RAM entry receives a valid control message.
 %The tiles can pass data to their neighbors and each tile can be configured with a different number of initiation intervals (II). 
@@ -104,6 +104,6 @@ The SE hardware imposes constraints that the RL mapper must adhere to in order t
   \item No two or more instructions that are siblings in the DFG can share a tile.
 \end{enumerate}
 The SE device configuration and its constraints are modeled in a simulation environment and a reward function is used to determine the quality of placements obtained.
-In order to enforce these constraints, we explore two methods in section \ref{subsec:output_masking}. The first method is to give a negative reward when a 
-constraint is violated and the second is creation of a mask on the invalid actions so that the network only outputs valid actions.
+To enforce these constraints, we explore two methods in Section \ref{subsec:output_masking}.
+The first method is to give a negative reward when a constraint is violated and the second is creation of a mask on the invalid actions so that the network only outputs valid actions.
 In both cases, placing instructions sub-optimally leads to a reduced reward whereas placements that optimally reduce total execution time of the graph are rewarded. 
