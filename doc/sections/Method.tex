@@ -3,7 +3,7 @@
 We present a Reinforcement learning (RL) based framework to explore and optimize the mapping of instructions for a given SDF graph to the SE, guided by a reward function that informs the mapping algorithm about the quality of the produced mappings at each step. In this section, we give an overview of the methods used along with the formulation required for detailed description of the various components of the RL approach.
 
 \subsection{Overview}
-Proximal Policy Optimization (PPO) \cite{schulman2017proximal} is an RL method that is  widely used for continuous and discrete action problems. 
+PPO \cite{schulman2017proximal} is an RL method that is  widely used for continuous and discrete action problems. 
 It trains an actor and a critic model (represented as neural networks).
 The actor model is trained to produce actions (node placements in our case) from sample states obtained during simulation and the critic model is trained to match the sampled rewards from the actions produced by the actor using a surrogate loss function. 
 This sample and train process is repeated over various iterations. 
@@ -81,7 +81,7 @@ For our RL framework, a GNN is used to process node dependencies and create an e
 This is processing the static data, which is the same SDF graph during placement of each node. 
 After placing all nodes in an episode, a different graph can be fed into the GNN to train the RL model on a collection of SDF graphs. 
 Each node contains a feature vector that is initialized with a combination of tile memory constraints and node dependencies. 
-Two layers of Graph Convolution \cite{wu2019simplifying} and a graph average pool layer produce a vector embedding.
+Two layers of graph convolution \cite{wu2019simplifying} and a graph average pool layer produce a vector embedding.
 An attention module is applied to the embedding to highlight relevant components for the current node to be placed. 
 The Global Graph Attention Module is the combination of the GNN and attention modules.
 The node selection and environment state change for each iteration over all nodes in the computation graph. 

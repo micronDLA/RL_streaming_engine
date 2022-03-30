@@ -32,15 +32,15 @@ Alternative optimization algorithms include evolutionary strategies \cite{Zhicha
 An advantage of an RL approach is that it is able to learn from a collection of programs and reuse previous data for new programs by training a Deep Learning model \cite{zhou2019gdp}.
 
 Recurrent neural networks (RNN) \cite{hochreiter1996lstm} were previously a popular approach to process a sequence of nodes from a graph representation. 
-Recently, graph neural networks (GNN) \cite{gori2005new} have shown success in processing structured data without needing the preprocessing required for RNNs.
+Recently, Graph Neural Networks (GNN) \cite{gori2005new} have shown success in processing structured data without needing the preprocessing required for RNNs.
 GNNs are widely used for tasks involving graph processing \cite{Zhou_compileGNN, zhou2019gdp}. 
 Attention modules have sometimes been used in literature to supplement the embeddings created by GNNs to further improve results \cite{addanki2019placeto}.
 
 In \cite{mirhoseini2020chip}, an RL based method for chip placement is presented where a graph neural network is used to create embeddings from a netlist graph and then passed through an actor model to get placements on a chip canvas.
 The training is done using the PPO approach and one component from the netlist is placed at each step until all required components have been placed.
 The actor network in this method is composed of deconvolution layers which are more computationally intensive than our approach. 
-\cite{wu_core_2020} proposes an RL based method that uses a deep deterministic policy gradient (DDPG) method for component placement in multi-chip many-core systems.
-\cite{khailany_accelerating_2020} presents a review of various machine learning approaches including reinforcement learning for chip design.
+An RL based method, proposed in \cite{wu_core_2020}, that uses a Deep Deterministic Policy Gradient (DDPG) method for component placement in multi-chip many-core systems.
+A review of various machine learning approaches are presented in \cite{khailany_accelerating_2020} which including reinforcement learning for chip design.
 The work proposed in \cite{zhou2019gdp} presents a combination of graph neural network and transformer-XL model to place operations in dataflow graphs on suitable devices.
 In each of these works, the aim is similar to ours i.e. to reduce the manual labor and domain expertise required to produce mappings.
 

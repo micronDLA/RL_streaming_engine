@@ -9,7 +9,7 @@ The compute tiles are interconnected with both a Synchronous Fabric (SF) and an 
 It also interconnects tile memory, multiplexers, and Single Instruction Multiple Data (SIMD) units within each tile as shown in Fig. \ref{fig:sub-tile}. 
 Tiles can be pipelined through SF to form a Synchronous Data Flow (SDF) through Multiply/Shift (MS) unit and an Arithmetic/Logic (AL) SIMD units. 
 The output of the MS unit is connected the one of the two inputs of the AL unit.
-AF connects a tile with all other tiles, dispatch interface (DI), and memory interfaces (MIs).
+AF connects a tile with all other tiles, dispatch interface (DI), and memory interfaces (MI).
 It bridges SDFs through asynchronous operations, which include SDF initiation, asynchronous data transfer from one SDF to another, system memory accesses, and branching and looping constructs. 
 Together, SF and AF allow the tiles to efficiently execute high-level programming language constructs.
 Simulation results of hand-crafted SE kernels have shown orders-of-magnitude better performance per watt on data-intensive applications than existing computing platforms.
