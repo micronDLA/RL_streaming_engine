@@ -85,7 +85,7 @@ The node selection and environment state change for each iteration over all node
 The dynamic data is fed into a Fully Connected (FC) layer model to create another embedding to represent current state. 
 The embeddings from dynamic data and static data are concatenated and fed to an MLP model with 3 FC layers to create actions. 
 Invalid actions are masked before being sent to the reward function. Masking was shown to be effective in RL setting \cite{Shengyi_mask}.
-We see the addition of GGA module provides improves reward and sample efficiency for various SDF graphs and different device configuration as shown in section \ref{sec:GGA_result}.
+We see the addition of GGA module provides improves reward and sample efficiency for various SDF graphs and different device configuration as shown in Section \ref{sec:GGA_result}.
 
 % \begin{algorithm*}
 %   \caption{\textcolor{red}{RL Mapping Algorithm}}
