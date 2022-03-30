@@ -57,12 +57,15 @@ The key contributions of this paper are as follows:
     \item An analysis of different factors that impacts the quality of mappings obtained.
 \end{enumerate}
 
-This work is motivated by the need to provide an improved toolset that lowers SE usability barrier for a programmer.
+This work is motivated by the need to provide an improved SE toolset that lowers SE usability barrier for a programmer.
 This will also assist other tools or programmers in SE mapping creation by providing even partial placement suggestions or tile configuration labels.
 The RL mapper performs unsupervised learning and optimization allowing it to search a wide and sparse search space. 
 Each node in the DFG is an instruction that is mapped to a specific slot on a tile.
+
 This line of research is inspired by recent work that used RL for chip placement \cite{mirhoseini2020chip}.
 Our problem requirement of mapping nodes of a DFG to available compute elements is similar to the problem of placing nodes of a chip netlist on a chip canvas. 
+Due to the similarities between these problem domains, we theorize that our approach has the potential of being used in the chip placement.
+This hypothesis will be investigated in future work.
 
 The rest of this paper is organized as follows: 
 Section \ref{sec:relatedwork} discusses related work.

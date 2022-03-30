@@ -22,9 +22,9 @@ The key components of our RL method are as follows:
   \item Transition function: The transition function gives the probability distribution over next states given the current state and the action to be performed.
 \end{itemize}
 
-\begin{figure}[h]
+\begin{figure}[tb]
   \centering
-  \includegraphics[width=\linewidth]{fig/ppo.pdf}
+  \includegraphics[trim=15 30 20 20, clip, width=\linewidth]{fig/ppo.pdf}
   \caption{Diagram of the RL framework showing the role of actor and critic networks during RL training. }
   \label{fig:ppo}
 \end{figure}
@@ -56,6 +56,15 @@ If the current node can't be placed because of the constraints (all values in th
   \end{cases}
 \]
 
+\begin{figure*}[tb]
+  \centering
+  \includegraphics[width=\textwidth]{fig/model_diagram.pdf}
+  \caption{Actor and critic model architecture. GNN is used to process the SDF graph (static data). 
+  Attention module gives importance to relevant nodes. The embedding created from dynamic data is combined with static data embedding. 
+  A final MLP model is used to generate actions. Actions are masked to ensure only valid actions are produced. }
+  \label{fig:model}
+\end{figure*}
+
 \subsection{Model design}
 
 The architecture for actor and critic models is shown in Fig. \ref{fig:model}.
@@ -77,15 +86,6 @@ The dynamic data is fed into a Fully Connected (FC) layer model to create anothe
 The embeddings from dynamic data and static data are concatenated and fed to an MLP model with 3 FC layers to create actions. 
 Invalid actions are masked before being sent to the reward function. Masking was shown to be effective in RL setting \cite{Shengyi_mask}.
 We see the addition of GGA module provides improves reward and sample efficiency for various SDF graphs and different device configuration as shown in section \ref{sec:GGA_result}.
-
-\begin{figure*}[h]
-  \centering
-  \includegraphics[width=\textwidth]{fig/model_diagram.pdf}
-  \caption{Actor and critic model architecture. GNN is used to process the SDF graph (static data). 
-  Attention module gives importance to relevant nodes. The embedding created from dynamic data is combined with static data embedding. 
-  A final MLP model is used to generate actions. Actions are masked to ensure only valid actions are produced. }
-  \label{fig:model}
-\end{figure*}
 
 % \begin{algorithm*}
 %   \caption{\textcolor{red}{RL Mapping Algorithm}}

@@ -1,11 +1,14 @@
-Our RL mapper improves and increments the capabilities of the toolset used to program the SE device. 
+Our proposed RL mapper is a key component of the SE device toolchain.
+It that enables finding a valid mapping of an application within a reasonable amount of time.
 It can search for optimal mappings while using the learning to map previously unseen workloads. 
-It improves on the total time required to get a mapping as compared to the existing manual placement approach and allows for automated search of mappings with different optimizations under different trade-offs, hence reducing the manual labor required to find mappings. 
-The techniques presented could be applied to other applications such as chip placement, which is worth exploring in the future. 
+Thus, improving the total time required to get a mapping as compared to the existing manual placement approach and allows for automated search of mappings with different optimizations under different trade-offs, hence reducing the manual labor required to find mappings. 
+Our proposed mapper relied on techniques applied to chip placement.
+Due to the similarities between the chip placement problem space and mapping operations to a dataflow architecture, the presented work could be applied to chip placement.
 Our future work also includes: 
 \begin{itemize}
     \item Optimizing training methods to obtain mappings for problems like FFT which have a bigger search space than currently used SDF graphs. 
     \item Increasing sample efficiency of learning methods and improving the simulation environment for the SE by adding more constraints. 
     \item Studying the impact of reusing the trained networks across graph rather than training a network from scratch for a given SDF graph.
     \item Integration of RL mapper into the SE toolset.
+    \item Investigating the application of the proposed techniques in chip placement.
 \end{itemize}

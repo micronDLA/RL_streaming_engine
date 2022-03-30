@@ -11,7 +11,7 @@ The inner loop code is optimized and broken down into six SDFs which are shown i
 The SE device configuration for the following experiments used 16 tiles and a maximum of 6 Initiation Interval (II).
 Other SE device configurations are possible.
 
-\begin{figure}[h]
+\begin{figure}[tb]
   \centering
   \includegraphics[width=\linewidth]{fig/ifft_graph.pdf}
   \caption{FFT application SDF graph.}
@@ -19,31 +19,7 @@ Other SE device configurations are possible.
 \end{figure}
 
 
-We also benchmarked our RL framework against a collection of random directed graphs meant to simulate real life workloads. 
-We compare a baseline PPO method composed of 3 stacked MLPs against an actor model with the proposed Global Graph Attention (GGA) module.
-We evaluate these models on varying SDF graphs with different complexities by increasing number of nodes in the graph. 
-We also tested on a larger device with 64 tiles.
-In Fig. \ref{fig:nodes_graph}, we observe that the RL approach finds mappings for a variety of computation graphs, and GGA
-improves the best schedule found for the same number of training epochs. The GGA also finds improved schedule in terms of clock cycles taken for a larger device configuration. 
-For the results in figure \ref{fig:nodes_graph}, the epochs were limited to 50000 for both models. 
-The cycle count is number of SE execution steps taken to process all nodes for a mapping, which is calculated from the simulated SE environment. 
-
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{fig/nodes_graph.pdf}
-  \caption{Cycle count for running all nodes in the best mapping given by RL model over 50000 epochs. 
-  PPO baseline MLP model and GGA model were evaluated with computation graphs with increasing number of nodes. 
-  A larger device configuration with 64 tiles was used for experiments with SDF graphs with 40 and 50 nodes. }
-  \label{fig:nodes_graph}
-\end{figure}
-
-
-\subsection{Global Graph Attention (GGA)} \label{sec:GGA_result}
-
-In Fig. \ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the FFT application. 
-The node and states changes for each iteration over all nodes in the SDF graph. The GGA module provides a representation of the entire graph while placing each node.
-
-\begin{figure}[h]
+\begin{figure}[tb]
   \centering
   \includegraphics[width=\linewidth]{fig/plot_gnn_atten_ppo.pdf}
   \caption{Effect of using Global Graph Attention (GGA) module for mapping the FFT application on device with 16 tiles. 
@@ -51,15 +27,7 @@ The node and states changes for each iteration over all nodes in the SDF graph. 
   \label{fig:ifft_rewards}
 \end{figure}
 
-
-\subsection{Node Iteration Order}
-
-The iteration order is the sequence in which nodes are fed to the actor model in the RL framework and plays an important role in whether the nodes can be successfully placed or not. 
-In Fig. \ref{fig:ordered_placement}, we observe that iterating over nodes in topological 
-ordering results in higher reward and eases the node placement task. 
-On the other hand, when placing the nodes randomly, sometimes nodes get placed before their predecessors are placed and the model needs to predict which tiles the predecessor nodes will be placed on, making training and the learning problem harder.
-
-\begin{figure}[h]
+\begin{figure}[tb]
   \centering
   \includegraphics[width=\linewidth]{fig/plot_ordered.pdf}
   \caption{Iterating nodes in topological ordering results in higher reward and eases the placement task. 
@@ -67,6 +35,49 @@ On the other hand, when placing the nodes randomly, sometimes nodes get placed b
   \label{fig:ordered_placement}
 \end{figure}
 
+\begin{figure}[tb]
+  \centering
+  \includegraphics[width=\linewidth]{fig/ifft_masked_nomask.pdf}
+  \caption{Reward comparison between node placement with output masking (blue) and without output masking (red).}
+  \label{fig:mask_nomask}
+\end{figure}
+
+\begin{figure}[tb]
+  \centering
+  \includegraphics[width=\linewidth]{fig/pretrain_ifft.pdf}
+  \caption{Comparison between training RL model from scratch (red) versus fine-tuning a model pre-trained on random graphs (blue). }
+  \label{fig:pretrain_ifft}
+\end{figure}
+
+We also benchmarked our RL framework against a collection of random directed graphs meant to simulate real life workloads. 
+We compare a baseline PPO method composed of 3 stacked MLPs against an actor model with the proposed Global Graph Attention (GGA) module.
+We evaluate these models on varying SDF graphs with different complexities by increasing number of nodes in the graph. 
+We also tested on a larger device with 64 tiles.
+In Fig. \ref{fig:nodes_graph}, we observe that the RL approach finds mappings for a variety of computation graphs, and GGA
+improves the best schedule found for the same number of training epochs. The GGA also finds improved schedule in terms of clock cycles taken for a larger device configuration. 
+For the results in figure \ref{fig:nodes_graph}, the epochs were limited to 50,000 for both models. 
+The cycle count is number of SE execution steps taken to process all nodes for a mapping, which is calculated from the simulated SE environment. 
+
+\begin{figure}[tb]
+  \centering
+  \includegraphics[width=\linewidth]{fig/nodes_graph.pdf}
+  \caption{Cycle count for running all nodes in the best mapping given by RL model over 50,000 epochs. 
+  PPO baseline MLP model and GGA model were evaluated with computation graphs with increasing number of nodes. 
+  A larger device configuration with 64 tiles was used for experiments with SDF graphs with 40 and 50 nodes. }
+  \label{fig:nodes_graph}
+\end{figure}
+
+\subsection{Global Graph Attention (GGA)} \label{sec:GGA_result}
+
+In Fig. \ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the FFT application. 
+The node and states changes for each iteration over all nodes in the SDF graph. The GGA module provides a representation of the entire graph while placing each node.
+
+\subsection{Node Iteration Order}
+
+The iteration order is the sequence in which nodes are fed to the actor model in the RL framework and plays an important role in whether the nodes can be successfully placed or not. 
+In Fig. \ref{fig:ordered_placement}, we observe that iterating over nodes in topological 
+ordering results in higher reward and eases the node placement task. 
+On the other hand, when placing the nodes randomly, sometimes nodes get placed before their predecessors are placed and the model needs to predict which tiles the predecessor nodes will be placed on, making training and the learning problem harder.
 
 \subsection{Output Masking}
 \label{subsec:output_masking}
@@ -76,23 +87,9 @@ After placement of each node, the succeeding nodes have fewer placement options 
 Masking invalid placements reduces the search space as each node is being placed. 
 Figure \ref{fig:mask_nomask} demonstrates that masking improves the reward and sample efficiency of the RL model.
 
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{fig/ifft_masked_nomask.pdf}
-  \caption{Reward comparison between node placement with output masking (blue) and without output masking (red).}
-  \label{fig:mask_nomask}
-\end{figure}
-
 \subsection{Pre-train and fine-tuning}
 
 After training the RL model on various SDF graphs, the RL model can be used for fine-tunning on specific graph or for inferencing.
 In figure \ref{fig:pretrain_ifft}, the RL model was pre-trained with random collection of SDF graphs and then fine-tuned for the FFT application.
 The initial and final reward of the fine tuned RL model is higher than training the model from scratch.
 The model is able to reuse some of the previous experience of placing nodes for random input graphs.
-
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{fig/pretrain_ifft.pdf}
-  \caption{Comparison between training RL model from scratch (red) versus fine-tuning a model pre-trained on random graphs (blue). }
-  \label{fig:pretrain_ifft}
-\end{figure}
