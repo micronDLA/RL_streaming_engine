@@ -30,7 +30,7 @@ def get_args():
     arg('--nodes', type=int, default=20,  help='number of nodes')
     arg('--debug', dest='debug', action='store_true', default=False, help='enable debug mode')
     arg('--input', type=str, default='input_graphs/vectorAdd_ir.json', help='load input json from file')
-    arg('--nnmode', type=str, default='simple_ff', help='select nn to use as actor/critic model: simple_ff, ff_gnn, ff_gnn_attention')
+    arg('--nnmode', type=str, default='ff_gnn_attention', help='select nn to use as actor/critic model: simple_ff, ff_gnn, ff_gnn_attention, ff_transf_attention')
 
     # Constraints
     arg('--pass-timing', action='store_true', help='enable pass through timing')

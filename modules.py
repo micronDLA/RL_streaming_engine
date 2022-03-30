@@ -9,7 +9,8 @@ from net import NormalHashLinear, TransformerModel
 from dgl import nn as gnn
 from util import ravel_index
 from einops import reduce
-
+import numpy as np
+import math
 from typing import Optional
 
 _engine = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -78,6 +79,42 @@ class GraphEmb_Conv(nn.Module):
         x = self.avg_pool(x).flatten(1)
         x = self.dropout(self.norm(x))
         return x
+
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
+
+
+class TransformerAttentionModel(nn.Module):
+    def __init__(self, ninp, nhead, nhid, nlayers, dropout=0.5):
+        super(TransformerAttentionModel, self).__init__()
+        self.pos_encoder = PositionalEncoding(ninp, dropout)
+        encoder_layers = nn.TransformerEncoderLayer(ninp, nhead, nhid, dropout)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, nlayers)
+        self.ninp = ninp
+
+    def generate_square_subsequent_mask(self, sz):
+        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+        return mask
+
+    def forward(self, src, src_mask=None):
+        src = self.pos_encoder(src)
+        output = self.transformer_encoder(src)
+        return output
 
 
 class PAM_ModuleM(nn.Module):
@@ -201,6 +238,7 @@ class ActorCritic(nn.Module):
 
         #GNN
         # self.graph_model = GraphEmb_Conv(graph_feat_size)
+
         self.graph_model = nn.ModuleList([
             gnn.SGConv(gnn_in, 64, 1, False, nn.ReLU),
             gnn.SGConv(64, 128, 1, False, nn.ReLU)
@@ -210,6 +248,7 @@ class ActorCritic(nn.Module):
         #Attention modules
         self.pam_attention = PAM_ModuleM(graph_feat_size)
         self.cam_attention = CAM_ModuleM(graph_feat_size)
+        self.transf_atten = TransformerAttentionModel(graph_feat_size, 4, 64, 2)
 
         if args.nnmode == 'rnn':
             self.actor = ACRNN(state_dim+graph_feat_size, emb_size, action_dim, mode='soft')
@@ -229,7 +268,10 @@ class ActorCritic(nn.Module):
             self.actor = ACFF(state_dim+1, emb_size, action_dim, mode='')  # Don't apply softmax since we now use logits
             self.critic = ACFF(state_dim+1, emb_size, 1, mode='')  # +1 for node_id
 
-        elif args.nnmode == 'ff_gnn' or self.args.nnmode == 'ff_gnn_attention':
+        elif (self.args.nnmode == 'ff_gnn' or
+            self.args.nnmode == 'ff_gnn_attention' or
+            self.args.nnmode == 'ff_transf_attention'):
+
             self.actor = ACFF(state_dim+1+graph_feat_size, emb_size, action_dim, mode='')  # Don't apply softmax since we now use logits
             self.critic = ACFF(state_dim+1+graph_feat_size, emb_size, 1, mode='')  # +1 for node_id
 
@@ -276,17 +318,22 @@ class ActorCritic(nn.Module):
 
         state = torch.atleast_2d(state)
 
-        if self.args.nnmode == 'ff_gnn' or self.args.nnmode == 'ff_gnn_attention':
+        if (self.args.nnmode == 'ff_gnn' or
+            self.args.nnmode == 'ff_gnn_attention' or
+            self.args.nnmode == 'ff_transf_attention'):
+
             graph = dgl.add_self_loop(graph_info)
             graph_feat = graph.ndata['feat']
             for layer in self.graph_model:
                 graph_feat = layer(graph, graph_feat)
 
-            graph_feat = self.graph_avg_pool(graph, graph_feat)
-
             if self.args.nnmode == 'ff_gnn_attention':
-                graph_feat = self.pam_attention(graph_feat.unsqueeze(1)).squeeze(1) # attention module
+                graph_feat = self.pam_attention(graph_feat.unsqueeze(0)).squeeze(0) # attention module
                 # graph_feat = self.cam_attention(graph_feat.unsqueeze(0)).squeeze(0)
+            if self.args.nnmode == 'ff_transf_attention':
+                graph_feat = self.transf_atten(graph_feat.unsqueeze(1)).squeeze(1)
+
+            graph_feat = self.graph_avg_pool(graph, graph_feat)
 
             state = torch.cat((state, node_id_or_ids, graph_feat), dim=1)# Add node id and graph embedding
         else:
@@ -310,24 +357,30 @@ class ActorCritic(nn.Module):
         #                 act_t[2] = random.choice(free_spoke)
         #             action.data = torch.tensor([int(ravel_index(act_t, self.device['topology']).item())], dtype=torch.int64)
 
-        
         return action.detach(), action_logprob.detach()
 
-    def evaluate(self, state, action, graph_info, mask, node_id_or_ids=None, taskid=None):
+    def evaluate(self, state, action, graph_info, mask, node_id_or_ids=None):
         state = torch.atleast_2d(state)
 
-        if self.args.nnmode == 'ff_gnn' or self.args.nnmode == 'ff_gnn_attention':
+        if (self.args.nnmode == 'ff_gnn' or
+            self.args.nnmode == 'ff_gnn_attention' or
+            self.args.nnmode == 'ff_transf_attention'):
+
             graph = graph_info[0]
             graph = dgl.add_self_loop(graph)
             graph_feat = graph.ndata['feat']
             for layer in self.graph_model:
                 graph_feat = layer(graph, graph_feat)
-            graph_feat = self.graph_avg_pool(graph, graph_feat)
-            gnn_feat = graph_feat.broadcast_to(state.shape[0], -1)
 
             if self.args.nnmode == 'ff_gnn_attention':
-                gnn_feat = self.pam_attention(gnn_feat.unsqueeze(1)).squeeze(1) # attention module
-                # gnn_feat = self.cam_attention(gnn_feat.unsqueeze(-1)).squeeze(-1)
+                graph_feat = self.pam_attention(graph_feat.unsqueeze(0)).squeeze(0) # attention module
+                # graph_feat = self.cam_attention(graph_feat.unsqueeze(-1)).squeeze(-1)
+
+            if self.args.nnmode == 'ff_transf_attention':
+                graph_feat = self.transf_atten(graph_feat.unsqueeze(1)).squeeze(1)
+
+            graph_feat = self.graph_avg_pool(graph, graph_feat)
+            gnn_feat = graph_feat.broadcast_to(state.shape[0], -1)
 
             state = torch.cat((state, node_id_or_ids, gnn_feat), dim=1)  # Add node id and graph embedding
         else:

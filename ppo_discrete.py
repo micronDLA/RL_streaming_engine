@@ -85,7 +85,7 @@ class PPO:
         self.buffer.node_ids.append(node_id)
 
 
-    def update(self, taskid=None):
+    def update(self):
         # Monte Carlo estimate of rewards:
         rewards = []
         discounted_reward = 0
@@ -124,7 +124,7 @@ class PPO:
             if self.args.nnmode == 'transformer':
                 logprobs, state_values, dist_entropy = self.policy.evaluate_seq((old_states, old_masks), old_actions, old_graph)
             else:
-                logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions, old_graph, old_masks, old_node_ids, taskid=taskid)
+                logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions, old_graph, old_masks, old_node_ids)
 
             # match state_values tensor dimensions with rewards tensor
             state_values = torch.squeeze(state_values)
@@ -156,5 +156,6 @@ class PPO:
         torch.save(self.policy_old.state_dict(), checkpoint_path)
 
     def load(self, checkpoint_path):
+        print('Loaded model \n')
         self.policy_old.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
         self.policy.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
