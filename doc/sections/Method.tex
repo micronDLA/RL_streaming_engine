@@ -10,13 +10,13 @@ This sample and train process is repeated over various iterations.
 In this manner, the problem search space is explored using the reward function as a heuristic.
 Refer to algorithm Alg.~\ref{alg1} for the complete RL training process.
 Our SE mapping task is formulated as a discrete action problem where the goal is to place one node at each time step. 
-Samples of SE state, actions performed and rewards obtained at each time step are collected after executing the actions provided by the actor model in simulation. 
+Samples of SE state, actions performed, and rewards obtained at each time step are collected after executing the actions provided by the actor model in simulation. 
 These samples are stored in a buffer and are used as data to train the models.
 \figurename~\ref{fig:ppo} shows the overall RL framework. 
 
 The key components of our RL method are as follows:
 \begin{itemize}
-  \item States: The state is $s$ represented by a concatenation of an array of features of placed nodes, a selected node to be placed next and an embedding of the whole computation graph. 
+  \item States: The state is $s$ represented by a concatenation of an array of features of placed nodes, a selected node to be placed next, and an embedding of the whole computation graph. 
   \item Action: The action $a$ consists of the node to be placed along with the tile and spoke location it is to be placed at.
   \item Reward function: The reward obtained is based on the number of clock cycles taken for a node to finish executing after its predecessors finished executing.
   \item Transition function: The transition function gives the probability distribution over next states given the current state and the action to be performed.
@@ -30,10 +30,12 @@ The key components of our RL method are as follows:
 \end{figure}
 
 \subsection{State Representation}
-The state $s$ is a vector of size $|TS|+1$ where $TS$ is the set of tile slices in the Streaming Engine with $TS=T \times S$. Here $T$ and $S$ are sets of all tiles and slots in the SE respectively. The number of slots available in each tile is equal to number of Initiation Intervals.
+The state $s$ is a vector of size $|TS|+1$ where $TS$ is the set of tile slices in the Streaming Engine with $TS=T \times S$. 
+Here $T$ and $S$ are sets of all tiles and slots in the SE respectively. 
+The number of slots available in each tile is equal to number of Initiation Intervals.
 
 \subsection{Action Representation}
-The action $a$ at each step is a tuple \((n,t,i)\) where $n \in N$ (the set of all nodes) is the node to be placed and $t \in T$ and $s \in S$ are the tile and slot at which the node $n$ is to be placed. 
+The action $a$ at each step is a tuple \((n,t,s)\) where $n \in N$ (the set of all nodes) is the node to be placed and $t \in T$ and $s \in S$ are the tile and slot at which the node $n$ is to be placed. 
 We place nodes in a topological order which ensures that all of a node's predecessors have been placed before the node. 
 We do not make selecting the node to be placed a part of the learning problem since it increases the complexity of the learning process and makes training harder.
 
@@ -43,7 +45,7 @@ This in turn sets the probability of sampling invalid actions to $0$, ensuring t
 Finally, we only calculate entropy on valid actions, so that our algorithm maximizes exploration only on valid actions.
 
 \subsection{Reward Function}
-Our goal in this work is to get mappings that are optimal in terms of total clock cycles taken and for this purpose, the reward that is given at each time step is the difference between the clock cycle at which the current node to be placed is ready (its ready time) and the ready time of its predecessor. 
+Our goal in this work is to get mappings that are optimal in terms of total clock cycles taken, and for this purpose, the reward that is given at each time step is the difference between the clock cycle at which the current node to be placed is ready (its ready time) and the ready time of its predecessor. 
 $R_n$ is the reward obtained for placing node $n$ and $t_n$ is its ready time. 
 The function $p(n)$ gives the predecessor of $n$ in an SDF graph. 
 If the current node can't be placed because of the constraints (all values in the mask vector $m$ are zero), then a high negative reward $-\lambda$ is given.
@@ -59,33 +61,35 @@ If the current node can't be placed because of the constraints (all values in th
 \begin{figure*}[tb]
   \centering
   \includegraphics[width=\textwidth]{fig/model_diagram.pdf}
-  \caption{Actor and critic model architecture. GNN is used to process the SDF graph (static data). 
-  Attention module gives importance to relevant nodes. The embedding created from dynamic data is combined with static data embedding. 
-  A final MLP model is used to generate actions. Actions are masked to ensure only valid actions are produced. }
+  \caption{Actor and critic model architecture. 
+  GNN is used to process the SDF graph (static data). 
+  Attention module gives importance to relevant nodes. 
+  The embedding created from dynamic data is combined with static data embedding. 
+  A final MLP model is used to generate actions. 
+  Actions are masked to ensure only valid actions are produced. }
   \label{fig:model}
 \end{figure*}
 
 \subsection{Model design}
-
 The architecture for actor and critic models is shown in \figurename~\ref{fig:model}.
 The input is separated in two categories: static and dynamic data. 
 Static data is information that doesn't change as nodes are being placed and includes the graph features from the DFG that encapsulate node dependence based on SE constraints.
 Device state (including placed nodes) and node to be placed are dynamic data that change during placement.
 
 \subsection{Global Graph Attention Module}
-
 For our RL framework, a GNN is used to process node dependencies and create an embedding for the computation graph.
 This is processing the static data, which is the same SDF graph during placement of each node. 
 After placing all nodes in an episode, a different graph can be fed into the GNN to train the RL model on a collection of SDF graphs. 
 Each node contains a feature vector that is initialized with a combination of tile memory constraints and node dependencies. 
-Two layers of Graph Convolution \cite{wu2019simplifying} and a graph average pool layer produces a vector embedding.
+Two layers of Graph Convolution \cite{wu2019simplifying} and a graph average pool layer produce a vector embedding.
 An attention module is applied to the embedding to highlight relevant components for the current node to be placed. 
 The Global Graph Attention Module is the combination of the GNN and attention modules.
 The node selection and environment state change for each iteration over all nodes in the computation graph. 
 The dynamic data is fed into a Fully Connected (FC) layer model to create another embedding to represent current state. 
-The embeddings from dynamic data and static data are concatenated and fed to an MLP model with 3 FC layers to create actions. 
-Invalid actions are masked before being sent to the reward function. Masking was shown to be effective in RL setting \cite{Shengyi_mask}.
-We see the addition of GGA module provides improves reward and sample efficiency for various SDF graphs and different device configuration as shown in Section \ref{sec:GGA_result}.
+The embeddings from dynamic data and static data are concatenated and fed to an MLP model with three FC layers to create actions. 
+Invalid actions are masked before being sent to the reward function. 
+Masking was shown to be effective in RL setting \cite{Shengyi_mask}.
+We see the addition of GGA module provides improved reward and sample efficiency for various SDF graphs and different device configuration as shown in Section \ref{sec:GGA_result}.
 
 % \begin{algorithm*}
 %   \caption{\textcolor{red}{RL Mapping Algorithm}}

@@ -1,4 +1,4 @@
-As Dennard scaling ends, big-data applications such as real-time image processing, graph analytics, and deep learning continue to push the boundaries of performance and energy efficiency requirements for compute system. 
+As Dennard scaling ends, big-data applications such as real-time image processing, graph analytics, and deep learning continue to push the boundaries of performance and energy efficiency requirements for computing system. 
 One solution to this challenge is to move compute closer to memory or storage for substantial energy savings of data movement. 
 We have developed an innovative Near-Data Computing (NDC) architecture that leverages the dramatic opportunities provided by the new CXL protocol \cite{sharma2020compute}. 
 NDC incorporates heterogenous compute elements in the memory/storage subsystem to accelerate various computing tasks near data. 
@@ -22,7 +22,8 @@ Simulation results of hand-crafted SE kernels have shown orders-of-magnitude bet
     The instruction execution latency is three clock cycles.
     The solid and dotted lines connecting the tiles, have one and two clock cycles transfer latency respectively.
     E.g., instruction \#0 is scheduled at (tile \#3, slot \#0) and its output is sent to instruction \#3.
-    Instruction \#0 output is ready after three clock cycles, in addition to two clock cycles to move data to tile \#1, instruction \#3 gets scheduled on (tile \#1, slot \#1).
+    Instruction \#0 output is ready after three clock cycles plus two clock cycles to move data to tile \#1. 
+    Thus, instruction \#3 gets scheduled on (tile \#1, slot \#1).
   }
   \label{fig:se_example}
 \end{figure}
@@ -38,7 +39,8 @@ The program in this example is a distance calculation function shown in Eq. \ref
 To keep this example simple, we ignore the square root part of the equation.
 The program is represented as a Data-Flow Graph (DFG) as shown in \figurename~\ref{fig:se_example}.
 Each operation in Eq. \ref{eq:dist} is an instruction that is mapped to a slot at a tile on the SE.
-Since the output of the MS unit is connected to the input of AL unit, instruction 6 produces $\Delta z^2$ on the output on MS unit and adds it to $(\Delta x^2 + \Delta y^2)$ at the AL unit.
+
+Since the output of the MS unit is connected to the input of the AL unit, instruction \#6 produces $\Delta z^2$ on the output on the MS unit and adds it to $(\Delta x^2 + \Delta y^2)$ at the AL unit.
 
 
 Mapping the instructions from a program's DFG onto the compute elements of the SE while adhering to architectural constraints is an NP-hard problem with a vast and sparse search space \cite{10.1007/3-540-69346-7_30}. 
@@ -57,13 +59,13 @@ The key contributions of this paper are as follows:
     \item An analysis of different factors that impacts the quality of mappings obtained.
 \end{enumerate}
 
-This work is motivated by the need to provide an improved SE toolset that lowers SE usability barrier for a programmer.
-This will also assist other tools or programmers in SE mapping creation by providing even partial placement suggestions or tile configuration labels.
+This work is motivated by the need to provide an improved SE toolset that lowers the SE usability barrier for a programmer.
+This will also assist other tools or programmers in SE mapping creation by providing partial placement suggestions or tile configuration labels.
 The RL mapper performs unsupervised learning and optimization allowing it to search a wide and sparse search space. 
 Each node in the DFG is an instruction that is mapped to a specific slot on a tile.
 
 This line of research is inspired by recent work that used RL for chip placement \cite{mirhoseini2020chip}.
-Our problem requirement of mapping nodes of a DFG to available compute elements is similar to the problem of placing nodes of a chip netlist on a chip canvas. 
+The problem requirement of mapping nodes of a DFG to available compute elements is similar to the problem of placing nodes of a chip netlist on a chip canvas. 
 Due to the similarities between these problem domains, we theorize that our approach has the potential of being used in the chip placement.
 This hypothesis will be investigated in future work.
 
@@ -71,4 +73,4 @@ The rest of this paper is organized as follows:
 Section \ref{sec:relatedwork} discusses related work.
 Section \ref{sec:background} provides the necessary background on the SE device architecture needed to understand the details of the RL approach.
 Section \ref{sec:rlmapper} presents the proposed RL approach for mapping applications to the SE.
-Section \ref{sec:results} discusses results and finally, Section \ref{sec:conclusion} concludes the paper along with a discussion on future work.
+Section \ref{sec:results} discusses results, and Section \ref{sec:conclusion} concludes the paper along with a discussion on future work.

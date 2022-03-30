@@ -1,14 +1,15 @@
 \subsection{CGRA}
 CGRAs are a heavily researched architectural paradigm with a long history and can provide an excellent balance of high-performance compute, memory bandwidth, and area and energy efficiency \cite{theodoridis2007survey}.
-Due to such advantages, CGRAs are currently enjoying a resurgence in interest—not just in the research realm \cite{prabhakar2018plasticine}, but also commercially \cite{morgan2018intel, nicol2017coarse, vissers2019versal}.
+Due to such advantages, CGRAs are currently enjoying a resurgence in interest, not just in the research realm \cite{prabhakar2018plasticine}, but also commercially \cite{morgan2018intel, nicol2017coarse, vissers2019versal}.
 Research compilers targeting CGRAs are available (for example, \cite{adriaansen2016code, chin_cgra-me_2017, mei2003exploiting, prabhakar2018plasticine}) but they are limited in quality and code coverage. 
 Industry-strength compilers such as Clang/LLVM do not provide official support for CGRA-like architectures.
 For further information on the various taxonomy of CGRAs architectures and design, we refer the reader to \cite{liu_survey_2019, tehre_survey_2012}.
 
-Mapping various programing constructs onto CGRAs is an extensive research topic.
+Mapping various program
+ming constructs onto CGRAs is an extensive research topic.
 The  mapping of large and irregular loops onto CGRAs is analyzed in \cite{zhao_towards_2020} which proposed paying more attention to temporal mapping than spatial mapping. 
-The proposed temporal mapping, utilizes a buffer allocating heuristic with constraint on computations and interconnection resources. 
-The proposed spatial mapping uses a backtracking and reordering mechanism with greedy algorithm with the goal of minimizing II.
+The proposed temporal mapping utilizes a buffer allocating heuristic with constraint on computations and interconnection resources. 
+The proposed spatial mapping uses a backtracking and reordering mechanism with greedy algorithm with the goal of minimizing the Initiation Interval (II).
 A method for mapping SDFs to a CGRA is introduced in \cite{li_chordmap_2022}.
 The proposed method relies on modulo-scheduling to provides a spatio-temporal mapping.
 ChordMap creates a schedule and partitions the SDF and CGRA, then performs spatio-temporal mapping of every kernel instance in each partition.
@@ -25,9 +26,9 @@ SE also provides asynchronous messaging as a first-class programming construct a
 
 
 \subsection{Reinforcement Learning}
-Reinforcement Learning (RL) is widely used to tackle unsupervised optimization problems.
+RL is widely used to tackle unsupervised optimization problems.
 It has been applied in chip placement \cite{mirhoseini2020chip}, workload distribution \cite{Mirhoseini_placementRNN, addanki2019placeto, zhou2019gdp}, compiler optimizations \cite{Zhou_compileGNN} and other decision based tasks \cite{kormushev2013reinforcement, ZophL16_NASRL}. 
-Alternative optimization algorithms includes evolutionary strategies \cite{Zhichao_ESNAS} and bayesian optimization \cite{shi2020learned}. 
+Alternative optimization algorithms include evolutionary strategies \cite{Zhichao_ESNAS} and bayesian optimization \cite{shi2020learned}. 
 An advantage of an RL approach is that it is able to learn from a collection of programs and reuse previous data for new programs by training a Deep Learning model \cite{zhou2019gdp}.
 
 Recurrent neural networks (RNN) \cite{hochreiter1996lstm} were previously a popular approach to process a sequence of nodes from a graph representation. 
@@ -40,8 +41,8 @@ The training is done using the PPO approach and one component from the netlist i
 The actor network in this method is composed of deconvolution layers which are more computationally intensive than our approach. 
 \cite{wu_core_2020} proposes an RL based method that uses a deep deterministic policy gradient (DDPG) method for component placement in multi-chip many-core systems.
 \cite{khailany_accelerating_2020} presents a review of various machine learning approaches including reinforcement learning for chip design.
-\cite{zhou2019gdp} presents a combination of graph neural network and transformer-XL model to place operations in dataflow graphs on suitable devices.
-In both of these works, the aim is similar to us i.e. to reduce the manual labor and domain expertise required to produce mappings.
+The work proposed in \cite{zhou2019gdp} presents a combination of graph neural network and transformer-XL model to place operations in dataflow graphs on suitable devices.
+In each of these works, the aim is similar to ours i.e. to reduce the manual labor and domain expertise required to produce mappings.
 
 % Our input is a combination of computation graph, SE device state and the node to be placed at a particular time step. 
 % Instead of only feeding our actor model with embedding from graph neural network, we combine the graph neural network embedding with information from the SE device and a representation of node that is going to be placed. 
