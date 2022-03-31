@@ -78,8 +78,7 @@ Device state (including placed nodes) and node to be placed are dynamic data tha
 
 \subsection{Global Graph Attention Module}
 
-A GNN is used to process a SDF graph. 
-Each node in the graph contains a feature vector that is initialized with a combination of tile memory constraints and node data dependencies. 
+A GNN is used to process an SDF graph where each node in the graph contains a feature vector that is initialized with a combination of tile memory constraints and node data dependencies. 
 The SDF graph is the same during placement of each node. 
 After placing all nodes in an episode, a different graph can be fed into the GNN to train the RL model on a collection of SDF graphs. 
 
