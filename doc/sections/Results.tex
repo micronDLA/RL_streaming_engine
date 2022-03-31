@@ -67,7 +67,7 @@ Other SE device configurations are possible.
 \end{figure}
 
 We also benchmarked our RL framework against a collection of random directed graphs meant to simulate real life workloads. 
-We compare a baseline PPO method composed of three stacked MLPs against an actor model with the proposed Global Graph Attention (GGA) module.
+We compare a baseline PPO method composed of three stacked MLPs against an actor model with the proposed GGA module.
 We evaluate these models on varying SDF graphs with different complexities by increasing number of nodes in the graph. 
 We also tested on a larger device with 64 tiles.
 In \figurename~\ref{fig:nodes_graph}, we observe that the RL approach finds mappings for a variety of computation graphs, and GGA improves the best schedule found for the same number of training epochs. 
@@ -75,7 +75,7 @@ The GGA also finds an improved schedule in terms of clock cycles taken for a lar
 For the results in \figurename~\ref{fig:nodes_graph}, the epochs were limited to 50,000 for both models. 
 The cycle count is the number of SE execution steps taken to process all nodes for a mapping, which is calculated from the simulated SE environment. 
 
-\subsection{Global Graph Attention (GGA)} \label{sec:GGA_result}
+\subsection{GGA} \label{sec:GGA_result}
 
 In \figurename~\ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the FFT application by 10\%. 
 The node and states changes for each iteration over all nodes in the SDF graph. The GGA module provides a representation of the entire graph while placing each node.

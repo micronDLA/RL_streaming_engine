@@ -15,7 +15,7 @@ ChordMap creates a schedule and partitions the SDF and CGRA, then performs spati
 ChordMap operates on three levels of parallelism: application-level, kernel instances-level, and instruction-level parallelism.
 %Parallel execution and high throughput are enabled by by time slicing the CGRA resources.
 In CGRA-ME\cite{chin_cgra-me_2017}, a CGRA device model is built using Module Routing Resource Graph (MRRG) \cite{mrrg}. 
-The parser converts an optimized C-language benchmark into a DFG using LLVM compiler framework. 
+The parser converts an optimized C-language benchmark into a Data Flow Graph (DFG) using LLVM compiler framework. 
 Each operation in the DFG is mapped to a functional unit in the MMRG using simulated annealing. 
 The routing between inputs and outputs of each operation is selected using PathFinder-like algorithm \cite{pathfinder}.
 

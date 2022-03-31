@@ -87,7 +87,7 @@ All operations with nondeterministic latencies, e.g. load/store requests to the 
 We have a written an in-house parser that enables the programmer to express the program in terms of SDFs using our defined assembly language.
 The parser produces an Intermediate Representation (IR) that is used as an input to our proposed mapper.
 
-The IR represents each SDF as a DFG, where every instruction a node.
+The IR represents each SDF as a graph, where every instruction a node.
 Each node represents an instruction that needs to be placed onto a SE tile at the proper time-slice such that when all nodes are placed, the program executes correctly. 
 In \figurename~\ref{fig:se_example}, the edges of the graph represent the data dependencies of the instructions. 
 The nodes also contain information about the variables that need to be present in tile memories during instruction execution. 
@@ -104,7 +104,7 @@ The SE hardware imposes constraints that the RL mapper must adhere to in order t
 \begin{enumerate}
   \item Instructions that share one or more tile memory variables must be placed on the same tile.
   \item No two or more instructions that start a synchronous data-flow can share a tile.
-  \item No two or more instructions that are siblings in the DFG can share a tile.
+  \item No two or more instructions that are siblings in the SDF can share a tile.
 \end{enumerate}
 The SE device configuration and its constraints are modeled in a simulation environment and a reward function is used to determine the quality of placements obtained.
 To enforce these constraints, we explore two methods in Section \ref{subsec:output_masking}.

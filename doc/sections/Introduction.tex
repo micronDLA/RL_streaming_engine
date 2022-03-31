@@ -37,20 +37,19 @@ The program in this example is a distance calculation function shown in Eq. \ref
 \end{equation}
 
 To keep this example simple, we ignore the square root part of the equation.
-The program is represented as a Data-Flow Graph (DFG) as shown in \figurename~\ref{fig:se_example}.
-In this paper, SDF and DFG are used interchangeably.
+The program is represented as SDF as shown in \figurename~\ref{fig:se_example}.
 Each operation in Eq. \ref{eq:dist} is an instruction that is mapped to a slot at a tile on the SE.
 
 Since the output of the MS unit is connected to the input of the AL unit, instruction \#6 produces $\Delta z^2$ on the output on the MS unit and adds it to $(\Delta x^2 + \Delta y^2)$ at the AL unit.
 
-Mapping the instructions from a program's DFG onto the compute elements of the SE while adhering to architectural constraints is an NP-hard problem with a vast and sparse search space \cite{10.1007/3-540-69346-7_30}. 
+Mapping the instructions from a program's SDF onto the compute elements of the SE while adhering to architectural constraints is an NP-hard problem with a vast and sparse search space \cite{10.1007/3-540-69346-7_30}. 
 Constraints related to tile memory, synchronous dataflow, the use of delays to match timing requirements and more are necessary to ensure correct execution. 
 Creating the mappings manually or using brute force algorithms takes time and lots of effort even for the simplest of programs. 
 This process also adds assumptions that reduce the search space, trading off optimization possibilities.  
 
 In this work we propose a deep Reinforcement Learning (RL) method to explore and find optimal mappings in an unsupervised manner. 
 Using the Proximal Policy Optimization (PPO) method we train a neural network model to place instructions onto the SE tiles guided by a reward function in an environment that models the SE device and its constraints. 
-We also present Global Graph Attention module that improves the baseline feedforward models by providing attention mechanism to the RL model.
+We also present Global Graph Attention (GGA) module that improves the baseline feedforward models by providing attention mechanism to the RL model.
 Our RL method is combined with output masking, finetuning and sorted iteration order, which will be presented in the following sections.
 
 The trained model is able to create valid mappings for the SE by learning about the structure of the problem domain.
@@ -58,17 +57,17 @@ On average addition of GGA finds 10\% better instruction schedules in terms of c
 
 The key contributions of this paper are as follows:
 \begin{enumerate}
-    \item A Reinforcement Learning methodology that is able to map the instructions from a given DFG to the processing elements in the SE and has the potential to be reused across SDF graphs.
+    \item A Reinforcement Learning methodology that is able to map the instructions from a given SDF to the processing elements in the SE and has the potential to be reused across SDF graphs.
     \item An analysis of different factors that impacts the quality of mappings obtained, such as attention module, output masking and iteration order.
 \end{enumerate}
 
 This work is motivated by the need to provide an improved SE toolset that lowers the SE usability barrier for a programmer.
 In addition, the proposed mapper can be used along with other SE tools or assist in the manual mapping of applications to the SE by providing partial placement suggestions or tile configuration labels.
 The RL mapper performs unsupervised learning and optimization allowing it to search a wide and sparse search space. 
-Each node in the DFG is an instruction that is mapped to a specific slot on a tile.
+Each node in the SDF is an instruction that is mapped to a specific slot on a tile.
 
 This line of research is inspired by recent work that used RL for chip placement \cite{mirhoseini2020chip}.
-The problem requirement of mapping nodes of a DFG to available compute elements is similar to the problem of placing nodes of a chip netlist on a chip canvas. 
+The problem requirement of mapping nodes of a SDF to available compute elements is similar to the problem of placing nodes of a chip netlist on a chip canvas. 
 % Due to the similarities between these problem domains, we theorize that our approach has the potential of being used for chip placement.
 % This hypothesis will be investigated in future work.
 

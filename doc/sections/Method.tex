@@ -73,7 +73,7 @@ If the current node can't be placed because of the constraints (all values in th
 \subsection{Model design}
 The architecture for actor and critic models is shown in \figurename~\ref{fig:model}.
 The input is separated in two categories: static and dynamic data. 
-Static data is information that doesn't change as nodes are being placed and includes the graph features from the DFG that encapsulate node dependence based on SE constraints.
+Static data is information that doesn't change as nodes are being placed and includes the graph features from the SDF that encapsulate node dependence based on SE constraints.
 Device state (including placed nodes) and node to be placed are dynamic data that change during placement.
 
 \subsection{Global Graph Attention Module}
@@ -91,7 +91,7 @@ Having more transformer encoder layers stacked showed improved best reward achie
 
 The node selection and environment state change for each iteration over all nodes in the computation graph. 
 The dynamic data is fed into a Fully Connected (FC) layer model to create another embedding to represent current state. 
-The embeddings from dynamic data and static data are concatenated and fed to a Multilayer Perceptron (MLP) model with three FC layers to create actions. 
+The embeddings from dynamic data and static data are concatenated and fed to a MultiLayer Perceptron (MLP) model with three FC layers to create actions. 
 Invalid actions are masked before being sent to the reward function. 
 Masking was shown to be effective in RL setting \cite{Shengyi_mask}.
 We see the addition of GGA module provides improved reward and sample efficiency for various SDF graphs and different device configuration as shown in Section \ref{sec:GGA_result}.
