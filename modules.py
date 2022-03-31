@@ -97,14 +97,48 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
+class TransformerEncode(nn.Module):
+    __constants__ = ['batch_first']
+    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1,
+                 layer_norm_eps=1e-5, batch_first=False,
+                 device=None, dtype=None) -> None:
+        factory_kwargs = {'device': device, 'dtype': dtype}
+        super(TransformerEncode, self).__init__()
+        self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout, batch_first=batch_first,
+                                            **factory_kwargs)
+        # Implementation of Feedforward model
+        self.linear1 = nn.Linear(d_model, dim_feedforward, **factory_kwargs)
+        self.dropout = nn.Dropout(dropout)
+        self.linear2 = nn.Linear(dim_feedforward, d_model, **factory_kwargs)
+
+        self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps, **factory_kwargs)
+        self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps, **factory_kwargs)
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
+
+        self.activation = nn.ReLU(True)
+
+    def __setstate__(self, state):
+        if 'activation' not in state:
+            state['activation'] = F.relu
+        super(TransformerEncode, self).__setstate__(state)
+
+    def forward(self, src, src_mask = None, src_key_padding_mask = None):
+        src2, attn = self.self_attn(src, src, src, attn_mask=src_mask,
+                              key_padding_mask=src_key_padding_mask)
+        src = src + self.dropout1(src2)
+        src = self.norm1(src)
+        src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
+        src = src + self.dropout2(src2)
+        src = self.norm2(src)
+        return src, attn
 
 class TransformerAttentionModel(nn.Module):
-    def __init__(self, ninp, nhead, nhid, nlayers, dropout=0.5):
+    def __init__(self, ninp, nhead, nhid, dropout=0.5):
         super(TransformerAttentionModel, self).__init__()
         self.pos_encoder = PositionalEncoding(ninp, dropout)
-        encoder_layers = nn.TransformerEncoderLayer(ninp, nhead, nhid, dropout)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, nlayers)
-        self.ninp = ninp
+        self.encoder_layer1 = TransformerEncode(ninp, nhead, nhid, dropout)
+        self.encoder_layer2 = TransformerEncode(ninp, nhead, nhid, dropout)
 
     def generate_square_subsequent_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
@@ -113,8 +147,9 @@ class TransformerAttentionModel(nn.Module):
 
     def forward(self, src, src_mask=None):
         src = self.pos_encoder(src)
-        output = self.transformer_encoder(src)
-        return output
+        tmp, attn = self.encoder_layer1(src)
+        output, _ = self.encoder_layer1(tmp)
+        return output, attn
 
 
 class PAM_ModuleM(nn.Module):
@@ -248,7 +283,7 @@ class ActorCritic(nn.Module):
         #Attention modules
         self.pam_attention = PAM_ModuleM(graph_feat_size)
         self.cam_attention = CAM_ModuleM(graph_feat_size)
-        self.transf_atten = TransformerAttentionModel(graph_feat_size, 4, 64, 2)
+        self.transf_atten = TransformerAttentionModel(graph_feat_size, 4, 64)
 
         if args.nnmode == 'rnn':
             self.actor = ACRNN(state_dim+graph_feat_size, emb_size, action_dim, mode='soft')
@@ -331,10 +366,10 @@ class ActorCritic(nn.Module):
                 graph_feat = self.pam_attention(graph_feat.unsqueeze(0)).squeeze(0) # attention module
                 # graph_feat = self.cam_attention(graph_feat.unsqueeze(0)).squeeze(0)
             if self.args.nnmode == 'ff_transf_attention':
-                graph_feat = self.transf_atten(graph_feat.unsqueeze(1)).squeeze(1)
+                graph_feat, attn = self.transf_atten(graph_feat.unsqueeze(1))
+                # graph_feat = graph_feat[0]#.squeeze(1)
 
             graph_feat = self.graph_avg_pool(graph, graph_feat)
-
             state = torch.cat((state, node_id_or_ids, graph_feat), dim=1)# Add node id and graph embedding
         else:
             state = torch.cat((state, node_id_or_ids), dim=1) # Add node id
@@ -377,7 +412,8 @@ class ActorCritic(nn.Module):
                 # graph_feat = self.cam_attention(graph_feat.unsqueeze(-1)).squeeze(-1)
 
             if self.args.nnmode == 'ff_transf_attention':
-                graph_feat = self.transf_atten(graph_feat.unsqueeze(1)).squeeze(1)
+                graph_feat, attn0, attn1 = self.transf_atten(graph_feat.unsqueeze(1))
+                # graph_feat = graph_feat[0]
 
             graph_feat = self.graph_avg_pool(graph, graph_feat)
             gnn_feat = graph_feat.broadcast_to(state.shape[0], -1)
