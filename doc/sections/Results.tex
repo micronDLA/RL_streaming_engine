@@ -18,6 +18,14 @@ Other SE device configurations are possible.
   \label{fig:ifft_graph}
 \end{figure}
 
+\begin{figure}[tb]
+  \centering
+  \includegraphics[width=\linewidth]{fig/nodes_graph.pdf}
+  \caption{Cycle count for running all nodes in the best mapping given by RL model over 50,000 epochs. 
+  PPO baseline MLP model and GGA model were evaluated with computation graphs with increasing number of nodes. 
+  A larger device configuration with 64 tiles was used for experiments with SDF graphs with 40 and 50 nodes. }
+  \label{fig:nodes_graph}
+\end{figure}
 
 \begin{figure}[tb]
   \centering
@@ -32,15 +40,6 @@ Other SE device configurations are possible.
   \includegraphics[width=\linewidth]{fig/ifft_attention.pdf}
   \caption{Attention scores from transformer module when placing certain nodes for the FFT application. }
   \label{fig:ifft_attention}
-\end{figure}
-
-\begin{figure}[tb]
-  \centering
-  \includegraphics[width=\linewidth]{fig/nodes_graph.pdf}
-  \caption{Cycle count for running all nodes in the best mapping given by RL model over 50,000 epochs. 
-  PPO baseline MLP model and GGA model were evaluated with computation graphs with increasing number of nodes. 
-  A larger device configuration with 64 tiles was used for experiments with SDF graphs with 40 and 50 nodes. }
-  \label{fig:nodes_graph}
 \end{figure}
 
 \begin{figure}[tb]
