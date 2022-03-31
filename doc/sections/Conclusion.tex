@@ -1,16 +1,11 @@
-Our proposed RL mapper is a key component of the SE device toolchain.
-It that enables finding a valid mapping of an application within a reasonable amount of time.
-It can search for optimal mappings while using the learning to map previously unseen workloads.
-Thus, improving the total time required to get a mapping as compared to the existing manual placement approach and allows for automated search of mappings with different optimizations under different trade-offs, hence reducing the manual labor required to find mappings. 
+The proposed RL mapper is a key component of the SE device toolchain.
+It can search for optimal mappings while using the learning to map other previously unseen workloads more efficiently.
+This improves upon the total time required to get mappings as compared to the existing manual placement approach and also reduces the amount of manual labor required.
+It also allows for an automated search of mappings with different optimizations and trade-offs.
+In this paper we have given a brief overview of the SE device architecture along with an analysis of how different design choices in terms of simulating the SE and neural network design impact the quality of mappings obtained. As future work we wish to explore:
 
-The chip placement problem space can be modeled as mapping an SDF graph onto a dataflow architecture.
-Thus, the presented work will be applicable for chip placement.
-
-Future work includes: 
 \begin{itemize}
-    \item Optimizing training methods to obtain mappings for problems like FFT which have a bigger search space than currently used SDF graphs. 
     \item Increasing sample efficiency of learning methods and improving the simulation environment for the SE by adding more constraints. 
-    \item Studying the impact of reusing the trained networks across graphs rather than training a network from scratch for a given SDF graph.
     \item Integration of RL mapper into the SE toolset.
-    \item Investigating the application of the proposed techniques for chip placement.
+    \item Investigate the application of the proposed techniques for broader problems such as chip placement.
 \end{itemize}
