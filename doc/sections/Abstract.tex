@@ -16,7 +16,7 @@ This creates an optimization problem with a vast and sparse search space for whi
 In this work we propose a Reinforcement Learning framework with Global Graph Attention (GGA) module and output masking of invalid placements to find and optimize instruction schedules.
 We use Proximal Policy Optimization in order to train a model which places operations into the SE tiles based on a reward function that models the SE device and its constraints.
 The GGA module consists of a graph neural network and an attention module. 
-The graph neural network creates embeddings of the SDF and the transformer block is used to model sequential operation placement mode. 
+The graph neural network creates embeddings of the SDF and the attention block is used to model sequential operation placement. 
 We show results on how certain workloads are mapped to the SE and the factors affecting mapping quality.
-Additionally, we find that the addition of GGA, on average, finds 10\% better instruction schedules in terms of clock cycles taken and masking improves reward obtained by 20\%.
+We find that the addition of GGA, on average, finds 10\% better instruction schedules in terms of total clock cycles taken and masking improves reward obtained by 20\%.
 % The implemented method is compared against evolutionary search and baseline.
