@@ -77,16 +77,22 @@ Static data is information that doesn't change as nodes are being placed and inc
 Device state (including placed nodes) and node to be placed are dynamic data that change during placement.
 
 \subsection{Global Graph Attention Module}
-For our RL framework, a GNN is used to process node dependencies and create an embedding for the computation graph.
-This is processing the static data, which is the same SDF graph during placement of each node. 
-After placing all nodes in an episode, a different graph can be fed into the GNN to train the RL model on a collection of SDF graphs. 
-Each node contains a feature vector that is initialized with a combination of tile memory constraints and node dependencies. 
-Two layers of graph convolution \cite{wu2019simplifying} and a graph average pool layer produce a vector embedding.
-An attention module is applied to the embedding to highlight relevant components for the current node to be placed. 
+
+A GNN is used to process a SDF graph. 
+Each node in the graph contains a feature vector that is initialized with a combination of tile memory constraints and node data dependencies. 
+The SDF graph is the same during placement of each node. 
+And after placing all nodes in an episode, a different graph can be fed into the GNN to train the RL model on a collection of SDF graphs. 
+
 The Global Graph Attention Module is the combination of the GNN and attention modules.
+The GNN is composed of two layers of graph convolution \cite{wu2019simplifying} and a graph average pool layer produce a vector embedding.
+An attention module is applied to the embedding produced by the GNN to highlight relevant components for the current node to be placed. 
+We evaluated two attention module implementations. A transformer encoder layer \cite{vaswani2017attention}. 
+And a modified position attention module (PAM) from \cite{fu2019dual}, in which the positions represent different node embeddings.
+In our experiments, both presented similar results. Having more transformer encoder layers stacked showed improved best reward achieved at cost of more parameters and operations.
+
 The node selection and environment state change for each iteration over all nodes in the computation graph. 
 The dynamic data is fed into a Fully Connected (FC) layer model to create another embedding to represent current state. 
-The embeddings from dynamic data and static data are concatenated and fed to an MLP model with three FC layers to create actions. 
+The embeddings from dynamic data and static data are concatenated and fed to a Multilayer Perceptron (MLP) model with three FC layers to create actions. 
 Invalid actions are masked before being sent to the reward function. 
 Masking was shown to be effective in RL setting \cite{Shengyi_mask}.
 We see the addition of GGA module provides improved reward and sample efficiency for various SDF graphs and different device configuration as shown in Section \ref{sec:GGA_result}.

@@ -14,7 +14,7 @@ Other SE device configurations are possible.
 \begin{figure}[tb]
   \centering
   \includegraphics[width=\linewidth]{fig/ifft_graph.pdf}
-  \caption{FFT application SDF graph.}
+  \caption{SDF graph of the FFT application.}
   \label{fig:ifft_graph}
 \end{figure}
 
@@ -25,6 +25,13 @@ Other SE device configurations are possible.
   \caption{Effect of using Global Graph Attention (GGA) module for mapping the FFT application on device with 16 tiles. 
   GGA module provides better sample efficiency and higher reward after training. }
   \label{fig:ifft_rewards}
+\end{figure}
+
+\begin{figure}[tb]
+  \centering
+  \includegraphics[width=\linewidth]{fig/ifft_attention.pdf}
+  \caption{Attention scores from transformer module when placing certain nodes for the FFT application. }
+  \label{fig:ifft_attention}
 \end{figure}
 
 \begin{figure}[tb]
@@ -69,12 +76,16 @@ The GGA also finds an improved schedule in terms of clock cycles taken for a lar
 For the results in \figurename~\ref{fig:nodes_graph}, the epochs were limited to 50,000 for both models. 
 The cycle count is number of SE execution steps taken to process all nodes for a mapping, which is calculated from the simulated SE environment. 
 
-
-
 \subsection{Global Graph Attention (GGA)} \label{sec:GGA_result}
 
 In \figurename~\ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the FFT application. 
 The node and states changes for each iteration over all nodes in the SDF graph. The GGA module provides a representation of the entire graph while placing each node.
+
+The attention module assists in highlighting the node dependencies when the RL model is predicting the placement of a node. 
+In \figurename~\ref{fig:ifft_attention}, we plot the attention tensor produced by the GGA module when mapping nodes from the FFT application \figurename~\ref{fig:ifft_graph}. 
+The x-axis is the node index, the title indices which node is being placed and the color axis indicates attention scale.
+For node 1, the model tries to focus on nodes 2 and 3. When placing node 3, the attention slightly shifts to node 6. 
+These attention examples matches with expectation that these nodes are related since they have direct data dependencies. 
 
 \subsection{Node Iteration Order}
 
