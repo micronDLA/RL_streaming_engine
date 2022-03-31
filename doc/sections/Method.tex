@@ -1,6 +1,6 @@
 \subsection{Reinforcement learning}
 
-We present an RL based framework to explore and optimize the mapping of instructions for a given SDF graph to the SE, guided by a reward function that informs the mapping algorithm about the quality of the produced mappings at each step. In this section, we give an overview of the methods used along with the formulation required for detailed description of the various components of the RL approach.
+We present an RL based framework to explore and optimize the mapping of instructions for a given application to the SE, guided by a reward function that informs the mapping algorithm about the quality of the produced mappings at each step. In this section, we give an overview of the methods used along with the formulation required for detailed description of the various components of the RL approach.
 
 \subsection{Overview}
 PPO \cite{schulman2017proximal} is an RL method that is  widely used for continuous and discrete action problems. 
@@ -62,7 +62,7 @@ If the current node can't be placed because of the constraints (all values in th
   \centering
   \includegraphics[width=\textwidth]{fig/model_diagram.pdf}
   \caption{Actor and critic model architecture. 
-  GNN is used to process the SDF graph (static data). 
+  GNN is used to process the SDF graphs (static data). 
   Attention module is used to determine relative importance of nodes that are relevant to the one currently being placed. 
   The embedding created from dynamic data is combined with static data embedding. 
   A final MLP model is used to generate actions. 
@@ -73,14 +73,14 @@ If the current node can't be placed because of the constraints (all values in th
 \subsection{Model design}
 The architecture for actor and critic models is shown in \figurename~\ref{fig:model}.
 The input is separated in two categories: static and dynamic data. 
-Static data is information that doesn't change as nodes are being placed and includes the graph features from the SDF that encapsulate node dependence based on SE constraints.
+Static data is information that doesn't change as nodes are being placed and includes the graph features from the SDFs that encapsulate node dependence based on SE constraints.
 Device state (including placed nodes) and node to be placed are dynamic data that change during placement.
 
 \subsection{Global Graph Attention Module}
 
-A GNN is used to process an SDF graph where each node in the graph contains a feature vector that is initialized with a combination of tile memory constraints and node data dependencies. 
-The SDF graph is the same during placement of each node. 
-After placing all nodes in an episode, a different graph can be fed into the GNN to train the RL model on a collection of SDF graphs. 
+A GNN is used to process the IR graph where each node contains a feature vector that is initialized with a combination of tile memory constraints and node data dependencies. 
+The input IR for an application is the same during placement of each node in the SDFs for that application.
+After placing all nodes in an episode, a different IR graph for another application can be fed into the RL model to train it on a collection of application tasks. 
 
 The Global Graph Attention Module is the combination of the GNN and attention modules.
 The GNN is composed of two layers of graph convolution \cite{wu2019simplifying} and a graph average pool layer which produce a vector embedding.
@@ -94,7 +94,7 @@ This dynamic data is fed into a Fully Connected (FC) layer model to create anoth
 The embeddings from dynamic data and static data are concatenated and fed to a MultiLayer Perceptron (MLP) model with three FC layers to obtain placements. 
 Invalid actions are masked before being sent to the SE simulation environment. 
 Output masking to filter invalid placements has previously been shown to be effective for RL in game environments \cite{Shengyi_mask}. 
-We see the addition of GGA module provides improved reward and sample efficiency for various SDF graphs and different device configurations as shown in Section \ref{sec:GGA_result}.
+We see the addition of GGA module provides improved reward and sample efficiency for various applications and different device configurations as shown in Section \ref{sec:GGA_result}.
 
 % \begin{algorithm*}
 %   \caption{\textcolor{red}{RL Mapping Algorithm}}

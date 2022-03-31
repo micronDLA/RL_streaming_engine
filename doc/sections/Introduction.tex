@@ -37,12 +37,12 @@ The program in this example is a distance calculation function shown in Eq. \ref
 \end{equation}
 
 To keep this example simple, we ignore the square root part of the equation.
-The program is represented as SDF as shown in \figurename~\ref{fig:se_example}.
+The program is represented as an SDF graph as shown in \figurename~\ref{fig:se_example}.
 Each operation in Eq. \ref{eq:dist} is an instruction that is mapped to a slot at a tile on the SE.
 
 Since the output of the MS unit is connected to the input of the AL unit, instruction \#6 produces $\Delta z^2$ on the output on the MS unit and adds it to $(\Delta x^2 + \Delta y^2)$ at the AL unit.
 
-Mapping the instructions from a program's SDF onto the compute elements of the SE while adhering to architectural constraints is an NP-hard problem with a vast and sparse search space \cite{10.1007/3-540-69346-7_30}. 
+Mapping the instructions from a program's SDFs onto the compute elements of the SE while adhering to architectural constraints is an NP-hard problem with a vast and sparse search space \cite{10.1007/3-540-69346-7_30}. 
 Constraints related to tile memory, synchronous dataflow, the use of delays to match timing requirements and more are necessary to ensure correct execution. 
 Creating the mappings manually or using brute force algorithms takes time and lots of effort even for the simplest of programs. 
 This process also adds assumptions that reduce the search space, trading off optimization possibilities.  
@@ -57,7 +57,7 @@ On average addition of GGA finds 10\% better instruction schedules in terms of c
 
 The key contributions of this paper are as follows:
 \begin{enumerate}
-    \item A Reinforcement Learning methodology that is able to map the instructions from a given SDF to the processing elements in the SE and has the potential to be reused across SDF graphs.
+    \item A Reinforcement Learning methodology that is able to map the instructions from a given application to the processing elements in the SE and has the potential to be reused across different applications.
     \item An analysis of different factors that impacts the quality of mappings obtained, such as attention module, output masking and iteration order.
 \end{enumerate}
 
