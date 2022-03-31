@@ -48,7 +48,7 @@ In each of these works, the aim is similar to ours i.e. to reduce the manual lab
 % Instead of only feeding our actor model with embedding from graph neural network, we combine the graph neural network embedding with information from the SE device and a representation of node that is going to be placed. 
 % A configuration is also added to guide the model to optimize different goals.
 
-A key difference between our work and \cite{zhou2019gdp} is that our strategy is to place one node at a time, instead of generating a whole assignment per iteration. 
+A difference between our work and \cite{zhou2019gdp} is that our strategy is to place one node at a time, instead of generating a whole assignment per iteration. 
 This allows our model to break down the placement problem into sub-problems and also allows the framework to start from a different starting configuration. 
 For example, if some nodes are already placed by some other algorithm such as brute force, the RL mapper can place the remaining nodes. 
 This approach also allows us to obtain more data during the sampling phase which consists of partial assignments, instead of only saving one sample for an entire sequence of nodes.

@@ -39,7 +39,7 @@ The action $a$ at each step is a tuple \((n,t,s)\) where $n \in N$ (the set of a
 We place nodes in a topological order which ensures that all of a node's predecessors have been placed before the node. 
 We do not make selecting the node to be placed a part of the learning problem since it increases the complexity of the learning process and makes training harder.
 
-\subsubsection{Masked Actions}
+\subsection{Masked Actions}
 In order to enure that the network only outputs valid actions, we determine a binary mask over all possible actions and set the value of logits corresponding to invalid actions to $-\infty$ in the actor network. 
 This in turn sets the probability of sampling invalid actions to $0$, ensuring that we never take an invalid action.
 Finally, we only calculate entropy on valid actions, so that our algorithm maximizes exploration only on valid actions.
