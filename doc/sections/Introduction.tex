@@ -38,10 +38,10 @@ The program in this example is a distance calculation function shown in Eq. \ref
 
 To keep this example simple, we ignore the square root part of the equation.
 The program is represented as a Data-Flow Graph (DFG) as shown in \figurename~\ref{fig:se_example}.
+In this paper, SDF and DFG are used interchangeably.
 Each operation in Eq. \ref{eq:dist} is an instruction that is mapped to a slot at a tile on the SE.
 
 Since the output of the MS unit is connected to the input of the AL unit, instruction \#6 produces $\Delta z^2$ on the output on the MS unit and adds it to $(\Delta x^2 + \Delta y^2)$ at the AL unit.
-
 
 Mapping the instructions from a program's DFG onto the compute elements of the SE while adhering to architectural constraints is an NP-hard problem with a vast and sparse search space \cite{10.1007/3-540-69346-7_30}. 
 Constraints related to tile memory, synchronous dataflow, and the use of delays to match timing requirements \dots etc. are necessary to ensure correct execution. 
@@ -60,7 +60,7 @@ The key contributions of this paper are as follows:
 \end{enumerate}
 
 This work is motivated by the need to provide an improved SE toolset that lowers the SE usability barrier for a programmer.
-This will also assist other tools or programmers in SE mapping creation by providing partial placement suggestions or tile configuration labels.
+In addition, the proposed mapper can be used along with other SE tools or assist in the manual mapping of applications to the SE by providing partial placement suggestions or tile configuration labels.
 The RL mapper performs unsupervised learning and optimization allowing it to search a wide and sparse search space. 
 Each node in the DFG is an instruction that is mapped to a specific slot on a tile.
 
