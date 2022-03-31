@@ -87,14 +87,14 @@ The GNN is composed of two layers of graph convolution \cite{wu2019simplifying} 
 An attention module is applied to the embedding produced by the GNN to highlight relevant components for the current node to be placed. 
 We evaluated two attention module implementations. A transformer encoder layer \cite{vaswani2017attention} and a modified Position Attention Module (PAM) from \cite{fu2019dual}, in which the positions represent different node embeddings.
 In our experiments, both produced similar results. 
-Having more transformer encoder layers stacked showed improved best reward achieved at cost of more parameters and operations.
+Having a higher number of transformer encoder layers improves the best reward obtained but it is achieved at a cost of more parameters, making training more expensive.
 
-The node selection and environment state change for each iteration over all nodes in the computation graph. 
-The dynamic data is fed into a Fully Connected (FC) layer model to create another embedding to represent current state. 
-The embeddings from dynamic data and static data are concatenated and fed to a MultiLayer Perceptron (MLP) model with three FC layers to create actions. 
-Invalid actions are masked before being sent to the reward function. 
-Masking was shown to be effective in RL setting \cite{Shengyi_mask}.
-We see the addition of GGA module provides improved reward and sample efficiency for various SDF graphs and different device configuration as shown in Section \ref{sec:GGA_result}.
+The selected node and SE state change for each iteration over all nodes in the SDF graph. 
+This dynamic data is fed into a Fully Connected (FC) layer model to create another embedding to represent the current state. 
+The embeddings from dynamic data and static data are concatenated and fed to a MultiLayer Perceptron (MLP) model with three FC layers to obtain placements. 
+Invalid actions are masked before being sent to the SE simulation environment. 
+Output masking to filter invalid placements has previously been shown to be effective for RL in game environments \cite{Shengyi_mask}. 
+We see the addition of GGA module provides improved reward and sample efficiency for various SDF graphs and different device configurations as shown in Section \ref{sec:GGA_result}.
 
 % \begin{algorithm*}
 %   \caption{\textcolor{red}{RL Mapping Algorithm}}

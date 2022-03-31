@@ -94,7 +94,6 @@ On the other hand, when placing the nodes randomly, sometimes nodes get placed b
 
 \subsection{Output Masking}
 \label{subsec:output_masking}
-Output masking to filter invalid placements has been shown to be effective for RL in game environments \cite{Shengyi_mask}. 
 The SE instruction scheduling task has several invalid actions for a given state that add noise to the samples and decision of the RL model, making convergence harder. 
 After placement of each node, the succeeding nodes have fewer placement options due to their data dependency with other nodes and device constraints.
 Masking invalid placements reduces the search space as each node is being placed. 
