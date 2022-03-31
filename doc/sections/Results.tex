@@ -78,13 +78,13 @@ The cycle count is the number of SE execution steps taken to process all nodes f
 \subsection{GGA} \label{sec:GGA_result}
 
 In \figurename~\ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the FFT application by 10\%. 
-The node and states changes for each iteration over all nodes in the SDF graph. The GGA module provides a representation of the entire graph while placing each node.
+The node to be placed and SE state changes for each iteration over all nodes in the SDF graph. The GGA module provides a representation of the entire graph while placing each node.
 
 The attention module assists in highlighting the node dependencies when the RL model is predicting the placement of a node. 
 In \figurename~\ref{fig:ifft_attention}, we plot the attention matrix produced by the GGA module when mapping nodes from the FFT application shown in \figurename~\ref{fig:ifft_graph}. 
 The x-axis is the node index, the title indices which node is being placed and the color axis indicates attention scale.
-For node 1, the model tries to focus on nodes 2 and 3. When placing node 3, the attention slightly shifts to node 6. 
-These attention examples matches with expectation that these nodes are related since they have direct data dependencies. 
+We see that when placing node 1, the model focuses on nodes 2 and 3. When placing node 3, the attention is focused on node 6. 
+These attention values match our expectations since these nodes are related and have direct data dependencies. 
 
 \subsection{Node Iteration Order}
 
