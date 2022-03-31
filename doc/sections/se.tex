@@ -103,7 +103,7 @@ The instruction intended to execute at a specific time-slice (clock cycle) will 
 The SE hardware imposes constraints that the RL mapper must adhere to in order to for it to produce a valid mapping. These constraints are:
 \begin{enumerate}
   \item Instructions that share one or more tile memory variables must be placed on the same tile.
-  \item No two or more instructions that start a synchronous data-flow can share a tile.
+  \item No two or more instructions that start an SDF can share a tile.
   \item No two or more instructions that are siblings in the SDF can share a tile.
 \end{enumerate}
 The SE device configuration and its constraints are modeled in a simulation environment and a reward function is used to determine the quality of placements obtained.
