@@ -48,7 +48,7 @@ Other SE device configurations are possible.
   \caption{Iterating nodes in topological ordering results in higher reward and eases the placement task. 
  The blue line is the reward curve for when nodes were randomly selected for placement. 
  The red line is the reward curve for when nodes were iterated upon in topological order. 
- The task involved is of placing 15 nodes SDF graph in a device with 16 tiles.}
+ The task involved is of placing 15 nodes of an SDF graph onto a device with 16 tiles.}
   \label{fig:ordered_placement}
 \end{figure}
 
@@ -73,35 +73,35 @@ We also tested on a larger device with 64 tiles.
 In \figurename~\ref{fig:nodes_graph}, we observe that the RL approach finds mappings for a variety of computation graphs, and GGA improves the best schedule found for the same number of training epochs. 
 The GGA also finds an improved schedule in terms of clock cycles taken for a larger device configuration. 
 For the results in \figurename~\ref{fig:nodes_graph}, the epochs were limited to 50,000 for both models. 
-The cycle count is number of SE execution steps taken to process all nodes for a mapping, which is calculated from the simulated SE environment. 
+The cycle count is the number of SE execution steps taken to process all nodes for a mapping, which is calculated from the simulated SE environment. 
 
 \subsection{Global Graph Attention (GGA)} \label{sec:GGA_result}
 
-In \figurename~\ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the FFT application. 
+In \figurename~\ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the FFT application by 10\%. 
 The node and states changes for each iteration over all nodes in the SDF graph. The GGA module provides a representation of the entire graph while placing each node.
 
 The attention module assists in highlighting the node dependencies when the RL model is predicting the placement of a node. 
-In \figurename~\ref{fig:ifft_attention}, we plot the attention tensor produced by the GGA module when mapping nodes from the FFT application \figurename~\ref{fig:ifft_graph}. 
+In \figurename~\ref{fig:ifft_attention}, we plot the attention matrix produced by the GGA module when mapping nodes from the FFT application shown in \figurename~\ref{fig:ifft_graph}. 
 The x-axis is the node index, the title indices which node is being placed and the color axis indicates attention scale.
 For node 1, the model tries to focus on nodes 2 and 3. When placing node 3, the attention slightly shifts to node 6. 
 These attention examples matches with expectation that these nodes are related since they have direct data dependencies. 
 
 \subsection{Node Iteration Order}
 
-The iteration order is the sequence in which nodes are fed to the actor model in the RL framework and plays an important role in whether the nodes can be successfully placed or not. 
+The iteration order is the sequence in which nodes are fed to the actor model in the RL framework and plays an important role in deciding whether the nodes can be successfully placed or not. 
 In \figurename~\ref{fig:ordered_placement}, we observe that iterating over nodes in topological ordering results in higher reward and eases the node placement task. 
 On the other hand, when placing the nodes randomly, sometimes nodes get placed before their predecessors are placed and the model needs to predict which tiles the predecessor nodes will be placed on, making training and the learning problem harder.
 
 \subsection{Output Masking}
 \label{subsec:output_masking}
 Output masking to filter invalid placements has been shown to be effective for RL in game environments \cite{Shengyi_mask}. 
-The SE instruction scheduling task has several invalid actions that adds noise to the samples and decision of the RL model, making convergence harder. 
+The SE instruction scheduling task has several invalid actions for a given state that add noise to the samples and decision of the RL model, making convergence harder. 
 After placement of each node, the succeeding nodes have fewer placement options due to their data dependency with other nodes and device constraints.
 Masking invalid placements reduces the search space as each node is being placed. 
-\figurename~\ref{fig:mask_nomask} demonstrates that masking improves the reward and sample efficiency of the RL model.
+\figurename~\ref{fig:mask_nomask} demonstrates that masking improves the rewards obtained when masking is used by 20\% as compared to using a negative reward for invalid actions. We can also see that making helps improve sample efficiency of the RL model.
 
-\subsection{Pre-train and fine-tuning}
+\subsection{Pre-training and fine-tuning}
 After training the RL model on various SDF graphs, the RL model can be used for fine-tunning on a specific graph or for inferencing.
-In \figurename~\ref{fig:pretrain_ifft}, the RL model was pre-trained with a random collection of SDF graphs and then fine-tuned for the FFT application.
+In \figurename~\ref{fig:pretrain_ifft}, the RL model was pre-trained on a collection of random SDF graphs and then fine-tuned for the FFT application.
 The initial and final reward of the fine tuned RL model is higher than training the model from scratch.
-The model is able to reuse some of the previous experience of placing nodes for random input graphs.
+This demonstrates that the model is able to reuse some of the previous experience of placing nodes for random input graphs.

@@ -16,7 +16,7 @@ These samples are stored in a buffer and are used as data to train the models.
 
 The key components of our RL method are as follows:
 \begin{itemize}
-  \item States: The state is $s$ represented by a concatenation of an array of features of placed nodes, a selected node to be placed next, and an embedding of the whole computation graph. 
+  \item States: The state is $s$ represented by a concatenation of current SE state, an embedding of the whole computation graph and the selected node to be placed next.
   \item Action: The action $a$ consists of the node to be placed along with the tile and spoke location it is to be placed at.
   \item Reward function: The reward obtained is based on the number of clock cycles taken for a node to finish executing after its predecessors finished executing.
   \item Transition function: The transition function gives the probability distribution over next states given the current state and the action to be performed.
@@ -30,7 +30,7 @@ The key components of our RL method are as follows:
 \end{figure}
 
 \subsection{State Representation}
-The state $s$ is a vector of size $|TS|+1$ where $TS$ is the set of tile slices in the Streaming Engine with $TS=T \times S$. 
+The state $s$ is a vector of size $|TS| + f + 1$ where $TS$ is the set of tile slices in the Streaming Engine with $TS=T \times S$ and $f$ is the length of graph features. 
 Here $T$ and $S$ are sets of all tiles and slots in the SE respectively. 
 The number of slots available in each tile is equal to number of Initiation Intervals.
 
@@ -40,15 +40,15 @@ We place nodes in a topological order which ensures that all of a node's predece
 We do not make selecting the node to be placed a part of the learning problem since it increases the complexity of the learning process and makes training harder.
 
 \subsubsection{Masked Actions}
-In order to enure that the network only outputs valid actions, we determine a binary mask over all possible actions and set the value of logits corresponding to invalid actions to $-\infty$ in the actor network. 
+In order to enure that the network only outputs valid actions, we determine a binary mask over all possible actions and set the value of logits (unnormalized outputs of last layer of the neural network) corresponding to invalid actions to $-\infty$ in the actor network. 
 This in turn sets the probability of sampling invalid actions to $0$, ensuring that we never take an invalid action.
-Finally, we only calculate entropy on valid actions, so that our algorithm maximizes exploration only on valid actions.
+Finally, we only calculate entropy on valid actions, making sure that our algorithm maximizes exploration only for valid actions in a given state.
 
 \subsection{Reward Function}
-Our goal in this work is to get mappings that are optimal in terms of total clock cycles taken, and for this purpose, the reward that is given at each time step is the difference between the clock cycle at which the current node to be placed is ready (its ready time) and the ready time of its predecessor. 
+Our goal in this work is to get mappings that are optimal in terms of total clock cycles taken, and for this purpose, the reward that is obtained at each time step is the difference between the clock cycle at which the current node to be placed is ready (its ready time) and the ready time of its predecessor. 
 $R_n$ is the reward obtained for placing node $n$ and $t_n$ is its ready time. 
 The function $p(n)$ gives the predecessor of $n$ in an SDF graph. 
-If the current node can't be placed because of the constraints (all values in the mask vector $m$ are zero), then a high negative reward $-\lambda$ is given.
+If the current node can't be placed because of the constraints (all values in the mask vector $m$ are zero), then a high negative reward $-\lambda$ is given. If a node has more than one predecessor, then the node with the later ready time is chosen for the purpose of determining reward value.
 \[
   R_n =
   \begin{cases}
@@ -63,7 +63,7 @@ If the current node can't be placed because of the constraints (all values in th
   \includegraphics[width=\textwidth]{fig/model_diagram.pdf}
   \caption{Actor and critic model architecture. 
   GNN is used to process the SDF graph (static data). 
-  Attention module gives importance to relevant nodes. 
+  Attention module is used to determine relative importance of nodes that are relevant to the one currently being placed. 
   The embedding created from dynamic data is combined with static data embedding. 
   A final MLP model is used to generate actions. 
   Actions are masked to ensure only valid actions are produced. }
@@ -78,17 +78,16 @@ Device state (including placed nodes) and node to be placed are dynamic data tha
 
 \subsection{Global Graph Attention Module}
 
-A GNN is used to process a SDF graph. 
-Each node in the graph contains a feature vector that is initialized with a combination of tile memory constraints and node data dependencies. 
+A GNN is used to process an SDF graph where each node in the graph contains a feature vector that is initialized with a combination of tile memory constraints and node data dependencies. 
 The SDF graph is the same during placement of each node. 
-And after placing all nodes in an episode, a different graph can be fed into the GNN to train the RL model on a collection of SDF graphs. 
+After placing all nodes in an episode, a different graph can be fed into the GNN to train the RL model on a collection of SDF graphs. 
 
 The Global Graph Attention Module is the combination of the GNN and attention modules.
-The GNN is composed of two layers of graph convolution \cite{wu2019simplifying} and a graph average pool layer produce a vector embedding.
+The GNN is composed of two layers of graph convolution \cite{wu2019simplifying} and a graph average pool layer which produce a vector embedding.
 An attention module is applied to the embedding produced by the GNN to highlight relevant components for the current node to be placed. 
-We evaluated two attention module implementations. A transformer encoder layer \cite{vaswani2017attention}. 
-And a modified Position Attention Module (PAM) from \cite{fu2019dual}, in which the positions represent different node embeddings.
-In our experiments, both presented similar results. Having more transformer encoder layers stacked showed improved best reward achieved at cost of more parameters and operations.
+We evaluated two attention module implementations. A transformer encoder layer \cite{vaswani2017attention} and a modified Position Attention Module (PAM) from \cite{fu2019dual}, in which the positions represent different node embeddings.
+In our experiments, both produced similar results. 
+Having more transformer encoder layers stacked showed improved best reward achieved at cost of more parameters and operations.
 
 The node selection and environment state change for each iteration over all nodes in the computation graph. 
 The dynamic data is fed into a Fully Connected (FC) layer model to create another embedding to represent current state. 

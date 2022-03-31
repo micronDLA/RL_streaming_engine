@@ -5,8 +5,7 @@ Research compilers targeting CGRAs are available (for example, \cite{adriaansen2
 Industry-strength compilers such as Clang/LLVM do not provide official support for CGRA-like architectures.
 For further information on the various taxonomy of CGRAs architectures and design, we refer the reader to \cite{liu_survey_2019, tehre_survey_2012}.
 
-Mapping various program
-ming constructs onto CGRAs is an extensive research topic.
+Mapping various programming constructs onto CGRAs is an extensive research topic.
 The  mapping of large and irregular loops onto CGRAs is analyzed in \cite{zhao_towards_2020} which proposed paying more attention to temporal mapping than spatial mapping. 
 The proposed temporal mapping utilizes a buffer allocating heuristic with constraint on computations and interconnection resources. 
 The proposed spatial mapping uses a backtracking and reordering mechanism with greedy algorithm with the goal of minimizing the Initiation Interval (II).
@@ -48,7 +47,7 @@ In each of these works, the aim is similar to ours i.e. to reduce the manual lab
 % Instead of only feeding our actor model with embedding from graph neural network, we combine the graph neural network embedding with information from the SE device and a representation of node that is going to be placed. 
 % A configuration is also added to guide the model to optimize different goals.
 
-A key difference between our work and \cite{zhou2019gdp} is that our strategy is to place one node at a time, instead of generating a whole assignment per iteration. 
-This allows our model to break down the placement problem into sub-problems and also allows the framework to start from a different starting configuration. 
+A key difference between our work and \cite{zhou2019gdp} is that our strategy is to place one node at a time, instead of generating a complete assignment per iteration. 
+This allows our model to break down the placement problem into sub-problems and also allows the framework to start from a different initial configuration. 
 For example, if some nodes are already placed by some other algorithm such as brute force, the RL mapper can place the remaining nodes. 
-This approach also allows us to obtain more data during the sampling phase which consists of partial assignments, instead of only saving one sample for an entire sequence of nodes.
+This approach also allows us to obtain more data during the sampling phase which consists of partial assignments, instead of only saving one training sample for an entire sequence of nodes.
