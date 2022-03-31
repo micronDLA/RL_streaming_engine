@@ -1,6 +1,6 @@
 \subsection{Reinforcement learning}
 
-We present a Reinforcement learning (RL) based framework to explore and optimize the mapping of instructions for a given SDF graph to the SE, guided by a reward function that informs the mapping algorithm about the quality of the produced mappings at each step. In this section, we give an overview of the methods used along with the formulation required for detailed description of the various components of the RL approach.
+We present an RL based framework to explore and optimize the mapping of instructions for a given SDF graph to the SE, guided by a reward function that informs the mapping algorithm about the quality of the produced mappings at each step. In this section, we give an overview of the methods used along with the formulation required for detailed description of the various components of the RL approach.
 
 \subsection{Overview}
 PPO \cite{schulman2017proximal} is an RL method that is  widely used for continuous and discrete action problems. 
@@ -87,7 +87,7 @@ The Global Graph Attention Module is the combination of the GNN and attention mo
 The GNN is composed of two layers of graph convolution \cite{wu2019simplifying} and a graph average pool layer produce a vector embedding.
 An attention module is applied to the embedding produced by the GNN to highlight relevant components for the current node to be placed. 
 We evaluated two attention module implementations. A transformer encoder layer \cite{vaswani2017attention}. 
-And a modified position attention module (PAM) from \cite{fu2019dual}, in which the positions represent different node embeddings.
+And a modified Position Attention Module (PAM) from \cite{fu2019dual}, in which the positions represent different node embeddings.
 In our experiments, both presented similar results. Having more transformer encoder layers stacked showed improved best reward achieved at cost of more parameters and operations.
 
 The node selection and environment state change for each iteration over all nodes in the computation graph. 
