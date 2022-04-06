@@ -103,8 +103,8 @@ class PreInput:
             grp_nodes = {}  # node n : list of nodes that goes with node n
             for n in range(self.args.nodes):
                 grp = []  # nodes that goes with n
-                tmem_n = graphdef['tile_memory_req'][n]  # tile mem var used by n
-                for nd, tmem in graphdef['tile_memory_req'].items():  # scan other nodes
+                tmem_n = graphdef['nodes_to_tm'][n]  # tile mem var used by n
+                for nd, tmem in graphdef['nodes_to_tm'].items():  # scan other nodes
                     if nd == n:
                         continue
                     if not set(tmem).isdisjoint(tmem_n):

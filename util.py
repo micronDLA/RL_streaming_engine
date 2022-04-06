@@ -21,7 +21,7 @@ def create_graph(graphdef, numnodes = 10):
         a = nx.generators.directed.gn_graph(numnodes)
         graph = dgl.from_networkx(a)
     else:
-        tile_memory_req = graphdef['tile_memory_req']
+        tile_memory_req = graphdef['nodes_to_tm']
         edges = graphdef['graphdef']
         graph = dgl.graph((torch.Tensor(edges[0]).int(), torch.Tensor(edges[1]).int()))
         if len(edges) == 3 and edges[2] > 0:
@@ -34,7 +34,14 @@ def create_graph(graphdef, numnodes = 10):
                 tm_req_feat[instr_idx][tm_idx] = 1
         graph.ndata['tm_req'] = tm_req_feat
 
+        # create list of sync start flow nodes
+        sf_nodes = []
+        for node in graph.nodes():
+            if len(graph.predecessors(node).numpy()) == 0:
+                sf_nodes.append(node.item())
+
     graphdef['graph'] = graph
+    graphdef['sf_nodes'] = sf_nodes
     return graphdef
     
 def positional_encoding(pos, feat_size=16, timescale=10000):
@@ -94,9 +101,19 @@ def get_graph_json(path):
 
                 tmem_req[nidx] = l
                 nidx += 1
-    return {'graphdef': (edge_src, edge_dst, extra_node), 'tile_memory_req': tmem_req, 'tile_memory_map': tmem_map}
 
-def output_json(instr_coords, no_of_tiles=16, spoke_count=3 ,out_file_name='mapping.json'):
+        # Create TM to node mappings
+        tm_to_nodes = {tm_idx:[] for tm_idx in range(0, len(tmem_map.keys()))}
+        for instr_idx, tm_idxs in tmem_req.items():
+            for tm_idx in tm_idxs:
+                tm_to_nodes[tm_idx].append(instr_idx)
+    return {'graphdef': (edge_src, edge_dst, extra_node), 
+            # 'tile_memory_req': tmem_req,  # nodes_to_tm
+            'nodes_to_tm': tmem_req,
+            'tm_to_nodes': tm_to_nodes, 
+            'tile_memory_map': tmem_map}
+
+def output_json(placed_nodes, no_of_tiles=16, spoke_count=3 ,out_file_name='mapping.json'):
     """[summary]
 
     Args:
@@ -111,10 +128,18 @@ def output_json(instr_coords, no_of_tiles=16, spoke_count=3 ,out_file_name='mapp
     mappings = [{'tile_id': tile_idx, 'spoke_map': ['' for _ in range(spoke_count)]} for \
                 tile_idx in range (no_of_tiles)]
     # Iterate over assignment
+    """
     for instr_idx, tile_coord in enumerate(instr_coords):
         tile_idx = int(tile_coord[0])
         spoke_no = int(tile_coord[2])
         mappings[tile_idx]['spoke_map'][spoke_no] = f'instruction ID#{instr_idx}'
+    """
+
+    for node_idx, info in placed_nodes.items():
+        tile_idx = info['tile_slice'][0]
+        spoke_no = info['tile_slice'][1]
+        mappings[tile_idx]['spoke_map'][spoke_no] = f'instruction ID#{node_idx}'
+
 
     data['mappings'] = mappings
     with open(out_file_name, 'w') as outfile:

@@ -458,7 +458,6 @@ TSWLatexianTemp*
 
 # End of https://www.toptal.com/developers/gitignore/api/latex
 
-.vscode/
 
 
 doc/sample-sigplan.aux
@@ -468,3 +467,13 @@ doc/sample-sigplan.fdb_latexmk
 doc/sample-sigplan.fls
 doc/sample-sigplan.out
 doc/sample-sigplan.pdf
+# Mac OS
+.DS_Store
+
+# VScode
+.vscode
+
+# Experiment code
+mappings/
+runs/
+*.pth
