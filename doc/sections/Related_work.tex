@@ -1,0 +1,53 @@
+\subsection{CGRA}
+CGRAs are a heavily researched architectural paradigm with a long history and can provide an excellent balance of high-performance compute, memory bandwidth, and area and energy efficiency \cite{theodoridis2007survey}.
+Due to such advantages, CGRAs are currently enjoying a resurgence in interest, not just in the research realm \cite{prabhakar2018plasticine}, but also commercially \cite{morgan2018intel, nicol2017coarse, vissers2019versal}.
+Research compilers targeting CGRAs are available (for example, \cite{adriaansen2016code, chin_cgra-me_2017, mei2003exploiting, prabhakar2018plasticine}) but they are limited in quality and code coverage. 
+Industry-strength compilers such as Clang/LLVM do not provide official support for CGRA-like architectures.
+For further information on the various taxonomy of CGRAs architectures and design, we refer the reader to \cite{liu_survey_2019, tehre_survey_2012}.
+
+Mapping various programming constructs onto CGRAs is an extensive research topic.
+The  mapping of large and irregular loops onto CGRAs is analyzed in \cite{zhao_towards_2020} which proposed paying more attention to temporal mapping than spatial mapping. 
+The proposed temporal mapping utilizes a buffer allocating heuristic with constraint on computations and interconnection resources. 
+The proposed spatial mapping uses a backtracking and reordering mechanism with greedy algorithm with the goal of minimizing the Initiation Interval (II).
+A method for mapping SDFs to a CGRA is introduced in \cite{li_chordmap_2022}.
+The proposed method relies on modulo-scheduling to provides a spatio-temporal mapping.
+ChordMap creates a schedule and partitions the SDF and CGRA, then performs spatio-temporal mapping of every kernel instance in each partition.
+ChordMap operates on three levels of parallelism: application-level, kernel instances-level, and instruction-level parallelism.
+%Parallel execution and high throughput are enabled by by time slicing the CGRA resources.
+In CGRA-ME\cite{chin_cgra-me_2017}, a CGRA device model is built using Module Routing Resource Graph (MRRG) \cite{mrrg}. 
+The parser converts an optimized C-language benchmark into a Data Flow Graph (DFG) using LLVM compiler framework. 
+Each operation in the DFG is mapped to a functional unit in the MMRG using simulated annealing. 
+The routing between inputs and outputs of each operation is selected using PathFinder-like algorithm \cite{pathfinder}.
+
+SE differentiates from others as the first CGRA in a near-data computing architecture.
+SE also provides asynchronous messaging as a first-class programming construct along with an SDF. 
+%A key challenge with SE applications is efficient compilation of high-level language code (for example, in C/C++) to executable program. 
+
+
+\subsection{Reinforcement Learning}
+RL is widely used to tackle unsupervised optimization problems.
+It has been applied in chip placement \cite{mirhoseini2020chip}, workload distribution \cite{Mirhoseini_placementRNN, addanki2019placeto, zhou2019gdp}, compiler optimizations \cite{Zhou_compileGNN} and other decision based tasks \cite{kormushev2013reinforcement, ZophL16_NASRL}. 
+Alternative optimization algorithms include evolutionary strategies \cite{Zhichao_ESNAS} and bayesian optimization \cite{shi2020learned}. 
+An advantage of an RL approach is that it is able to learn from a collection of programs and reuse previous data for new programs by training a Deep Learning model \cite{zhou2019gdp}.
+
+Recurrent Neural Networks (RNN) \cite{hochreiter1996lstm} were previously a popular approach to process a sequence of nodes from a graph representation. 
+Recently, Graph Neural Networks (GNN) \cite{gori2005new} have shown success in processing structured data without needing the preprocessing required for RNNs.
+GNNs are widely used for tasks involving graph processing \cite{Zhou_compileGNN, zhou2019gdp}. 
+Attention modules have sometimes been used in literature to supplement the embeddings created by GNNs to further improve results \cite{addanki2019placeto}.
+
+In \cite{mirhoseini2020chip}, an RL based method for chip placement is presented where a graph neural network is used to create embeddings from a netlist graph and then passed through an actor model to get placements on a chip canvas.
+The training is done using the PPO approach and one component from the netlist is placed at each step until all required components have been placed.
+The actor network in this method is composed of deconvolution layers which are more computationally intensive than our approach. 
+An RL based method, proposed in \cite{wu_core_2020}, that uses a Deep Deterministic Policy Gradient (DDPG) method for component placement in multi-chip many-core systems.
+A review of various machine learning approaches are presented in \cite{khailany_accelerating_2020} which including reinforcement learning for chip design.
+The work proposed in \cite{zhou2019gdp} presents a combination of graph neural network and transformer-XL model to place operations in dataflow graphs on suitable devices.
+In each of these works, the aim is similar to ours i.e. to reduce the manual labor and domain expertise required to produce mappings.
+
+% Our input is a combination of computation graph, SE device state and the node to be placed at a particular time step. 
+% Instead of only feeding our actor model with embedding from graph neural network, we combine the graph neural network embedding with information from the SE device and a representation of node that is going to be placed. 
+% A configuration is also added to guide the model to optimize different goals.
+
+A key difference between our work and \cite{zhou2019gdp} is that our strategy is to place one node at a time, instead of generating a complete assignment per iteration. 
+This allows our model to break down the placement problem into sub-problems and also allows the framework to start from a different initial configuration. 
+For example, if some nodes are already placed by some other algorithm such as brute force, the RL mapper can place the remaining nodes. 
+This approach also allows us to obtain more data during the sampling phase which consists of partial assignments, instead of only saving one training sample for an entire sequence of nodes.

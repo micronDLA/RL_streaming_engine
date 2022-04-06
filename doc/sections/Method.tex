@@ -1,0 +1,156 @@
+\subsection{Reinforcement learning}
+
+We present an RL based framework to explore and optimize the mapping of instructions for a given application to the SE, guided by a reward function that informs the mapping algorithm about the quality of the produced mappings at each step. In this section, we give an overview of the methods used along with the formulation required for detailed description of the various components of the RL approach.
+
+\subsection{Overview}
+PPO \cite{schulman2017proximal} is an RL method that is  widely used for continuous and discrete action problems. 
+It trains an actor and a critic model (represented as neural networks).
+The actor model is trained to produce actions (node placements in our case) from sample states obtained during simulation and the critic model is trained to match the sampled rewards from the actions produced by the actor using a surrogate loss function. 
+This sample and train process is repeated over various iterations. 
+In this manner, the problem search space is explored using the reward function as a heuristic.
+Refer to algorithm Alg.~\ref{alg1} for the complete RL training process.
+Our SE mapping task is formulated as a discrete action problem where the goal is to place one node at each time step. 
+Samples of SE state, actions performed, and rewards obtained at each time step are collected after executing the actions provided by the actor model in simulation. 
+These samples are stored in a buffer and are used as data to train the models.
+\figurename~\ref{fig:ppo} shows the overall RL framework. 
+
+The key components of our RL method are as follows:
+\begin{itemize}
+  \item States: The state is $s$ represented by a concatenation of current SE state, an embedding of the whole computation graph and the selected node to be placed next.
+  \item Action: The action $a$ consists of the node to be placed along with the tile and spoke location it is to be placed at.
+  \item Reward function: The reward obtained is based on the number of clock cycles taken for a node to finish executing after its predecessors finished executing.
+  \item Transition function: The transition function gives the probability distribution over next states given the current state and the action to be performed.
+\end{itemize}
+
+\begin{figure}[tb]
+  \centering
+  \includegraphics[trim=15 30 20 20, clip, width=\linewidth]{fig/ppo.pdf}
+  \caption{Diagram of the RL framework showing the role of actor and critic networks during RL training. }
+  \label{fig:ppo}
+\end{figure}
+
+\subsection{State Representation}
+The state $s$ is a vector of size $|TS| + f + 1$ where $TS$ is the set of tile slices in the Streaming Engine with $TS=T \times S$ and $f$ is the length of graph features. 
+Here $T$ and $S$ are sets of all tiles and slots in the SE respectively. 
+The number of slots available in each tile is equal to number of Initiation Intervals.
+
+\subsection{Action Representation}
+The action $a$ at each step is a tuple \((n,t,s)\) where $n \in N$ (the set of all nodes) is the node to be placed and $t \in T$ and $s \in S$ are the tile and slot at which the node $n$ is to be placed. 
+We place nodes in a topological order which ensures that all of a node's predecessors have been placed before the node. 
+We do not make selecting the node to be placed a part of the learning problem since it increases the complexity of the learning process and makes training harder.
+
+\subsubsection{Masked Actions}
+In order to enure that the network only outputs valid actions, we determine a binary mask over all possible actions and set the value of logits (unnormalized outputs of last layer of the neural network) corresponding to invalid actions to $-\infty$ in the actor network. 
+This in turn sets the probability of sampling invalid actions to $0$, ensuring that we never take an invalid action.
+Finally, we only calculate entropy on valid actions, making sure that our algorithm maximizes exploration only for valid actions in a given state.
+
+\subsection{Reward Function}
+Our goal in this work is to get mappings that are optimal in terms of total clock cycles taken, and for this purpose, the reward that is obtained at each time step is the difference between the clock cycle at which the current node to be placed is ready (its ready time) and the ready time of its predecessor. 
+$R_n$ is the reward obtained for placing node $n$ and $t_n$ is its ready time. 
+The function $p(n)$ gives the predecessor of $n$ in an SDF graph. 
+If the current node can't be placed because of the constraints (all values in the mask vector $m$ are zero), then a high negative reward $-\lambda$ is given. If a node has more than one predecessor, then the node with the later ready time is chosen for the purpose of determining reward value.
+\[
+  R_n =
+  \begin{cases}
+    -\lambda,& m_i = 0, \, \forall \, i \in T \times S \\
+    t_n - t_{p(n)}, & \text{otherwise}
+    
+  \end{cases}
+\]
+
+\begin{figure*}[tb]
+  \centering
+  \includegraphics[width=\textwidth]{fig/model_diagram.pdf}
+  \caption{Actor and critic model architecture. 
+  GNN is used to process the SDF graphs (static data). 
+  Attention module is used to determine relative importance of nodes that are relevant to the one currently being placed. 
+  The embedding created from dynamic data is combined with static data embedding. 
+  A final MLP model is used to generate actions. 
+  Actions are masked to ensure only valid actions are produced. }
+  \label{fig:model}
+\end{figure*}
+
+\subsection{Model design}
+The architecture for actor and critic models is shown in \figurename~\ref{fig:model}.
+The input is separated in two categories: static and dynamic data. 
+Static data is information that doesn't change as nodes are being placed and includes the graph features from the SDFs that encapsulate node dependence based on SE constraints.
+Device state (including placed nodes) and node to be placed are dynamic data that change during placement.
+
+\subsection{Global Graph Attention Module}
+
+A GNN is used to process the IR graph where each node contains a feature vector that is initialized with a combination of tile memory constraints and node data dependencies. 
+The input IR for an application is the same during placement of each node in the SDFs for that application.
+After placing all nodes in an episode, a different IR graph for another application can be fed into the RL model to train it on a collection of application tasks. 
+
+The Global Graph Attention Module is the combination of the GNN and attention modules.
+The GNN is composed of two layers of graph convolution \cite{wu2019simplifying} and a graph average pool layer which produce a vector embedding.
+An attention module is applied to the embedding produced by the GNN to highlight relevant components for the current node to be placed. 
+We evaluated two attention module implementations. A transformer encoder layer \cite{vaswani2017attention} and a modified Position Attention Module (PAM) from \cite{fu2019dual}, in which the positions represent different node embeddings.
+In our experiments, both produced similar results. 
+Having a higher number of transformer encoder layers improves the best reward obtained but it is achieved at a cost of more parameters, making training more expensive.
+
+The selected node and SE state change for each iteration over all nodes in the SDF graph. 
+This dynamic data is fed into a Fully Connected (FC) layer model to create another embedding to represent the current state. 
+The embeddings from dynamic data and static data are concatenated and fed to a MultiLayer Perceptron (MLP) model with three FC layers to obtain placements. 
+Invalid actions are masked before being sent to the SE simulation environment. 
+Output masking to filter invalid placements has previously been shown to be effective for RL in game environments \cite{Shengyi_mask}. 
+We see the addition of GGA module provides improved reward and sample efficiency for various applications and different device configurations as shown in Section \ref{sec:GGA_result}.
+
+% \begin{algorithm*}
+%   \caption{\textcolor{red}{RL Mapping Algorithm}}
+%   \label{alg:mapping}
+%   \begin{algorithmic}[1]
+%     \State Input: $\theta_0$: Initial actor network parameters, $\phi_0$: Initial value network parameters, Graph $\mathcal{G}$ which is to be placed
+%     \For{k=0,1,2,...}
+%       \State Collect set of placements $\mathcal{D}_k$ by running policy $\pi(\theta_k)$.
+%       \State Compute advantage estimates $\mathit{A}$ using value function $\mathit{V}$
+%       \State Update policy $\pi(\theta_k)$:
+%       $\theta_{k+1} = \arg \max_{\theta} \underset{s,a \sim \pi_{\theta_k}}{{\mathrm E}}\left[
+%         \min\left(
+%           \frac{\pi_{\theta}(a|s)}{\pi_{\theta_k}(a|s)}  A^{\pi_{\theta_k}}(s,a), \;\;
+%           \text{clip}\left(\frac{\pi_{\theta}(a|s)}{\pi_{\theta_k}(a|s)}, 1 - \epsilon, 1+\epsilon \right) A^{\pi_{\theta_k}}(s,a)
+%           \right)\right],$
+
+%     \EndFor
+%   \end{algorithmic}
+% \end{algorithm*}
+
+\begin{algorithm*}
+  \caption{RL Mapper Training Algorithm}
+  \label{alg1}
+\begin{algorithmic}[1]
+  \STATE Input: $\theta_0$: Initial actor network parameters, $\phi_0$: Initial value network parameters, Graph $\mathcal{G}$ which is to be placed
+  \FOR{$k = 0,1,2,...$}
+  \FOR{$i = 0,1,2,...$}
+  \FOR{$\text{node} \, n \in \mathcal{G} \, \text{in topological order}$}
+    \STATE Get placement mask $m$ for $n$
+    \STATE Get placement for $n$ by running policy $\pi(\theta_k, m)$
+    \STATE Store node placements in buffer ${\mathcal D}_k$.
+  \ENDFOR
+  \ENDFOR
+  \STATE Compute discounted rewards $\hat{R}_t$.
+  \STATE Compute advantage estimates, $\hat{A}_t = \hat{R}_t - \hat{V}_t$ using current value function $V_{\phi_k}$.
+  \STATE Update the policy by maximizing the PPO-Clip objective:
+      \begin{equation*}
+        \theta_{k+1} = \arg \max_{\theta} \frac{1}{|{\mathcal D}_k| T} \sum_{\tau \in {\mathcal D}_k} \sum_{t=0}^T \min\left(
+            \frac{\pi_{\theta}(a_t|s_t)}{\pi_{\theta_k}(a_t|s_t)}  A^{\pi_{\theta_k}}(s_t,a_t), \;\;
+            g(\epsilon, A^{\pi_{\theta_k}}(s_t,a_t))
+        \right),
+      \end{equation*}
+      via stochastic gradient ascent with Adam where
+      \begin{equation*}
+        g(\epsilon, A) = \left\{ 
+          \begin{array}{ll}
+          (1 + \epsilon) A & A \geq 0 \\
+          (1 - \epsilon) A & A < 0.
+          \end{array}
+          \right.
+      \end{equation*}
+  \STATE Fit value function by regression on mean-squared error:
+      \begin{equation*}
+      \phi_{k+1} = \arg \min_{\phi} \frac{1}{|{\mathcal D}_k| T} \sum_{\tau \in {\mathcal D}_k} \sum_{t=0}^T\left( V_{\phi} (s_t) - \hat{R}_t \right)^2,
+      \end{equation*}
+      via gradient descent algorithm.
+  \ENDFOR
+\end{algorithmic}
+\end{algorithm*}
