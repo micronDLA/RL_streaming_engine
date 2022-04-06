@@ -63,15 +63,19 @@ class StreamingEngineEnv(gym.Env):
         self.all_nodes_placed = False
         self.graph_ready_time = -1
 
+    def set_graph(self, graphdef):
+        self.graphdef = graphdef
+        self.num_nodes = graphdef['graph'].num_nodes()
+
     def step(self, action):
         node, tile_idx, spoke_idx = action
         assert tile_idx >=0 and tile_idx < self.se.tile_count, f"Tile index not in range [0, {self.se.tile_count-1}]"
         mask = self.get_mask(node)
-        if not mask.any():  # If no action is possible, return high negative reward
+        if not mask.any():# or not self._predecessors_placed(node) or self.placed_nodes.get(node) != None or mask[tile_idx*self.se.spoke_count + spoke_idx] == 0:  # If no action is possible, return high negative reward
             obs = self.se.get_state()
             reward = -10.0
             done = True
-            return obs, reward, done, {}
+            return obs, reward, done, {'ready_time': 100}
         if not self._predecessors_placed(node):  # Check if predecessors have been placed
             raise ValueError(f'All predecessors of node {node} not placed')
         if self.placed_nodes.get(node) != None:  # Check if node hasn't been placed already
@@ -91,7 +95,7 @@ class StreamingEngineEnv(gym.Env):
         obs = self.se.get_state()  # Can change to boolean obs
         reward = self._calculate_reward(ready_time, predecessor_ready_time)
         done = len(self.placed_nodes) == self.num_nodes
-        return obs, reward, done, {}
+        return obs, reward, done, {'ready_time': ready_time}
 
     def reset(self):
         self.se.reset()
@@ -196,7 +200,7 @@ class StreamingEngineEnv(gym.Env):
                     mask[unavail_idxs] = 0
 
         # Mask for TM constraint
-        if not self.args.no_tm_constr:
+        if not self.args.no_tm_constr and node in self.graphdef['nodes_to_tm']:
             # What TMs does node use
             tms_used = self.graphdef['nodes_to_tm'][node]
 

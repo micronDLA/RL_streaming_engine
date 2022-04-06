@@ -5,18 +5,10 @@
 # PPO from: https://github.com/nikhilbarhate99/PPO-PyTorch
 # discrete version!
 
-import dgl
-import random
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-# from torch.distributions import MultivariateNormal # continuous
-from torch.distributions import Categorical # discrete
-import numpy as np
-from net import NormalHashLinear, TransformerModel
-from dgl import nn as gnn
-from util import ravel_index
 
+torch.manual_seed(0)
 _engine = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 from modules import RolloutBuffer, ActorCritic
@@ -27,12 +19,10 @@ class PPO:
                  graphdef,
                  device,
                  state_dim,
-                 mode='',
                  ntasks = 1):
 
         #ntasks: number of different graphs
         self.args = args
-        self.graphdef = graphdef
         self.device_topology = device['topology']
         self.ntasks = ntasks
         self.state_dim = state_dim  # Input ready time (Number of tiles slices, 1)
@@ -48,7 +38,6 @@ class PPO:
                                   action_dim=self.action_dim,
                                   graph_feat_size=self.args.graph_feat_size,
                                   gnn_in=self.gnn_in,
-                                  mode=mode,
                                   ntasks=ntasks).to(_engine)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.args.lr, betas=self.args.betas)
 
@@ -59,44 +48,22 @@ class PPO:
                                       action_dim=self.action_dim,
                                       graph_feat_size=self.args.graph_feat_size,
                                       gnn_in=self.gnn_in,
-                                      mode=mode,
                                       ntasks=ntasks).to(_engine)
         self.policy_old.load_state_dict(self.policy.state_dict())
         if args.model != '':
             self.load(args.model)
 
         self.MseLoss = nn.MSELoss()
-        self.mode = mode
 
     def reset_lstm(self):
-        if self.mode == 'rnn':
+        if self.args.nnmode == 'rnn':
             self.policy.reset_lstm()
             self.policy_old.reset_lstm()
-
-    """ Deprecated
-    def get_coord(self, assigment, action, node):
-        # put node assigment to vector of node assigments
-        action[node] = torch.tensor(np.unravel_index(assigment, self.device_topology))
-        return action
-    """
-
-    """ Old select_action
-    def select_action(self, tensor_in, graphdef, node_id, action, pre_constr):
-        with torch.no_grad():
-            graph_info = graphdef['graph'].to(_engine)
-            if self.mode=='transformer':
-                action, action_logprob = self.policy_old.act_seq(tensor_in, graph_info)
-            else:
-                state = torch.FloatTensor(tensor_in).to(_engine)
-                action, action_logprob = self.policy_old.act(state, graph_info, node_id, action, pre_constr)
-
-        return action.item(), (state, action, graph_info, action_logprob)
-    """
 
     def select_action(self, tensor_in, graphdef, node_id, mask):
         with torch.no_grad():
             graph_info = graphdef['graph'].to(_engine)
-            if self.mode=='transformer':
+            if self.args.nnmode=='transformer':
                 action, action_logprob = self.policy_old.act_seq(tensor_in, graph_info)
             else:
                 state = torch.FloatTensor(tensor_in).to(_engine)
@@ -118,7 +85,7 @@ class PPO:
         self.buffer.node_ids.append(node_id)
 
 
-    def update(self, taskid=None):
+    def update(self):
         # Monte Carlo estimate of rewards:
         rewards = []
         discounted_reward = 0
@@ -135,7 +102,7 @@ class PPO:
 
         # convert list to tensor
         old_masks = 0  # Used in transformer mode
-        if self.mode == 'transformer':
+        if self.args.nnmode == 'transformer':
             s = [i for i, _ in self.buffer.states]
             old_states = torch.squeeze(torch.stack(s, dim=0)).detach().to(_engine)
             old_states = torch.permute(old_states, (1, 0, 2))
@@ -154,10 +121,10 @@ class PPO:
         for _ in range(self.args.K_epochs):
 
             # Evaluating old actions and values
-            if self.mode == 'transformer':
+            if self.args.nnmode == 'transformer':
                 logprobs, state_values, dist_entropy = self.policy.evaluate_seq((old_states, old_masks), old_actions, old_graph)
             else:
-                logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions, old_graph, old_masks, old_node_ids, taskid=taskid)
+                logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions, old_graph, old_masks, old_node_ids)
 
             # match state_values tensor dimensions with rewards tensor
             state_values = torch.squeeze(state_values)
@@ -189,5 +156,6 @@ class PPO:
         torch.save(self.policy_old.state_dict(), checkpoint_path)
 
     def load(self, checkpoint_path):
+        print('Loaded model \n')
         self.policy_old.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
         self.policy.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))

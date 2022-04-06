@@ -1,5 +1,4 @@
 from numpy.lib.shape_base import tile
-import torch
 import dgl
 from scipy.spatial import distance
 import numpy as np
@@ -9,6 +8,11 @@ from collections import deque
 import torch
 import math
 import json
+import matplotlib.pyplot as plt
+
+torch.manual_seed(0)
+random.seed(0)
+np.random.seed(0)
 
 ROW = 2
 COL = 2
@@ -19,7 +23,23 @@ def create_graph(graphdef, numnodes = 10):
     if graphdef is None:
         graphdef = {}
         a = nx.generators.directed.gn_graph(numnodes)
+        # a = nx.generators.directed.gnc_graph(numnodes)
         graph = dgl.from_networkx(a)
+
+        # make one input node
+        asc = dgl.topological_nodes_generator(graph)
+        for i in range(1, len(asc[0])):
+            graph.add_edge(asc[0][0], asc[0][i])
+
+        tm_idx_total = random.randint(1, numnodes//2) #number of tm variables
+        tile_memory_req = {}
+        for i in range(0, tm_idx_total):
+            nodeid = random.randint(0, numnodes-1)
+            if nodeid in tile_memory_req:
+                tile_memory_req[nodeid].append(i)
+            else:
+                tile_memory_req[nodeid] = [i]
+        graphdef['nodes_to_tm'] = tile_memory_req
     else:
         tile_memory_req = graphdef['nodes_to_tm']
         edges = graphdef['graphdef']
@@ -27,18 +47,26 @@ def create_graph(graphdef, numnodes = 10):
         if len(edges) == 3 and edges[2] > 0:
             graph.add_nodes(edges[2])
         tm_idx_total = len(graphdef['tile_memory_map'].keys())
-        # Add tile memory constraints as features to graph
-        tm_req_feat = torch.zeros(graph.num_nodes(), tm_idx_total) # node, tile mem var index binary vector
-        for instr_idx, tm_idxs in tile_memory_req.items():
-            for tm_idx in tm_idxs:
-                tm_req_feat[instr_idx][tm_idx] = 1
-        graph.ndata['tm_req'] = tm_req_feat
 
-        # create list of sync start flow nodes
-        sf_nodes = []
-        for node in graph.nodes():
-            if len(graph.predecessors(node).numpy()) == 0:
-                sf_nodes.append(node.item())
+    # Create TM to node mappings
+    tm_to_nodes = {tm_idx: [] for tm_idx in range(0, tm_idx_total)}
+    for instr_idx, tm_idxs in tile_memory_req.items():
+        for tm_idx in tm_idxs:
+            tm_to_nodes[tm_idx].append(instr_idx)
+    graphdef['tm_to_nodes'] = tm_to_nodes
+
+    # Add tile memory constraints as features to graph
+    tm_req_feat = torch.zeros(graph.num_nodes(), tm_idx_total) # node, tile mem var index binary vector
+    for instr_idx, tm_idxs in tile_memory_req.items():
+        for tm_idx in tm_idxs:
+            tm_req_feat[instr_idx][tm_idx] = 1
+    graph.ndata['tm_req'] = tm_req_feat
+
+    # create list of sync start flow nodes
+    sf_nodes = []
+    for node in graph.nodes():
+        if len(graph.predecessors(node).numpy()) == 0:
+            sf_nodes.append(node.item())
 
     graphdef['graph'] = graph
     graphdef['sf_nodes'] = sf_nodes
@@ -102,16 +130,16 @@ def get_graph_json(path):
                 tmem_req[nidx] = l
                 nidx += 1
 
-        # Create TM to node mappings
-        tm_to_nodes = {tm_idx:[] for tm_idx in range(0, len(tmem_map.keys()))}
-        for instr_idx, tm_idxs in tmem_req.items():
-            for tm_idx in tm_idxs:
-                tm_to_nodes[tm_idx].append(instr_idx)
     return {'graphdef': (edge_src, edge_dst, extra_node), 
-            # 'tile_memory_req': tmem_req,  # nodes_to_tm
             'nodes_to_tm': tmem_req,
-            'tm_to_nodes': tm_to_nodes, 
             'tile_memory_map': tmem_map}
+
+def print_graph(graphdef):
+    graph_in = graphdef['graph'].adjacency_matrix_scipy().toarray()
+    print('graph adjacency matrix: ', graph_in)
+    nx_g = graphdef['graph'].to_networkx()
+    nx.draw(nx_g, nx.nx_agraph.graphviz_layout(nx_g, prog='dot'), with_labels=True)
+    plt.show()
 
 def output_json(placed_nodes, no_of_tiles=16, spoke_count=3 ,out_file_name='mapping.json'):
     """[summary]
