@@ -15,14 +15,6 @@ def arange_like(x, dim: int):
     return x.new_ones(x.shape[dim]).cumsum(0) - 1
 
 class PolicyNet(nn.Module):
-
-    '''
-    Params
-    ------
-    cg_* : Params for Compute Graph GNN layers
-    device_topology : [Rows, Cols, Spokes]
-    '''
-
     def __init__(self,
                  cg_in_feats=32, cg_hidden_dim=64, cg_conv_k=1,
                  transformer_dim=96, transformer_nhead=4, transformer_ffdim=256,
@@ -104,24 +96,6 @@ class PolicyNet(nn.Module):
             else:
                 logp.append(scores[0, i, j])
                 assignment.append(j)
-
-        '''
-        topk = torch.topk(scores[0, :-1, :].exp(), scores.shape[-1], -1)
-        topk = topk.indices
-
-        assignment = []
-        logp = []
-        for i in range(topk.shape[0]):
-            idx = 0
-            for choice in topk[i]:
-                if choice in assignment: continue
-                break
-            else:
-                raise Exception
-
-            logp.append(scores[0, i, choice])
-            assignment.append(choice)
-        '''
 
         entropy = (scores[:, :-1, :-1] * scores[:, :-1, :-1].exp()).sum(-1)
         entropy = entropy[0]
