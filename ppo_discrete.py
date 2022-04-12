@@ -1,9 +1,3 @@
-# E. Culurciello
-# A. Chang
-# April 2021
-
-# PPO from: https://github.com/nikhilbarhate99/PPO-PyTorch
-# discrete version!
 
 import torch
 import torch.nn as nn
@@ -55,21 +49,13 @@ class PPO:
 
         self.MseLoss = nn.MSELoss()
 
-    def reset_lstm(self):
-        if self.args.nnmode == 'rnn':
-            self.policy.reset_lstm()
-            self.policy_old.reset_lstm()
-
     def select_action(self, tensor_in, graphdef, node_id, mask):
         with torch.no_grad():
             graph_info = graphdef['graph'].to(_engine)
-            if self.args.nnmode=='transformer':
-                action, action_logprob = self.policy_old.act_seq(tensor_in, graph_info)
-            else:
-                state = torch.FloatTensor(tensor_in).to(_engine)
-                mask = torch.tensor(mask, dtype=torch.bool).to(_engine)
-                node_id = torch.atleast_2d(torch.tensor(node_id)).to(_engine)
-                action, action_logprob = self.policy_old.act(state, graph_info, node_id, mask)
+            state = torch.FloatTensor(tensor_in).to(_engine)
+            mask = torch.tensor(mask, dtype=torch.bool).to(_engine)
+            node_id = torch.atleast_2d(torch.tensor(node_id)).to(_engine)
+            action, action_logprob = self.policy_old.act(state, graph_info, node_id, mask)
 
         return action.item(), (state, action, graph_info, action_logprob, mask, node_id)
 
@@ -102,17 +88,9 @@ class PPO:
 
         # convert list to tensor
         old_masks = 0  # Used in transformer mode
-        if self.args.nnmode == 'transformer':
-            s = [i for i, _ in self.buffer.states]
-            old_states = torch.squeeze(torch.stack(s, dim=0)).detach().to(_engine)
-            old_states = torch.permute(old_states, (1, 0, 2))
-            m = [i for _, i in self.buffer.states]
-            old_masks = torch.squeeze(torch.stack(m, dim=0)).detach().to(_engine)
-            old_graph = torch.squeeze(torch.stack(self.buffer.graphs, dim=0)).detach().to(_engine)
-        else:
-            old_masks = torch.squeeze(torch.stack(self.buffer.masks, dim=0)).detach().to(_engine)
-            old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(_engine)
-            old_graph = [graph.to(_engine) for graph in self.buffer.graphs]
+        old_masks = torch.squeeze(torch.stack(self.buffer.masks, dim=0)).detach().to(_engine)
+        old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(_engine)
+        old_graph = [graph.to(_engine) for graph in self.buffer.graphs]
         old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(_engine)
         old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(_engine)
         old_node_ids = torch.vstack(self.buffer.node_ids).detach().to(_engine)

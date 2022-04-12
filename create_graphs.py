@@ -107,6 +107,5 @@ def ex_curriculum_rl():
     results[num_node]['reward'].append(reward)
 
 
-
 if __name__ == "__main__":
-    ex_curriculum_rl()
+    ex_topoorder()

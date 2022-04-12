@@ -231,32 +231,6 @@ class ACFF(nn.Module): # feedforward ppo
             y = self.soft(y)
         return y
 
-class ACRNN(nn.Module): # rnn ppo
-    def __init__(self, in_dim, emb_size, out_dim, mode='soft'):
-        super(ACRNN, self).__init__()
-
-        # action mean range -1 to 1
-        self.fc = nn.Linear(in_dim, emb_size)
-        self.tanh = nn.Tanh()
-        self.fc1 = nn.LSTM(emb_size, emb_size)
-        self.fc2 = nn.Linear(emb_size, out_dim)
-        self.soft = nn.Softmax(dim=-1)  # if discrete
-        self.emb_size = emb_size
-        self.mode = mode
-        self.nlstm = 1
-        self.hidden = (torch.zeros(self.nlstm, 1, emb_size), torch.zeros(self.nlstm, 1, emb_size))
-
-    def reset_lstm(self):
-        self.hidden = (torch.zeros(self.nlstm, 1, self.emb_size), torch.zeros(self.nlstm, 1, self.emb_size))
-
-    def forward(self, x):
-        y = self.tanh(self.fc(x))
-        y, self.hidden = self.fc1(y, self.hidden)
-        y = self.fc2(y)
-        if self.mode == 'soft':
-            y = self.soft(y)
-        return y
-
 class ActorCritic(nn.Module):
     def __init__(self,
                  args,
@@ -271,9 +245,6 @@ class ActorCritic(nn.Module):
         self.args = args
         self.device = device
 
-        #GNN
-        # self.graph_model = GraphEmb_Conv(graph_feat_size)
-
         self.graph_model = nn.ModuleList([
             gnn.SGConv(gnn_in, 64, 1, False, nn.ReLU),
             gnn.SGConv(64, 128, 1, False, nn.ReLU)
@@ -285,21 +256,7 @@ class ActorCritic(nn.Module):
         self.cam_attention = CAM_ModuleM(graph_feat_size)
         self.transf_atten = TransformerAttentionModel(graph_feat_size, 4, 64)
 
-        if args.nnmode == 'rnn':
-            self.actor = ACRNN(state_dim+graph_feat_size, emb_size, action_dim, mode='soft')
-            self.critic = ACRNN(state_dim + graph_feat_size, emb_size, 1, mode='')
-
-        elif args.nnmode == 'transformer':
-            # ntokens: 1hot device topology
-            self.model = TransformerModel(ntoken=action_dim, ninp=16, nhead=4, nhid=emb_size, nlayers=2)
-            self.actor = ACFF(16*state_dim+graph_feat_size, emb_size, action_dim, mode='soft')
-            self.critic = ACFF(16*state_dim+graph_feat_size, emb_size, 1, mode='')
-
-        elif args.nnmode == 'super':
-            self.actor = ACFF_SP(state_dim + graph_feat_size, emb_size, action_dim, ntasks=ntasks, mode='soft')
-            self.critic = ACFF_SP(state_dim + graph_feat_size, emb_size, 1, ntasks=ntasks, mode='')
-        
-        elif args.nnmode == 'simple_ff':
+        if args.nnmode == 'simple_ff':
             self.actor = ACFF(state_dim+1, emb_size, action_dim, mode='')  # Don't apply softmax since we now use logits
             self.critic = ACFF(state_dim+1, emb_size, 1, mode='')  # +1 for node_id
 
@@ -314,40 +271,8 @@ class ActorCritic(nn.Module):
             self.actor = ACFF(state_dim+graph_feat_size, emb_size, action_dim, mode='soft')  # earlier: state_dim+graph_feat_size
             self.critic = ACFF(state_dim+graph_feat_size, emb_size, 1, mode='')
 
-    def reset_lstm(self):
-        self.actor.reset_lstm()
-        self.critic.reset_lstm()
-
     def forward(self):
         raise NotImplementedError
-
-    def act_seq(self, state, graph_info):
-        state_in = state[0].to(_engine)
-        mask = state[1].to(_engine)
-        emb = self.graph_model(graph_info).squeeze()
-        o = self.model(state_in)
-        o = o.view(-1)
-        act_in = torch.cat((o, emb))
-        action_probs = self.actor(act_in)
-        dist = Categorical(action_probs)
-        action = dist.sample()
-        action_logprob = dist.log_prob(action)
-        return action.detach(), action_logprob.detach()
-
-    def evaluate_seq(self, state, action, graph_info):
-        state_in = state[0]
-        mask = state[1]
-        emb = self.graph_model(graph_info)
-        o = self.model(state_in)
-        o = torch.permute(o, (1, 0, 2)).contiguous()
-        o = o.view(o.shape[0], -1)
-        act_in = torch.cat((o[mask], emb), dim=1)
-        action_probs = self.actor(act_in)
-        dist = Categorical(action_probs)
-        action_logprobs = dist.log_prob(action)
-        dist_entropy = dist.entropy()
-        state_values = self.critic(act_in)
-        return action_logprobs, state_values, dist_entropy
 
     def act(self, state, graph_info, node_id_or_ids, mask):
 
@@ -378,20 +303,6 @@ class ActorCritic(nn.Module):
         dist = CategoricalMasked(logits=logits, mask=mask)
         action = dist.sample() # flattened index of a tile slice coord
         action_logprob = dist.log_prob(action)
-
-        # if not self.args.no_tm_constr:
-        #     for nd in pre_constr['grp_nodes'][node_id]:
-        #         if (prev_act[nd] > -1).all(): # if a grouped node is already placed
-        #             act_t = list(np.unravel_index(action.item(), self.device['topology']))
-        #             act_t[:2] = prev_act[nd][:2] #copy tile loc
-        #             if act_t[2] == prev_act[nd][2]:
-        #                 free_spoke = list(range(0, self.device['topology'][2]))
-        #                 for p_act in prev_act:
-        #                     if p_act[:2] == act_t[:2]:
-        #                         free_spoke.remove(p_act[2])
-        #                 act_t[2] = random.choice(free_spoke)
-        #             action.data = torch.tensor([int(ravel_index(act_t, self.device['topology']).item())], dtype=torch.int64)
-
         return action.detach(), action_logprob.detach()
 
     def evaluate(self, state, action, graph_info, mask, node_id_or_ids=None):

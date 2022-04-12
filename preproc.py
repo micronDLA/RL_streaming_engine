@@ -9,9 +9,6 @@ from util import positional_encoding
 
 pp =pprint.PrettyPrinter(indent=2)
 
-# device['topology']
-# graphdef['graph']
-
 class PreInput:
     '''
         Prepare the input for RL model

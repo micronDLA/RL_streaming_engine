@@ -57,24 +57,6 @@ def get_args():
     return args
 
 def run_mapper(args, graphs, writer=None):
-    '''
-    graphdef:
-     graphdef['graph']: dgl graph, ndata['tm_req'], ndata['feat']
-     graphdef['nodes_to_tm']: dict{ node id : list of tile mem var indexes }
-     graphdef['tm_to_nodes']: dict{ tile mem var indexes : list of node id }
-     graphdef['sf_nodes']: nodes in a sync flow
-     graphdef['graphdef']: (edge_src, edge_dst, extra_node)
-     graphdef['tile_memory_map']: dict{ tile_mem variable str : int index }
-    #tensor_in:
-     tensor_in['state'] = torch.FloatTensor(state).view(-1).unsqueeze(1)
-     tensor_in['node_sel'] = node_1hot.unsqueeze(1)
-    device:
-     device['topology'] = args.device_topology
-     device['action_dim'] = np.prod(args.device_topology)
-    constr:
-     constr['grp_nodes'] = tile mem based grp_nodes
-    '''
-
     # Parse arguments
     args.device_topology = tuple(args.device_topology)
     logging.info('[ARGS]')
@@ -195,100 +177,8 @@ def run_mapper(args, graphs, writer=None):
 
     return best_ready_time, best_reward
 
-
-def run_mapper_es(args, graphdef):
-
-    # Parse arguments
-    args.device_topology = tuple(args.device_topology)
-    logging.info('[ARGS]')
-    logging.info('\n'.join(f'{k}={v}' for k, v in vars(args).items()))
-
-    # Tensorboard logging
-    if not args.quiet:
-        writer = SummaryWriter(comment=f'_{generate_slug(2)}')
-        print(f'[INFO] Saving log data to {writer.log_dir}')
-        writer.add_text('experiment config', str(args))
-        writer.flush()
-
-    args.nodes = graphdef['graph'].number_of_nodes()
-
-    if args.debug:
-        print_graph(graphdef)
-
-    # SE Device attributes
-    device = {}
-    device['topology'] = args.device_topology
-    device['action_dim'] = np.prod(args.device_topology)
-
-    preproc = PreInput(args)
-    graphdef = preproc.pre_graph(graphdef, device)
-
-    # Init gym env
-    env = StreamingEngineEnv(args,
-                             graphdef=graphdef,
-                             tile_count=args.device_topology[0],
-                             spoke_count=args.device_topology[1],
-                             pipeline_depth=args.pipeline_depth)
-
-    # randomly occupy with nodes (not occupied=0 value):
-    device_topology = args.device_topology
-    # Setup logging variables
-    best_ready_time = 100
-    best_reward = 0
-    final_value = None
-
-    import nevergrad as ng
-
-    budget = args.epochs  # How many steps of training we will do before concluding.
-    workers = 16
-    # param = ng.p.Array(shape=(int(nodes), 1)).set_integer_casting().set_bounds(lower=0, upper=ROW*COL*nodes)
-    param = ng.p.Array(shape=(int(args.nodes), 1)).set_integer_casting().set_bounds(lower=0, upper=np.prod(device_topology)-1)
-    # ES optim
-    names = "CMA"
-    optim = ng.optimizers.registry[names](parametrization=param, budget=budget, num_workers=workers)
-    # optim = ng.optimizers.RandomSearch(parametrization=param, budget=budget, num_workers=workers)
-    # optim = ng.optimizers.NGOpt(parametrization=param, budget=budget, num_workers=workers)
-    def es_calculate_reward(actions):
-        ready_buf = []
-        reward_buf = []
-        xv = [i[0] for i in actions]
-        for node_id, act in enumerate(xv):
-            tile, spoke = np.unravel_index(act, args.device_topology)
-            action = [node_id, tile, spoke]
-            state, reward, done, mdata = env.step(action)
-            ready_buf.append(mdata['ready_time'])
-            reward_buf.append(reward)
-            if done and reward < 0:
-                return 100, -10
-        return np.max(ready_buf), np.mean(reward_buf)
-
-    def isvalid(x):
-        xv = [i[0] for i in x]
-        return len(set(xv)) == len(xv)
-
-    print('Running ES optimization ...')
-    for _ in tqdm(range(budget)):
-        x = optim.ask()
-        while isvalid(x.value):
-            x = optim.ask()
-        loss, reward = es_calculate_reward(x.value)
-        optim.tell(x, loss)
-        if best_ready_time > loss:
-            final_value = x.value
-            best_ready_time = loss
-            best_reward = reward
-
-    rec = optim.recommend()
-    es_calculate_reward(rec.value)
-    print('best score found:', best_ready_time)
-    if args.debug:
-        print('optim placement:\n', final_value)
-
-    return best_ready_time, best_reward
-
 if __name__ == "__main__":
     args = get_args()  # Holds all the input arguments
     graph_json = get_graph_json(args.input)# Get computation graph definition
     graphdef = create_graph(graph_json)
     run_mapper(args, graphdef)
-    # run_mapper_es(args, graphdef)
