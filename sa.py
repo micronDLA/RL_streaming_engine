@@ -17,6 +17,7 @@ from train_alt import get_nodes_rand
 from collections import deque
 from tqdm import tqdm
 import time
+import numpy as np
 
 #--- MAIN ---------------------------------------------------------------------+
 
@@ -24,7 +25,7 @@ class minimize():
     '''Simple Simulated Annealing
     '''
 
-    def __init__(self, args, env, graphdef, device, cooling_schedule='linear', step_max=1000, t_min=0, t_max=100, bounds=[], alpha=None, damping=1):
+    def __init__(self, args, env, graphdef, device, writer, cooling_schedule='linear', step_max=1000, t_min=0, t_max=100, bounds=[], alpha=None, damping=1):
 
         # checks
         assert cooling_schedule in ['linear','exponential','logarithmic', 'quadratic'], 'cooling_schedule must be either "linear", "exponential", "logarithmic", or "quadratic"'
@@ -38,7 +39,7 @@ class minimize():
         self.step_max = step_max
         self.hist = []
         self.cooling_schedule = cooling_schedule
-        self.args, self.env, self.graphdef, self.device = args, env, graphdef, device
+        self.args, self.env, self.graphdef, self.device, self.writer = args, env, graphdef, device, writer
 
         self.bounds = bounds[:]
         self.damping = damping
@@ -85,6 +86,7 @@ class minimize():
 
         # begin optimizing
         self.step, self.accept = 1, 0
+        i_episode = 0
         pbar = tqdm(total=self.step_max)
         while self.step < self.step_max and self.t >= self.t_min and self.t > 0:
 
@@ -108,6 +110,10 @@ class minimize():
                 self.best_state = proposed_neighbor[:]
                 print(f'Best graph ready time yet: {self.best_energy}, {self.best_state}')
 
+                self.writer.add_scalar('SA Best readytime/episode', self.best_energy, i_episode)
+                self.writer.flush()
+
+
             # persist some info for later
             self.hist.append([
                 self.step,
@@ -120,6 +126,10 @@ class minimize():
             if reward < 100:
                 self.step += 1
                 pbar.update(1)
+            if i_episode % self.args.log_interval == 0:
+                self.writer.add_scalar('SA Mean reward/episode', np.mean(self.reward_buf), i_episode)
+                self.writer.flush()
+            i_episode += 1
 
         # generate some final stats
         self.acceptance_rate = self.accept / self.step

@@ -140,7 +140,7 @@ def run_sa_mapper(args, graphs, writer=None):
 
     best_ready_time = float('inf')
     best_reward = 0
-    opt = sa.minimize(args, env, graphdef, device, cooling_schedule='linear', step_max=1000000000000000000, t_max=1, t_min=0)
+    opt = sa.minimize(args, env, graphdef, device, writer, cooling_schedule='linear', step_max=100000000000, t_max=1, t_min=0)
     opt.results()
     return best_ready_time, best_reward
 

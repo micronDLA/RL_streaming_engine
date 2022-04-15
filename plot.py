@@ -166,5 +166,31 @@ def plot_pretrain():
     fig.show()
     fig.write_image("pretrain.pdf")
 
+def plot_sa():
+    df = pd.read_csv('experiments/compare_sa/ppo_gnn_transform_data.csv')
+    df2 = pd.read_csv('experiments/compare_sa/simulated_anneal_ifft.csv')
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df['Step'], y=smooth(df['Value'], 0.99),
+        name="GGA+MLP"
+    ))
+    fig.add_trace(go.Scatter(
+        x=df2['Step'], y=smooth(df2['Value'], 0.99),
+        name="SA"
+    ))
+    fig.update_layout(
+        xaxis_title="Epochs",
+        yaxis_title="Rewards",
+        xaxis_range=[2000, 100000],
+        showlegend=True,
+        font=dict(
+            family="Courier New, monospace",
+            size=20,
+        )
+    )
+    fig.show()
+    fig.write_image("sa.pdf")
+
+
 if __name__ == "__main__":
     pass
