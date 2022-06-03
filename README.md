@@ -1,5 +1,8 @@
 # Streaming Engine Scheduler
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6611892.svg)](https://doi.org/10.5281/zenodo.6611892)
+
+
 Gym environment for Streaming Engine and PPO code to generate assignment for a given compute graph on a streaming engine topology.
 
 ## Dependencies
