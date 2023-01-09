@@ -1,0 +1,22 @@
+% The Streaming Engine (SE) is a Coarse-Grained Reconfigurable Array. % developed by Micron Technology.
+% The SE provides programming flexibility and high-performance with energy efficiency.
+% %A program is broken down into a set of one or more Synchronous Data-Flows (SDFs).
+% A program is represented as a computation graph, where every instruction is a node.
+% Each node needs to be mapped to the right slot and array in the SE to ensure the correct execution of the program.
+% This creates an optimization problem with a vast and sparse search space.
+% A manual mapping of the graph takes an infeasible amount of time by the programmer.
+% Such manual mapping is impractical because it requires expertise and knowledge in the SE micro-architecture and reduces the search-space, thus, trading off optimization possibilities.
+% In this work we propose a Reinforcement Learning(RL) based mapper to explore mappings and optimize them in an unsupervised manner using a reinforcement learning framework.
+% This provides us an automated method that can produce mappings for programs quickly and searches for optimal mappings without the programmer's interference. 
+% This tool also improves the usability of the SE device by encapsulating device configuration details.
+The Streaming Engine (SE) is a Coarse-Grained Reconfigurable Array which provides programming flexibility and high-performance with energy efficiency.
+For an application to be accelerated on the SE, it is has to be represented as a combination of Synchronous Data Flow (SDF) graphs, where every instruction is represented as a node.
+Each node needs to be mapped to the right slot and array in the SE to ensure the correct execution of the program.
+This creates an optimization problem with a vast and sparse search space for which finding a mapping manually is impractical because it requires expertise and knowledge of the SE micro-architecture.
+In this work we propose a Reinforcement Learning framework with Global Graph Attention (GGA) module and output masking of invalid placements to find and optimize instruction schedules.
+We use Proximal Policy Optimization in order to train a model which maps operations spatially and temporally onto the SE based on a reward function that models the SE device and its constraints.
+The GGA module consists of a graph neural network and an attention module. 
+The graph neural network creates embeddings of the SDFs and the attention block is used to model sequential operation placement. 
+We present results on how benchmark workloads are mapped to the SE and the factors affecting mapping quality.
+We find that the addition of GGA, on average, finds 10\% better instruction schedules in terms of total clock cycles taken.
+% The implemented method is compared against evolutionary search and baseline.

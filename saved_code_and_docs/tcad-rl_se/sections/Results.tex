@@ -1,0 +1,119 @@
+
+The aim of this section is to evaluate the RL framework for mapping applications to the SE.
+We analyze the effects that different components of the RL model such as the GGA module and training strategies such as node iteration ordering and output masking have on the quality of placements generated. We also analyze the results of pre-training the RL model on multiple graphs and then fine-tuning it on a desired application.
+
+The implemented RL approach was able to successfully map different applications such as vector add, distance calculation function and Fast Fourier Transform (FFT).
+FFT is widely used in several areas such as digital signal and image processing, pattern recognition, solving partial differential equations, error-correcting codes, and many others \cite{814659}.
+FFT has a time complexity of $\mathcal{O}(N\log{N})$ and two nested loops.
+The outer loop and inner loop have time complexity of $\mathcal{O}(\log{N})$ and $\mathcal{O}(N)$ respectively.
+The inner loop is targeted for acceleration.
+The inner loop code is optimized and broken down into four SDFs.
+%  which are shown in \figurename~\ref{fig:ifft_graph}.
+The SE device configuration for the following experiments used 16 tiles and a maximum slot count of six.
+Other SE device configurations are possible.
+
+% \begin{figure}[tb]
+%   \centering
+%   \includegraphics[width=\linewidth]{fig/ifft_graph.pdf}
+%   \caption{IR for FFT application consists of 4 SDFs. The arrows show data dependence between nodes. Tile memory dependencies have not been shown for the sake of simplicity.}
+%   \label{fig:ifft_graph}
+% \end{figure}
+
+\begin{figure}[tbh]
+  \centering
+  \includegraphics[width=0.7\linewidth]{fig/nodes_graph.pdf}
+  \caption{Cycle count for running all nodes in the best mapping given by RL model over 50,000 epochs.
+    PPO baseline MLP model and GGA model were evaluated with computation graphs with increasing number of nodes.
+    A larger device configuration with 64 tiles was used for experiments with IR graphs with 40 and 50 nodes. }
+  \label{fig:nodes_graph}
+\end{figure}
+
+\begin{figure}[tbh]
+  \centering
+  \includegraphics[width=0.75\linewidth]{fig/sa.pdf}
+  \caption{Comparison between training RL model (blue) versus Simulated Annealing (SA) method (red).}
+  \label{fig:ifft_sa}
+\end{figure}
+
+\begin{figure}[tbh]
+  \centering
+  \includegraphics[width=0.7\linewidth]{fig/plot_gnn_atten_ppo.pdf}
+  \caption{Effect of using Global Graph Attention (GGA) module for mapping the FFT application on device with 16 tiles.
+    GGA module provides better sample efficiency and higher reward after training. }
+  \label{fig:ifft_rewards}
+\end{figure}
+
+\begin{figure}[tbh]
+  \centering
+  \includegraphics[width=0.7\linewidth]{fig/ifft_attention.pdf}
+  \caption{Attention scores from transformer module when placing certain nodes for the FFT application. }
+  \label{fig:ifft_attention}
+\end{figure}
+
+% \begin{figure}[tb]
+%   \centering
+%   \includegraphics[width=\linewidth]{fig/plot_ordered.pdf}
+%   \caption{Iterating nodes in topological ordering results in higher reward and eases the placement task.
+%     The blue line is the reward curve for when nodes were randomly selected for placement.
+%     The red line is the reward curve for when nodes were iterated upon in topological order.
+%     The task involved is of placing 15 nodes of an IR graph onto a device with 16 tiles.}
+%   \label{fig:ordered_placement}
+% \end{figure}
+
+
+\begin{figure}[tbh]
+  \centering
+  \includegraphics[trim=0 0 0 50, clip, width=0.7\linewidth]{fig/ifft_masked_nomask.pdf}
+  \caption{Reward comparison between node placement with output masking (blue) and without output masking (red).}
+  \label{fig:mask_nomask}
+\end{figure}
+
+\begin{figure}[tbh]
+  \centering
+  \includegraphics[width=0.7\linewidth]{fig/pretrain_ifft.pdf}
+  \caption{Comparison between training RL model from scratch (red) versus fine-tuning a model pre-trained on random graphs (blue). }
+  \label{fig:pretrain_ifft}
+\end{figure}
+
+We also benchmarked our RL framework against a collection of random directed graphs meant to simulate real life applications.
+We compare a baseline PPO method composed of three stacked layers of MLPs against an actor model with the proposed GGA module.
+We evaluate these models on varying application IR graphs with different complexities by increasing the total number of nodes.
+We also tested on a larger device with 64 tiles.
+In \figurename~\ref{fig:nodes_graph}, we observe that the RL approach finds mappings for a variety of IR graphs for randomly generated applications, and GGA improves the best schedule found for the same number of training epochs.
+The GGA also finds an improved schedule in terms of clock cycles taken for a larger device configuration.
+For the results in \figurename~\ref{fig:nodes_graph}, the epochs were limited to 50,000 for both models.
+The cycle count is the number of SE execution steps taken to process all nodes for a mapping, which is calculated from the simulated SE environment.
+
+In \figurename~\ref{fig:ifft_sa}, we evaluate the RL method for the FFT application and compare it against Simulated Annealing (SA) optimization method \cite{kirkpatrick1983optimization}.
+We observe that our method finds higher rewards over time, while SA finds it difficult to improve reward in the SE's sparse search space.
+
+\subsection{GGA} \label{sec:GGA_result}
+
+In \figurename~\ref{fig:ifft_rewards}, we see the addition of GGA module provides improved reward and sample efficiency for the FFT application.
+The node to be placed and SE state changes for each iteration over all nodes in the SDFs. The GGA module provides a representation of the entire IR graph while placing each node.
+
+The attention module assists in highlighting the node dependencies when the RL model is predicting the placement of a node.
+In \figurename~\ref{fig:ifft_attention}, we plot the attention matrix produced by the GGA module when mapping nodes from the FFT application.
+%% shown in \figurename~\ref{fig:ifft_graph}.
+The x-axis is the node index, the title indices which node is being placed and the color axis indicates attention scale.
+We see that when placing node 1, the model focuses on nodes 2 and 3. When placing node 3, the attention is focused on node 6.
+These attention values match our expectations since these nodes are related and have direct data dependencies.
+
+% \subsection{Node Iteration Order}
+
+% The iteration order is the sequence in which nodes are fed to the actor model in the RL framework and plays an important role in deciding whether the nodes can be successfully placed or not.
+% In \figurename~\ref{fig:ordered_placement}, we observe that iterating over nodes in topological ordering results in higher reward and eases the node placement task.
+% On the other hand, when placing the nodes randomly, sometimes nodes get placed before their predecessors are placed and the model needs to predict which tiles the predecessor nodes will be placed on, making training and the learning problem harder.
+
+\subsection{Output Masking}
+\label{subsec:output_masking}
+The SE instruction scheduling task has several invalid actions for a given state that add noise to the samples and decision of the RL model, making convergence harder.
+After placement of each node, the succeeding nodes have fewer placement options due to their data dependency with other nodes and device constraints.
+Masking invalid placements reduces the search space as each node is being placed.
+\figurename~\ref{fig:mask_nomask} demonstrates that masking greatly improves the rewards obtained as compared to using a negative reward for invalid actions. We can also see that making helps improve sample efficiency of the RL model.
+
+\subsection{Pre-training and fine-tuning}
+After training the RL model on various applications, the RL model can be used for fine-tunning on a specific task or for inferencing.
+In \figurename~\ref{fig:pretrain_ifft}, the RL model was pre-trained on a collection of randomly generated IR graphs and then fine-tuned for the FFT application.
+The initial and final reward of the fine tuned RL model is higher than training the model from scratch.
+This demonstrates that the model is able to reuse some of the previous experience of placing nodes for random input graphs.
